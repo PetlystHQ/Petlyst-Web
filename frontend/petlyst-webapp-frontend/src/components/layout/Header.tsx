@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from "styled-components";
 
 const HeaderWrapper = styled.header`
   background-color: #f8f9fa;
@@ -33,17 +33,25 @@ const Nav = styled.nav`
 const Header: React.FC = () => {
   return (
     <CenteredContainer>
-    <HeaderWrapper>
-      <Title>Petlyst</Title>
-      <Nav>
-        <ul>
-          <li><a href="/">Ana Sayfa</a></li>
-          <li><a href="/hakkimizda">Hakkımızda</a></li>
-          <li><a href="/iletisim">İletişim</a></li>
-          <li><a href="/login">Giriş Yap</a></li>
-        </ul>
-      </Nav>
-    </HeaderWrapper>
+      <HeaderWrapper>
+        <Title>Petlyst</Title>
+        <Nav>
+          <ul>
+            <li>
+              <a href="/">Ana Sayfa</a>
+            </li>
+            <li>
+              <a href="/hakkimizda">Hakkımızda</a>
+            </li>
+            <li>
+              <a href="/iletisim">İletişim</a>
+            </li>
+            <li>
+              <a href="/login">Giriş Yap</a>
+            </li>
+          </ul>
+        </Nav>
+      </HeaderWrapper>
     </CenteredContainer>
   );
 };
