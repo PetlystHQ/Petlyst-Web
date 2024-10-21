@@ -1,4 +1,6 @@
+import { useState } from "react";
 import styled from "styled-components";
+import AuthModal from "../auth/AuthModal";
 
 const HeaderWrapper = styled.header`
   background-color: #f8f9fa;
@@ -31,6 +33,11 @@ const Nav = styled.nav`
 `;
 
 const Header: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+  
   return (
     <CenteredContainer>
       <HeaderWrapper>
@@ -47,11 +54,12 @@ const Header: React.FC = () => {
               <a href="/iletisim">İletişim</a>
             </li>
             <li>
-              <a href="/login">Giriş Yap</a>
+              <a href="#" onClick={openModal}>Giriş Yap</a>
             </li>
           </ul>
         </Nav>
       </HeaderWrapper>
+      <AuthModal isOpen={isModalOpen} onClose={closeModal} />
     </CenteredContainer>
   );
 };
