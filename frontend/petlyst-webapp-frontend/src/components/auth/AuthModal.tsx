@@ -1,353 +1,370 @@
-import React, { useState, useEffect } from 'react';
-import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
-import * as Yup from 'yup';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { useAppDispatch } from '../../hooks/useAppDispatch';
+import { setCredentials } from '../../store/slices/authSlice';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface LoginValues {
-  email: string;
-  password: string;
-}
-
-interface RegisterValues {
-  userType: string;
-  name: string;
-  surname: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-type FormValues = LoginValues | RegisterValues;
-
-interface AuthResponse {
-  token: string;
-  user: {
-    id: number;
-    email: string;
-    name: string;
-    surname: string;
-    userType: string;
-  };
-}
-
-const API_BASE_URL = 'http://localhost:3000/api/users';
-
-const loginValidationSchema = Yup.object().shape({
-  email: Yup.string().email('Please enter a valid email address').required('Email is required'),
-  password: Yup.string().required('Password is required'),
-});
-
-const registerValidationSchema = Yup.object().shape({
-  userType: Yup.string().required('User type selection is required'),
-  name: Yup.string().required('Name is required'),
-  surname: Yup.string().required('Surname is required'),
-  email: Yup.string().email('Please enter a valid email address').required('Email is required'),
-  password: Yup.string()
-    .min(8, 'Password must be at least 8 characters')
-    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .matches(/[0-9]/, 'Password must contain at least one number')
-    .required('Password is required'),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password')], 'Passwords must match')
-    .required('Password confirmation is required'),
-});
-
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false);
+  const dispatch = useAppDispatch();
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [userType, setUserType] = useState<'pet_owner' | 'veterinarian'>('pet_owner');
+  const [formData, setFormData] = useState({
+    name: '',
+    surname: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Email validation
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    }
+
+    // Additional validations for registration
+    if (activeTab === 'register') {
+      if (!formData.name) {
+        newErrors.name = 'Name is required';
+      }
+      if (!formData.surname) {
+        newErrors.surname = 'Surname is required';
+      }
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    try {
+      if (activeTab === 'login') {
+        // Login logic
+        const response = await fetch('http://localhost:3000/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Login failed');
+        }
+
+        const data = await response.json();
+        console.log('Login response:', data); // Debug log
+
+        // Ensure user_type is included in the credentials
+        dispatch(setCredentials({
+          user: {
+            ...data.user,
+            user_type: data.user.userType || data.user.user_type // Handle both possible field names
+          },
+          token: data.token
+        }));
+        onClose();
+      } else {
+        // Register logic
+        const response = await fetch('http://localhost:3000/api/users/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            surname: formData.surname,
+            email: formData.email,
+            password: formData.password,
+            user_type: userType,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Registration failed');
+        }
+
+        const data = await response.json();
+        console.log('Register response:', data); // Debug log
+
+        // Ensure user_type is included in the credentials
+        dispatch(setCredentials({
+          user: {
+            ...data.user,
+            user_type: data.user.userType || data.user.user_type // Handle both possible field names
+          },
+          token: data.token
+        }));
+        onClose();
+      }
+    } catch (error) {
+      console.error('Auth error:', error); // Debug log
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Authentication failed. Please try again.',
+      }));
+    }
+  };
 
   if (!isOpen) return null;
 
-  const handleLogin = async (values: LoginValues) => {
-    try {
-      const response = await axios.post<AuthResponse>(`${API_BASE_URL}/login`, values);
-      
-      // Store token and user info in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
-    }
-  };
-
-  const handleRegister = async (values: RegisterValues) => {
-    try {
-      // Map the userType value
-      const mappedUserType = values.userType === 'veterinary' ? 'veterinarian' : 'petOwner';
-      
-      const registerData = {
-        name: values.name,
-        surname: values.surname,
-        email: values.email,
-        password: values.password,
-        user_type: mappedUserType // Backend expects user_type
-      };
-
-      const response = await axios.post<AuthResponse>(`${API_BASE_URL}/register`, registerData);
-      
-      // Store token and user info in localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
-    }
-  };
-
-  const handleSubmit = async (
-    values: FormValues,
-    { setSubmitting, resetForm, setFieldError }: FormikHelpers<FormValues>
-  ) => {
-    try {
-      if (isLogin) {
-        await handleLogin(values as LoginValues);
-      } else {
-        await handleRegister(values as RegisterValues);
-      }
-
-      resetForm();
-      onClose();
-      // Optionally refresh the page or update the app state
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Authentication error:', error);
-      setFieldError('email', error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const initialValues = isLogin
-    ? {
-        email: '',
-        password: '',
-      }
-    : {
-        userType: '',
-        name: '',
-        surname: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-      };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 relative" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative">
+        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="Close modal"
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+        {/* Tabs */}
+        <div className="flex border-b">
           <button
-            type="button"
-            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-              isLogin ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`flex-1 py-4 text-center font-medium ${
+              activeTab === 'login'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => setIsLogin(true)}
+            onClick={() => setActiveTab('login')}
           >
-            Sign In
+            Login
           </button>
           <button
-            type="button"
-            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-              !isLogin ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`flex-1 py-4 text-center font-medium ${
+              activeTab === 'register'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => setIsLogin(false)}
+            onClick={() => setActiveTab('register')}
           >
-            Sign Up
+            Register
           </button>
         </div>
 
-        <Formik
-          initialValues={initialValues}
-          validationSchema={isLogin ? loginValidationSchema : registerValidationSchema}
-          onSubmit={handleSubmit}
-          enableReinitialize
-        >
-          {({ isSubmitting, touched, errors, handleBlur }) => (
-            <Form className="space-y-4">
-              {!isLogin && (
-                <>
-                  <div className="flex gap-4 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <Field
-                          type="radio"
-                          name="userType"
-                          value="veterinary"
-                          className="form-radio text-indigo-600"
-                        />
-                        <span className="text-gray-700">Veterinarian</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <Field
-                          type="radio"
-                          name="userType"
-                          value="petParent"
-                          className="form-radio text-indigo-600"
-                        />
-                        <span className="text-gray-700">Pet Parent</span>
-                      </label>
-                    </div>
-                  </div>
-                  <ErrorMessage name="userType">
-                    {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                  </ErrorMessage>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Field name="name">
-                        {({ field }: any) => (
-                          <input
-                            {...field}
-                            type="text"
-                            placeholder="Name"
-                            className={`w-full px-3 py-2 border ${
-                              touched.name && errors.name ? 'border-red-500' : 'border-gray-300'
-                            } rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                          />
-                        )}
-                      </Field>
-                      <ErrorMessage name="name">
-                        {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                      </ErrorMessage>
-                    </div>
-                    <div>
-                      <Field name="surname">
-                        {({ field }: any) => (
-                          <input
-                            {...field}
-                            type="text"
-                            placeholder="Surname"
-                            className={`w-full px-3 py-2 border ${
-                              touched.surname && errors.surname ? 'border-red-500' : 'border-gray-300'
-                            } rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                          />
-                        )}
-                      </Field>
-                      <ErrorMessage name="surname">
-                        {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                      </ErrorMessage>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <Field name="email">
-                  {({ field }: any) => (
-                    <input
-                      {...field}
-                      type="email"
-                      placeholder="Email"
-                      className={`w-full px-3 py-2 border ${
-                        touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
-                      } rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                    />
-                  )}
-                </Field>
-                <ErrorMessage name="email">
-                  {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                </ErrorMessage>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {activeTab === 'register' && (
+            <>
+              {/* User Type Selection */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setUserType('pet_owner')}
+                  className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
+                    userType === 'pet_owner'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                  </svg>
+                  <span className="font-medium">Pet Owner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType('veterinarian')}
+                  className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
+                    userType === 'veterinarian'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                  </svg>
+                  <span className="font-medium">Veterinarian</span>
+                </button>
               </div>
 
-              <div className="relative">
-                <Field name="password">
-                  {({ field }: any) => (
-                    <input
-                      {...field}
-                      type="password"
-                      placeholder="Password"
-                      className={`w-full px-3 py-2 border ${
-                        touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
-                      } rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                      onFocus={() => !isLogin && setShowPasswordTooltip(true)}
-                      onBlur={(e) => {
-                        handleBlur(e);
-                        setShowPasswordTooltip(false);
-                      }}
-                    />
+              {/* Name fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
                   )}
-                </Field>
-                <ErrorMessage name="password">
-                  {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                </ErrorMessage>
+                </div>
+                <div>
+                  <label htmlFor="surname" className="block text-sm font-medium text-gray-700">
+                    Surname
+                  </label>
+                  <input
+                    type="text"
+                    id="surname"
+                    name="surname"
+                    value={formData.surname}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.surname ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.surname && (
+                    <p className="mt-1 text-sm text-red-600">{errors.surname}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
-                {!isLogin && showPasswordTooltip && (
-                  <div className="absolute left-0 top-full mt-2 p-3 bg-gray-800 text-white text-sm rounded-md shadow-lg z-10">
-                    <h4 className="font-semibold mb-2">Password Requirements:</h4>
-                    <ul className="space-y-1 list-disc list-inside">
-                      <li>Minimum 8 characters</li>
-                      <li>At least one uppercase letter</li>
-                      <li>At least one lowercase letter</li>
-                      <li>At least one number</li>
+          {/* Email field */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="example@email.com"
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Password field */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="********"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                <div className="group">
+                  <svg
+                    className="w-5 h-5 text-gray-400 cursor-help"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="invisible group-hover:visible absolute right-0 mt-2 w-64 p-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-10">
+                    Password must:
+                    <ul className="list-disc list-inside mt-1">
+                      <li>Be at least 8 characters long</li>
+                      <li>Include at least one uppercase letter</li>
+                      <li>Include at least one lowercase letter</li>
+                      <li>Include at least one number</li>
+                      <li>Special characters are optional</li>
                     </ul>
                   </div>
-                )}
-              </div>
-
-              {!isLogin && (
-                <div>
-                  <Field name="confirmPassword">
-                    {({ field }: any) => (
-                      <input
-                        {...field}
-                        type="password"
-                        placeholder="Confirm Password"
-                        className={`w-full px-3 py-2 border ${
-                          touched.confirmPassword && errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                        } rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                      />
-                    )}
-                  </Field>
-                  <ErrorMessage name="confirmPassword">
-                    {msg => <div className="text-red-500 text-sm mt-1">{msg}</div>}
-                  </ErrorMessage>
                 </div>
-              )}
+              </div>
+            </div>
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+            )}
+          </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? (
-                  <span>Processing...</span>
-                ) : (
-                  <span>{isLogin ? 'Sign In' : 'Sign Up'}</span>
-                )}
-              </button>
-            </Form>
+          {/* Confirm Password field (only for registration) */}
+          {activeTab === 'register' && (
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="********"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
+            </div>
           )}
-        </Formik>
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {activeTab === 'login' ? 'Login' : 'Register'}
+          </button>
+
+          {/* General error message */}
+          {errors.submit && (
+            <p className="mt-2 text-sm text-red-600 text-center">{errors.submit}</p>
+          )}
+        </form>
       </div>
     </div>
   );
