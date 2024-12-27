@@ -1,33 +1,43 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
-import AdminLogin from './components/admin/AdminLogin';
-import AdminDashboard from './components/admin/AdminDashboard';
-import ProtectedRoute from './components/admin/ProtectedRoute';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import store from './store';
+import DefaultHeader from './components/layout/DefaultHeader';
+import HomePage from './pages/HomePage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Dashboard from './pages/Dashboard';
 
-function App() {
+
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard';
+
   return (
-    <Router>
+    <div className="min-h-screen bg-gray-50">
+      {!isDashboard && <DefaultHeader />}
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        
-        {/* Admin Routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route
-          path="/admin/dashboard"
+        <Route path="/" element={<HomePage />} />
+        <Route 
+          path="/dashboard" 
           element={
-            <ProtectedRoute>
-              <AdminDashboard />
+            <ProtectedRoute allowedUserType="veterinarian">
+              <Dashboard />
             </ProtectedRoute>
-          }
+          } 
         />
-        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-        
-        {/* Catch all route - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+    </div>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <Provider store={store}>
+      <Router>
+        <AppContent />
+      </Router>
+    </Provider>
+  );
+};
 
 export default App;
