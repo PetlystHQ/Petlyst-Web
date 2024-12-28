@@ -113,7 +113,7 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
         <div className="bg-gray-50 px-8 py-4">
           <div className="text-sm">
             <span className="text-gray-500">Need help? </span>
-            <a href="#" className="text-blue-600 hover:text-blue-500">Click if you like disappointment.</a>
+            <a href="#" className="text-blue-600 hover:text-blue-500">We feel your pain. That’s it, though.</a>
           </div>
         </div>
       </div>
