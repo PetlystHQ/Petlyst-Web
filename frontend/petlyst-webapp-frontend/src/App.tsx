@@ -4,19 +4,30 @@ import { Provider } from 'react-redux';
 import store from './store';
 import DefaultHeader from './components/layout/DefaultHeader';
 import HomePage from './pages/HomePage';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProtectedRoute from './components/admin/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
-
+import AdminLogin from './components/admin/AdminLogin';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard';
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isDashboard && <DefaultHeader />}
+      {!isDashboard && !isAdminRoute && <DefaultHeader />}
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <ProtectedRoute allowedUserType="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/dashboard" 
           element={

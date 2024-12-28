@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface User {
+  id: number;
   name: string;
   surname: string;
   email: string;
@@ -17,6 +18,9 @@ interface AuthState {
 const storedUser = localStorage.getItem('user');
 const storedToken = localStorage.getItem('token');
 
+console.log('Initial auth state - Stored token:', storedToken);
+console.log('Initial auth state - Stored user:', storedUser);
+
 const initialState: AuthState = {
   user: storedUser ? JSON.parse(storedUser) : null,
   token: storedToken,
@@ -31,15 +35,26 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
+      
+      // Store in localStorage
       localStorage.setItem('token', action.payload.token);
       localStorage.setItem('user', JSON.stringify(action.payload.user));
+      
+      // Debug log
+      console.log('setCredentials - Token:', action.payload.token);
+      console.log('setCredentials - User:', action.payload.user);
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+      
+      // Clear localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      
+      // Debug log
+      console.log('logout - Clearing credentials');
     },
   },
 });

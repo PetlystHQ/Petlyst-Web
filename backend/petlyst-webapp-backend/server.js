@@ -3,7 +3,9 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
 
-const userRoutes = require('./routes/userRoutes');
+const userRoutes = require('./userRoutes/userRoutes');
+const veterinaryRoutes = require('./veterinarianRoutes/veterinaryRoutes');
+const adminRoutes = require('./adminRoutes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,10 +19,12 @@ app.use(cors({
 }));
 
 // Middleware
-app.use(bodyParser.json());
+app.use(express.json());
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/veterinarian', veterinaryRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

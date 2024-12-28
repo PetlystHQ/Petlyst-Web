@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout } from '../../store/slices/authSlice';
-import AuthModal from '../auth/AuthModal';
+import AuthModal from '../../components/modals/AuthModal';
 
 const DefaultHeader: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -36,11 +36,11 @@ const DefaultHeader: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2">
-                <img 
-                  src="https://d4ryfzc64ndbh.cloudfront.net" 
-                  alt="Petlyst Logo" 
-                  className="h-10 w-auto"
-                />
+              <img 
+                src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
+                alt="Petlyst Logo" 
+                className="h-8 w-auto mb-4"
+              />
                 <span className="text-2xl font-bold text-blue-600">Petlyst</span>
               </Link>
             </div>

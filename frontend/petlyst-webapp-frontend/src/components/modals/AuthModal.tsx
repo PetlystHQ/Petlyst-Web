@@ -118,16 +118,32 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           throw new Error('Registration failed');
         }
 
-        const data = await response.json();
-        console.log('Register response:', data); // Debug log
+        // After successful registration, automatically log in
+        const loginResponse = await fetch('http://localhost:3000/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
 
-        // Ensure user_type is included in the credentials
+        if (!loginResponse.ok) {
+          throw new Error('Auto-login after registration failed');
+        }
+
+        const loginData = await loginResponse.json();
+        console.log('Auto-login response:', loginData); // Debug log
+
+        // Dispatch login credentials
         dispatch(setCredentials({
           user: {
-            ...data.user,
-            user_type: data.user.userType || data.user.user_type // Handle both possible field names
+            ...loginData.user,
+            user_type: loginData.user.userType || loginData.user.user_type
           },
-          token: data.token
+          token: loginData.token
         }));
         onClose();
       }

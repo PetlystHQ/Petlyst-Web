@@ -27,6 +27,7 @@ const validatePassword = (password) => {
     };
 };
 
+// Postman -> POST http://localhost:3000/api/users/register
 // Register endpoint
 router.post('/register', async (req, res) => {
     try {
@@ -102,6 +103,8 @@ router.post('/register', async (req, res) => {
     }
 });
 
+
+// Postman -> POST http://localhost:3000/api/users/login
 // Enhanced Login Endpoint with Admin Verification
 router.post('/login', async (req, res) => {
     try {
