@@ -1,30 +1,29 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
 
-const userRoutes = require('./userRoutes/userRoutes');
-const veterinaryRoutes = require('./veterinarianRoutes/veterinaryRoutes');
-const adminRoutes = require('./adminRoutes/adminRoutes');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// CORS configuration
-app.use(cors({
-    origin: 'http://localhost:5173', // Vite's default port
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Request']
-}));
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 
-// Routes
+// Import routes
+const userRoutes = require('./userRoutes/userRoutes');
+const veterinarianRoutes = require('./veterinarianRoutes/veterinaryRoutes');
+const clinicRoutes = require('./clinicRoutes/clinicRoutes');
+const adminRoutes = require('./adminRoutes/adminRoutes');
+
+// Use routes
 app.use('/api/users', userRoutes);
-app.use('/api/veterinarian', veterinaryRoutes);
+app.use('/api/veterinarian', veterinarianRoutes);
+app.use('/api/clinics', clinicRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Test route
+app.get('/test', (req, res) => {
+    res.json({ message: 'Test successful!' });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -32,6 +31,8 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
