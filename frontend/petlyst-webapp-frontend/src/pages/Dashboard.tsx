@@ -1,185 +1,136 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAppSelector } from '../hooks/useAppSelector';
-
-type DashboardView = 'overview' | 'appointments' | 'patients' | 'schedule' | 'settings';
+import { useNavigate } from 'react-router-dom';
+import { useVerificationStatus } from '../hooks/useVerificationStatus';
+import DashboardSidebar from '../components/layout/DashboardSidebar';
+import VerificationModal from '../components/modals/VerificationModal';
+import { Overview } from '../components/dashboard/views/Overview';
+import { Clinics } from '../components/dashboard/views/Clinics';
+import { DashboardView } from '../types/dashboard';
+import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAppSelector(state => state.auth);
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const { 
+    verificationStatus, 
+    isLoading, 
+    error, 
+    updateVerificationStatus,
+    refreshStatus 
+  } = useVerificationStatus();
+  const navigate = useNavigate();
+
+  const handleAddClinic = () => {
+    // TODO: Implement clinic addition logic
+    console.log('Add clinic clicked');
+  };
+
+  const handleEditClinic = (clinic: any) => {
+    // TODO: Implement clinic editing logic
+    console.log('Edit clinic clicked', clinic);
+  };
+
+  const handleViewClinicDetails = (clinic: any) => {
+    // TODO: Implement clinic details view logic
+    console.log('View clinic details clicked', clinic);
+  };
+
+  const handleVerificationSubmit = async () => {
+    await updateVerificationStatus('pending');
+    setIsVerificationModalOpen(false);
+    // Refresh the status after a short delay to ensure backend has updated
+    setTimeout(refreshStatus, 1000);
+  };
+
+  const handleBackToPetlyst = () => {
+    navigate('/');
+  };
 
   const renderContent = () => {
+    const commonProps = {
+      verificationStatus,
+      onVerify: () => setIsVerificationModalOpen(true),
+      isLoading
+    };
+
+    // Only allow access to certain views if verified
+    if (verificationStatus !== 'verified' && currentView !== DASHBOARD_VIEWS.overview) {
+      return <Overview {...commonProps} />;
+    }
+
     switch (currentView) {
-      case 'appointments':
+      case DASHBOARD_VIEWS.overview:
+        return <Overview {...commonProps} />;
+      case DASHBOARD_VIEWS.clinics:
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Appointments</h2>
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold">Today's Appointments</h3>
-                <p className="text-gray-600">No appointments for today</p>
-              </div>
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold">Upcoming Appointments</h3>
-                <p className="text-gray-600">No upcoming appointments</p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'patients':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Patient Records</h2>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-gray-600">No patient records found</p>
-            </div>
-          </div>
-        );
-      case 'schedule':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Weekly Schedule</h2>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-gray-600">Your schedule is empty</p>
-            </div>
-          </div>
-        );
-      case 'settings':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Account Settings</h2>
-            <div className="bg-white p-4 rounded-lg shadow space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Profile Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600">Name</label>
-                    <input type="text" value={user?.name} readOnly className="mt-1 block w-full px-3 py-2 border rounded-md bg-gray-50" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600">Email</label>
-                    <input type="email" value={user?.email} readOnly className="mt-1 block w-full px-3 py-2 border rounded-md bg-gray-50" />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Notification Settings</h3>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="rounded" />
-                    <span className="ml-2">Email notifications</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="rounded" />
-                    <span className="ml-2">SMS notifications</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Clinics
+            isLoading={isLoading}
+            onAddClinic={handleAddClinic}
+            onEditClinic={handleEditClinic}
+            onViewClinicDetails={handleViewClinicDetails}
+          />
         );
       default:
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Today's Appointments</h2>
-                <p className="text-gray-600">No appointments scheduled for today.</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Statistics</h2>
-                <div className="space-y-2">
-                  <p className="text-gray-600">Total Patients: 0</p>
-                  <p className="text-gray-600">This Week's Appointments: 0</p>
-                  <p className="text-gray-600">Pending Reviews: 0</p>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="space-y-2">
-                  <button className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
-                    Add Appointment
-                  </button>
-                  <button className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                    View Calendar
-                  </button>
-                  <button className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                    Update Profile
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return <Overview {...commonProps} />;
     }
   };
 
-  return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md">
-        {/* Logo */}
-        <div className="p-4 border-b">
-          <img 
-            src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
-            alt="Petlyst Logo" 
-            className="h-8 w-auto mb-4"
-          />
-        </div>
-        {/* User Info */}
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Dr. {user?.name}</h2>
-          <p className="text-sm text-gray-600">Veterinarian</p>
-        </div>
-        <nav className="mt-4">
-          <button
-            onClick={() => setCurrentView('overview')}
-            className={`w-full text-left px-4 py-2 ${currentView === 'overview' ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setCurrentView('appointments')}
-            className={`w-full text-left px-4 py-2 ${currentView === 'appointments' ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            Appointments
-          </button>
-          <button
-            onClick={() => setCurrentView('patients')}
-            className={`w-full text-left px-4 py-2 ${currentView === 'patients' ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            Patients
-          </button>
-          <button
-            onClick={() => setCurrentView('schedule')}
-            className={`w-full text-left px-4 py-2 ${currentView === 'schedule' ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            Schedule
-          </button>
-          <button
-            onClick={() => setCurrentView('settings')}
-            className={`w-full text-left px-4 py-2 ${currentView === 'settings' ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            Settings
-          </button>
-        </nav>
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gray-100">
+        <DashboardSidebar 
+          currentView={currentView} 
+          onViewChange={setCurrentView}
+          verificationStatus={verificationStatus}
+        />
+        <main className="flex-1 p-6">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
+    );
+  }
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="flex justify-end p-4">
-          <Link
-            to="/"
-            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+  return (
+    <div className="flex min-h-screen bg-gray-100">
+      <DashboardSidebar 
+        currentView={currentView} 
+        onViewChange={setCurrentView}
+        verificationStatus={verificationStatus}
+      />
+      <main className="flex-1 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">{VIEW_TITLES[currentView]}</h1>
+          <button
+            onClick={handleBackToPetlyst}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
+            <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
             Back to Petlyst
-          </Link>
+          </button>
         </div>
         {renderContent()}
-      </div>
+      </main>
+      <VerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+        onSubmitSuccess={handleVerificationSubmit}
+      />
     </div>
   );
 };

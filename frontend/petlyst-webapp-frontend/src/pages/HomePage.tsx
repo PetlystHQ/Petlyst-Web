@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppSelector } from '../hooks/useAppSelector';
+import AuthModal from '../components/modals/AuthModal';
 
 const HomePage: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -58,13 +60,19 @@ const HomePage: React.FC = () => {
           <h2 className="text-3xl font-bold mb-4">Join Our Community Today</h2>
           <p className="text-xl mb-6">Get started with managing your pet's health care</p>
           <button
-            onClick={() => document.dispatchEvent(new CustomEvent('openAuthModal'))}
+            onClick={() => setIsAuthModalOpen(true)}
             className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
           >
             Get Started
           </button>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };
