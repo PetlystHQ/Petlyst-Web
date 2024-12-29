@@ -1,6 +1,11 @@
 const pool = require('../config/db');
 const jwt = require('jsonwebtoken');
 
+
+// Returns 404 if user not found
+// Returns 403 if user is not a veterinarian
+// Returns 403 if veterinarian is not verified  
+
 const checkVerificationStatus = async (req, res, next) => {
     try {
         // Check if token exists and is valid
