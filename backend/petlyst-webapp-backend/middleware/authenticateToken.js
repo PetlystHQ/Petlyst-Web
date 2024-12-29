@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 
+// Returns 401 if token is not provided
+// Returns 403 if token is invalid or expired
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN formatından TOKEN kısmını alır

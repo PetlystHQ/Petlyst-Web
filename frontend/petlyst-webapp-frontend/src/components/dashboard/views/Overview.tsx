@@ -1,15 +1,16 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { DASHBOARD_VIEWS } from '../../../constants/dashboard';
+import { DashboardView } from '../../../types/dashboard';
 
 interface OverviewProps {
   verificationStatus: string | null;
   onVerify: () => void;
   isLoading?: boolean;
+  onAddClinic?: () => void;
+  onViewChange?: (view: DashboardView) => void;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading }) => {
-  const navigate = useNavigate();
+export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange }) => {
 
   if (isLoading) {
     return (
@@ -92,7 +93,13 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
               <p className="mt-2 text-gray-600">Ready to start managing your veterinary practice?</p>
               <div className="mt-6 flex items-center space-x-4">
                 <button
-                  onClick={() => navigate(DASHBOARD_VIEWS.clinics)}
+                  onClick={() => {
+                    onViewChange?.(DASHBOARD_VIEWS.clinics);
+                    // Biraz gecikme ekleyerek önce view değişiminin tamamlanmasını bekleyelim
+                    setTimeout(() => {
+                      onAddClinic?.();
+                    }, 100);
+                  }}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Add Your Clinic
@@ -113,7 +120,7 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
         <div className="bg-gray-50 px-8 py-4">
           <div className="text-sm">
             <span className="text-gray-500">Need help? </span>
-            <a href="#" className="text-blue-600 hover:text-blue-500">We feel your pain. That’s it, though.</a>
+            <a href="#" className="text-blue-600 hover:text-blue-500">We feel your pain. That's it, though.</a>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardSidebar from '../components/layout/DashboardSidebar';
 import VerificationModal from '../components/modals/VerificationModal';
+import AddClinicModal from '../components/modals/AddClinicModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import { DashboardView } from '../types/dashboard';
@@ -11,6 +12,7 @@ import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [isAddClinicModalOpen, setIsAddClinicModalOpen] = useState(false);
   const { 
     verificationStatus, 
     isLoading, 
@@ -21,8 +23,19 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const handleAddClinic = () => {
-    // TODO: Implement clinic addition logic
-    console.log('Add clinic clicked');
+    setIsAddClinicModalOpen(true);
+  };
+
+  const handleAddClinicSuccess = () => {
+    // Klinik listesini yenile
+    // TODO: Implement getClinics function
+    // getClinics();
+    
+    // Başarı mesajını göster
+    console.log('Clinic added successfully');
+    
+    // Modal'ı kapat
+    setIsAddClinicModalOpen(false);
   };
 
   const handleEditClinic = (clinic: any) => {
@@ -50,7 +63,9 @@ const Dashboard: React.FC = () => {
     const commonProps = {
       verificationStatus,
       onVerify: () => setIsVerificationModalOpen(true),
-      isLoading
+      isLoading,
+      onAddClinic: handleAddClinic,
+      onViewChange: setCurrentView
     };
 
     // Only allow access to certain views if verified
@@ -62,7 +77,7 @@ const Dashboard: React.FC = () => {
       case DASHBOARD_VIEWS.overview:
         return <Overview {...commonProps} />;
       case DASHBOARD_VIEWS.clinics:
-    return (
+        return (
           <Clinics
             isLoading={isLoading}
             onAddClinic={handleAddClinic}
@@ -85,17 +100,17 @@ const Dashboard: React.FC = () => {
         />
         <main className="flex-1 p-6">
           <div className="bg-red-50 border-l-4 border-red-500 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
+            <div className="flex">
+              <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div className="ml-3">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">Error</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{error}</p>
-              </div>
+                </div>
               </div>
             </div>
           </div>
@@ -112,7 +127,7 @@ const Dashboard: React.FC = () => {
         verificationStatus={verificationStatus}
       />
       <main className="flex-1 p-6">
-    <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">{VIEW_TITLES[currentView]}</h1>
           <button
             onClick={handleBackToPetlyst}
@@ -130,6 +145,11 @@ const Dashboard: React.FC = () => {
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
         onSubmitSuccess={handleVerificationSubmit}
+      />
+      <AddClinicModal
+        isOpen={isAddClinicModalOpen}
+        onClose={() => setIsAddClinicModalOpen(false)}
+        onSuccess={handleAddClinicSuccess}
       />
     </div>
   );
