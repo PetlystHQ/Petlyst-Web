@@ -172,7 +172,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
           key={clinic.id}
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 flex flex-col justify-between h-[250px] hover:border-blue-500 hover:shadow-md transition-all duration-200"
         >
-          <div>
+            <div>
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-lg font-semibold text-gray-900">{clinic.name}</h3>
               {getStatusBadge(clinic.verification_status)}
@@ -180,19 +180,19 @@ export const Clinics: React.FC<ClinicsProps> = ({
             <p className="text-sm text-gray-600">{clinic.address || 'Address not specified'}</p>
           </div>
           <div className="flex flex-col space-y-2">
-            <div className="flex space-x-2">
-              <button
-                onClick={() => onEditClinic?.(clinic)}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => onEditClinic?.(clinic)}
                 className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-sm font-medium"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => onViewClinicDetails?.(clinic)}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onViewClinicDetails?.(clinic)}
                 className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors text-sm font-medium"
-              >
-                View Details
-              </button>
+            >
+              View Details
+            </button>
             </div>
             {clinic.verification_status === 'verified' && (
               <button
