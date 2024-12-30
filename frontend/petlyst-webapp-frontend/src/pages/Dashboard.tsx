@@ -13,6 +13,7 @@ const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [isAddClinicModalOpen, setIsAddClinicModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { 
     verificationStatus, 
     isLoading, 
@@ -28,11 +29,7 @@ const Dashboard: React.FC = () => {
 
   const handleAddClinicSuccess = () => {
     // Klinik listesini yenile
-    // TODO: Implement getClinics function
-    // getClinics();
-    
-    // Başarı mesajını göster
-    console.log('Clinic added successfully');
+    setRefreshKey(prev => prev + 1);
     
     // Modal'ı kapat
     setIsAddClinicModalOpen(false);
@@ -83,6 +80,7 @@ const Dashboard: React.FC = () => {
             onAddClinic={handleAddClinic}
             onEditClinic={handleEditClinic}
             onViewClinicDetails={handleViewClinicDetails}
+            refreshKey={refreshKey}
           />
         );
       default:

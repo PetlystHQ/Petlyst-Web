@@ -3,6 +3,11 @@ const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
 
+// Test route - no authentication required
+router.get('/test', (req, res) => {
+    res.json({ message: 'Admin routes are working!' });
+});
+
 // Middleware - isAdmin
 const isAdmin = (req, res, next) => {
     if (req.user.userType !== 'admin') {
@@ -10,6 +15,122 @@ const isAdmin = (req, res, next) => {
     }
     next();
 };
+
+// Get All Clinics with "Pending" Status
+router.get('/pending-clinics', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                c.*,
+                u.name as operator_name,
+                u.surname as operator_surname
+            FROM clinics c
+            JOIN users u ON c.operator_id = u.id
+            WHERE c.verification_status = 'pending'
+            ORDER BY c.created_at DESC
+        `;
+
+        const result = await pool.query(query);
+
+        res.json({
+            message: 'Showing All Pending Clinics',
+            pendingClinics: result.rows
+        });
+
+    } catch (error) {
+        console.error('Error Fetching Pending Clinics:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Update Clinic status (approve/reject) and also return rest "pendings"
+router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { clinicId } = req.params;
+        const { action } = req.body;
+
+        // Validate action
+        if (!['approve', 'reject'].includes(action)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid action. Action must be either "approve" or "reject"'
+            });
+        }
+
+        // Check if the clinic exists and is pending
+        const checkQuery = `
+            SELECT verification_status 
+            FROM clinics 
+            WHERE id = $1
+        `;
+        const checkResult = await pool.query(checkQuery, [clinicId]);
+
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Clinic not found'
+            });
+        }
+
+        if (checkResult.rows[0].verification_status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only update pending verification requests'
+            });
+        }
+
+        // Set the new status based on action
+        const newStatus = action === 'approve' ? 'verified' : 'not_verified';
+
+        // Update the clinic status
+        const updateQuery = `
+            UPDATE clinics 
+            SET verification_status = $1
+            WHERE id = $2 
+            RETURNING *
+        `;
+
+        const updateResult = await pool.query(updateQuery, [newStatus, clinicId]);
+
+        // Get updated list of pending clinics
+        const pendingQuery = `
+            SELECT 
+                c.*,
+                u.name as operator_name,
+                u.surname as operator_surname
+            FROM clinics c
+            JOIN users u ON c.operator_id = u.id
+            WHERE c.verification_status = 'pending'
+            ORDER BY c.created_at DESC
+        `;
+
+        const pendingResult = await pool.query(pendingQuery);
+
+        // Send response
+        res.json({
+            success: true,
+            message: `Clinic verification ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
+            updatedClinic: updateResult.rows[0],
+            pendingClinics: pendingResult.rows
+        });
+
+    } catch (error) {
+        console.error('Error updating clinic verification status:', error);
+        
+        if (error.code === '23503') { // Foreign key violation
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid clinic ID: Clinic does not exist'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update clinic verification status',
+            error: error.message
+        });
+    }
+});
 
 // Get All Veterinarians with "Pending" Status
 router.get('/pending-review-status', authenticateToken, isAdmin, async (req, res) => {
@@ -40,7 +161,7 @@ router.get('/pending-review-status', authenticateToken, isAdmin, async (req, res
     }
 });
 
-// Update verification status (approve/reject) and also return rest "pendings"
+// Update User status (approve/reject) and also return rest "pendings"
 router.put('/update-verification-status/:userId', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { userId } = req.params;

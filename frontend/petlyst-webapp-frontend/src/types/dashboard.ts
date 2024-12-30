@@ -5,10 +5,11 @@ export type VerificationStatus = 'pending' | 'verified' | 'unverified' | null;
 export interface Clinic {
   id: string;
   name: string;
-  address: string;
-  workingHours: string;
-  phone: string;
-  status: 'active' | 'inactive';
+  address: string | null;
+  phone_number: string | null;
+  location: string | null;
+  description: string | null;
+  verification_status: 'pending' | 'verified' | 'not_verified' | 'archived';
 }
 
 export interface Appointment {
