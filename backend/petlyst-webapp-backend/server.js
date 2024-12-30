@@ -35,4 +35,9 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log('Available routes:');
+    console.log('- /api/users');
+    console.log('- /api/veterinarian');
+    console.log('- /api/clinics');
+    console.log('- /api/admin');
 });
