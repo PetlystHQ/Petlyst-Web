@@ -3,6 +3,23 @@ const router = express.Router();
 const authenticateToken = require('../middleware/authenticateToken');
 const { checkVerificationStatus } = require('../middleware/verificationMiddleware');
 const pool = require('../config/db');
+const multer = require('multer');
+const s3Service = require('../aws/s3Service');
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Base route: /api/clinics
 
@@ -205,6 +222,87 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
   } catch (error) {
     console.error('Error deleting clinic:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Upload clinic photo
+router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    const { clinicId, clinicName } = req.body;
+    const photo = req.file;
+    const operator_id = req.user.userId;
+
+    // Validate required fields
+    if (!clinicId || !clinicName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Clinic ID and name are required'
+      });
+    }
+
+    if (!photo) {
+      return res.status(400).json({
+        success: false,
+        message: 'No photo provided'
+      });
+    }
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT id 
+      FROM clinics 
+      WHERE id = $1 AND operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to upload photos'
+      });
+    }
+
+    // Upload to S3
+    try {
+      console.log('Uploading photo:', {
+        fileName: photo.originalname,
+        fileSize: photo.size,
+        mimeType: photo.mimetype,
+        clinicId,
+        clinicName
+      });
+
+      const result = await s3Service.uploadClinicPhoto(
+        photo.buffer,
+        photo.originalname,
+        photo.mimetype,
+        clinicId,
+        clinicName
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Photo uploaded successfully',
+        photo: {
+          url: result.url,
+          key: result.key
+        }
+      });
+    } catch (s3Error) {
+      console.error('S3 upload error:', s3Error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to upload photo to storage: ${s3Error.message}`
+      });
+    }
+
+  } catch (error) {
+    console.error('Error uploading clinic photo:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
