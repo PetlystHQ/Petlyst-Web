@@ -23,7 +23,7 @@ const upload = multer({
 
 // Base route: /api/clinics
 
-// Clinics verified to archived)
+// Clinics verified to archived
 router.patch('/archive/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
     const { clinicId } = req.params;
@@ -135,7 +135,7 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
     const userId = req.user.userId;
     
     const query = `
-      SELECT id, name, address, phone_number, location, description, verification_status
+      SELECT id, name, address, phone_number, description, verification_status
       FROM clinics 
       WHERE operator_id = $1
       ORDER BY created_at DESC
@@ -156,7 +156,7 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
 // Add a new clinic (requires verified veterinarian)
 router.post('/add', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    const { name, address, phone_number, location, description } = req.body;
+    const { name, address, phone_number, description } = req.body;
     const operator_id = req.user.userId;
 
     // Validate required field
@@ -170,16 +170,15 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         name, 
         address, 
         phone_number, 
-        location, 
         description, 
         operator_id,
         verification_status
       ) 
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending') 
+      VALUES ($1, $2, $3, $4, $5, 'pending') 
       RETURNING *
     `;
 
-    const values = [name, address || null, phone_number || null, location || null, description || null, operator_id];
+    const values = [name, address || null, phone_number || null, description || null, operator_id];
     const result = await pool.query(query, values);
 
     res.status(201).json({
@@ -298,6 +297,56 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
   } catch (error) {
     console.error('Error uploading clinic photo:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get clinic photos
+router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT id, name 
+      FROM clinics 
+      WHERE id = $1 AND operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to view photos'
+      });
+    }
+
+    const clinic = checkResult.rows[0];
+    
+    // Get photos from S3
+    try {
+      const photos = await s3Service.listClinicPhotos(clinic.id, clinic.name);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Photos fetched successfully',
+        photos: photos
+      });
+    } catch (s3Error) {
+      console.error('S3 list error:', s3Error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to fetch photos from storage: ${s3Error.message}`
+      });
+    }
+
+  } catch (error) {
+    console.error('Error fetching clinic photos:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',

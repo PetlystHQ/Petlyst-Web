@@ -4,15 +4,18 @@ import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardSidebar from '../components/layout/DashboardSidebar';
 import VerificationModal from '../components/modals/VerificationModal';
 import AddClinicModal from '../components/modals/AddClinicModal';
+import ViewClinicModal from '../components/modals/ViewClinicModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import { DashboardView } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
+import { Clinic } from '../types/dashboard';
 
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [isAddClinicModalOpen, setIsAddClinicModalOpen] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { 
     verificationStatus, 
@@ -40,9 +43,8 @@ const Dashboard: React.FC = () => {
     console.log('Edit clinic clicked', clinic);
   };
 
-  const handleViewClinicDetails = (clinic: any) => {
-    // TODO: Implement clinic details view logic
-    console.log('View clinic details clicked', clinic);
+  const handleViewClinicDetails = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
   };
 
   const handleVerificationSubmit = async () => {
@@ -139,16 +141,26 @@ const Dashboard: React.FC = () => {
         </div>
         {renderContent()}
       </main>
+
       <VerificationModal
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
         onSubmitSuccess={handleVerificationSubmit}
       />
+
       <AddClinicModal
         isOpen={isAddClinicModalOpen}
         onClose={() => setIsAddClinicModalOpen(false)}
         onSuccess={handleAddClinicSuccess}
       />
+
+      {selectedClinic && (
+        <ViewClinicModal
+          isOpen={selectedClinic !== null}
+          onClose={() => setSelectedClinic(null)}
+          clinic={selectedClinic}
+        />
+      )}
     </div>
   );
 };
