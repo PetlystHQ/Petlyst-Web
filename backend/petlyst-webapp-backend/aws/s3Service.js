@@ -99,25 +99,48 @@ class S3Service {
    * @returns {Promise<Array>} - Array of photo objects with urls and keys
    */
   async listClinicPhotos(clinicId, clinicName) {
-    try {
-      const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
-      
-      const params = {
-        Bucket: s3Config.bucket,
-        Prefix: folderPath + '/'
-      };
+    const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
+    const params = {
+      Bucket: s3Config.bucket,
+      Prefix: folderPath + '/'
+    };
 
+    try {
       const result = await s3.listObjectsV2(params).promise();
       
-      return result.Contents.map(item => ({
-        key: item.Key,
-        url: `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${item.Key}`,
-        lastModified: item.LastModified,
-        size: item.Size
+      if (!result.Contents || result.Contents.length === 0) {
+        return [];
+      }
+
+      // Generate pre-signed URLs for each photo
+      const photos = await Promise.all(result.Contents.map(async item => {
+        const signedUrl = await s3.getSignedUrlPromise('getObject', {
+          Bucket: s3Config.bucket,
+          Key: item.Key,
+          Expires: 3600 // URL expires in 1 hour
+        });
+
+        return {
+          key: item.Key,
+          url: signedUrl,
+          lastModified: item.LastModified,
+          size: item.Size
+        };
       }));
+
+      return photos;
     } catch (error) {
-      console.error('Error listing clinic photos from S3:', error);
-      throw new Error('Failed to list clinic photos from S3');
+      console.error('Error listing clinic photos from S3:', {
+        error: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        stack: error.stack,
+        bucket: s3Config.bucket,
+        region: s3Config.region,
+        folderPath: params.Prefix
+      });
+      throw new Error(`Failed to list clinic photos from S3: ${error.message}`);
     }
   }
 
