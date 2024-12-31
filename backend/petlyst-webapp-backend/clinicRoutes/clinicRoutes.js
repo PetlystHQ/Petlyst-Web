@@ -169,7 +169,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       INSERT INTO clinics (
         name, 
         address, 
-        phone_number, 
+        phone_number,  
         description, 
         operator_id,
         verification_status
@@ -202,14 +202,78 @@ router.get('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
   }
 });
 
-// Update clinic details (requires verified status)
+// Update clinic details
 router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    // TODO: Implement update clinic logic
-    res.status(200).json({ message: "Update clinic endpoint" });
+    const { clinicId } = req.params;
+    const { name, address, phone_number, description } = req.body;
+    const operator_id = req.user.userId;
+
+    // Validate required field
+    if (!name) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Clinic name is required' 
+      });
+    }
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT verification_status 
+      FROM clinics 
+      WHERE id = $1 AND operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to update this clinic'
+      });
+    }
+
+    const currentStatus = checkResult.rows[0].verification_status;
+    const newStatus = ['verified', 'archived'].includes(currentStatus) ? 'pending' : currentStatus;
+
+    // Update clinic in database
+    const updateQuery = `
+      UPDATE clinics 
+      SET 
+        name = $1,
+        address = $2,
+        phone_number = $3,
+        description = $4,
+        verification_status = $5,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6 AND operator_id = $7
+      RETURNING *
+    `;
+
+    const values = [
+      name,
+      address || null,
+      phone_number || null,
+      description || null,
+      newStatus,
+      clinicId,
+      operator_id
+    ];
+
+    const result = await pool.query(updateQuery, values);
+
+    res.status(200).json({
+      success: true,
+      message: 'Clinic updated successfully',
+      clinic: result.rows[0]
+    });
+
   } catch (error) {
     console.error('Error updating clinic:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -279,6 +343,15 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         clinicName
       );
 
+      // Insert photo URL into clinic_photos table
+      const insertPhotoQuery = `
+        INSERT INTO clinic_photos (clinic_id, s3_url)
+        VALUES ($1, $2)
+        RETURNING *
+      `;
+      
+      await pool.query(insertPhotoQuery, [clinicId, result.url]);
+
       res.status(200).json({
         success: true,
         message: 'Photo uploaded successfully',
@@ -347,6 +420,66 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching clinic photos:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Delete clinic photo
+router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId, photoKey } = req.params;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT id, name, verification_status 
+      FROM clinics 
+      WHERE id = $1 AND operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to delete photos'
+      });
+    }
+
+    const clinic = checkResult.rows[0];
+
+    // Delete from S3
+    try {
+      await s3Service.deleteClinicPhoto(clinic.id, clinic.name, photoKey);
+
+      // Update verification status to pending if it was verified or archived
+      if (['verified', 'archived'].includes(clinic.verification_status)) {
+        const updateQuery = `
+          UPDATE clinics 
+          SET verification_status = 'pending'
+          WHERE id = $1 AND operator_id = $2
+          RETURNING *
+        `;
+        await pool.query(updateQuery, [clinicId, operator_id]);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Photo deleted successfully'
+      });
+    } catch (s3Error) {
+      console.error('S3 delete error:', s3Error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to delete photo from storage: ${s3Error.message}`
+      });
+    }
+
+  } catch (error) {
+    console.error('Error deleting clinic photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',

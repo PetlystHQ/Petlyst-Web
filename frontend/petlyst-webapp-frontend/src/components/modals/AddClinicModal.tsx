@@ -13,6 +13,7 @@ interface ClinicFormData {
   name: string;
   address: string;
   phone_number: string;
+  location: string;
   description: string;
 }
 
@@ -22,6 +23,7 @@ const AddClinicModal: React.FC<AddClinicModalProps> = ({ isOpen, onClose, onSucc
     name: '',
     address: '',
     phone_number: '',
+    location: '',
     description: ''
   });
   const [loading, setLoading] = useState(false);
@@ -152,6 +154,7 @@ const AddClinicModal: React.FC<AddClinicModalProps> = ({ isOpen, onClose, onSucc
           name: '',
           address: '',
           phone_number: '',
+          location: '',
           description: ''
         });
         setSelectedPhotos([]);
@@ -278,6 +281,20 @@ const AddClinicModal: React.FC<AddClinicModalProps> = ({ isOpen, onClose, onSucc
                 type="tel"
                 name="phone_number"
                 value={formData.phone_number}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 disabled={loading}
