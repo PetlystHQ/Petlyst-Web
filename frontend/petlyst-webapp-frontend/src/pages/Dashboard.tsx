@@ -4,7 +4,7 @@ import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardSidebar from '../components/layout/DashboardSidebar';
 import VerificationModal from '../components/modals/VerificationModal';
 import AddClinicModal from '../components/modals/AddClinicModal';
-import ViewClinicModal from '../components/modals/ViewClinicModal';
+import EditClinicModal from '../components/modals/EditClinicModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import { DashboardView } from '../types/dashboard';
@@ -38,13 +38,15 @@ const Dashboard: React.FC = () => {
     setIsAddClinicModalOpen(false);
   };
 
-  const handleEditClinic = (clinic: any) => {
-    // TODO: Implement clinic editing logic
-    console.log('Edit clinic clicked', clinic);
+  const handleEditClinic = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
   };
 
-  const handleViewClinicDetails = (clinic: Clinic) => {
-    setSelectedClinic(clinic);
+  const handleClinicUpdate = () => {
+    // Klinik listesini güncelle
+    setRefreshKey(prev => prev + 1);
+    // Modal'ı kapat
+    setSelectedClinic(null);
   };
 
   const handleVerificationSubmit = async () => {
@@ -81,7 +83,6 @@ const Dashboard: React.FC = () => {
             isLoading={isLoading}
             onAddClinic={handleAddClinic}
             onEditClinic={handleEditClinic}
-            onViewClinicDetails={handleViewClinicDetails}
             refreshKey={refreshKey}
           />
         );
@@ -155,10 +156,11 @@ const Dashboard: React.FC = () => {
       />
 
       {selectedClinic && (
-        <ViewClinicModal
+        <EditClinicModal
           isOpen={selectedClinic !== null}
           onClose={() => setSelectedClinic(null)}
           clinic={selectedClinic}
+          onUpdate={handleClinicUpdate}
         />
       )}
     </div>

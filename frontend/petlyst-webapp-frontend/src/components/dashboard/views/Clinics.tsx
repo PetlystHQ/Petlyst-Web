@@ -8,7 +8,6 @@ interface ClinicsProps {
   isLoading?: boolean;
   onAddClinic?: () => void;
   onEditClinic?: (clinic: Clinic) => void;
-  onViewClinicDetails?: (clinic: Clinic) => void;
   refreshKey?: number;
 }
 
@@ -16,7 +15,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
   isLoading: propIsLoading,
   onAddClinic,
   onEditClinic,
-  onViewClinicDetails,
   refreshKey
 }) => {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -88,13 +86,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
     if (token) {
       fetchClinics();
     }
-  }, [token]);
-
-  useEffect(() => {
-    if (refreshKey !== undefined) {
-      fetchClinics();
-    }
-  }, [refreshKey]);
+  }, [token, refreshKey]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -180,20 +172,12 @@ export const Clinics: React.FC<ClinicsProps> = ({
             <p className="text-sm text-gray-600">{clinic.address || 'Address not specified'}</p>
           </div>
           <div className="flex flex-col space-y-2">
-          <div className="flex space-x-2">
             <button
               onClick={() => onEditClinic?.(clinic)}
-                className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-sm font-medium"
+              className="w-full px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-sm font-medium"
             >
               Edit
             </button>
-            <button
-              onClick={() => onViewClinicDetails?.(clinic)}
-                className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors text-sm font-medium"
-            >
-              View Details
-            </button>
-            </div>
             {clinic.verification_status === 'verified' && (
               <button
                 onClick={() => handleArchiveClinic(clinic.id)}
@@ -208,7 +192,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
               </button>
             )}
             {clinic.verification_status === 'archived' && (
-              <button
+            <button
                 onClick={() => handleRestoreClinic(clinic.id)}
                 disabled={actionLoading === clinic.id}
                 className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors ${
@@ -218,7 +202,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
                 }`}
               >
                 {actionLoading === clinic.id ? 'Restoring...' : 'Restore Clinic'}
-              </button>
+            </button>
             )}
           </div>
         </div>
