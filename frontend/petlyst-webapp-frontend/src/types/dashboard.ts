@@ -7,7 +7,6 @@ export interface Clinic {
   name: string;
   address: string | null;
   phone_number: string | null;
-  location: string | null;
   description: string | null;
   verification_status: 'pending' | 'verified' | 'not_verified' | 'archived';
 }

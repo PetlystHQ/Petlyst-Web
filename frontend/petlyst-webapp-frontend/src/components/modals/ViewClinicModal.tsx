@@ -144,10 +144,6 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
                 <p className="mt-1 text-sm text-gray-900">{clinic.phone_number || 'Not specified'}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Location</h4>
-                <p className="mt-1 text-sm text-gray-900">{clinic.location || 'Not specified'}</p>
-              </div>
-              <div>
                 <h4 className="text-sm font-medium text-gray-500">Description</h4>
                 <p className="mt-1 text-sm text-gray-900">{clinic.description || 'No description available'}</p>
               </div>
