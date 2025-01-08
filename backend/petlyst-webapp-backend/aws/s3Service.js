@@ -68,21 +68,42 @@ class S3Service {
     }
   }
 
+  // const deleteFileFromS3 = async (clinic_id, clinic_name, key) => {
+  //   try {
+  
+  //     // Create the delete parameters
+  //     const params = {
+  //       Bucket: 'petlyst-s3', // Your S3 bucket name
+  //       Key: key
+  //     };
+  
+  //     // Create the delete object command
+  //     const command = new DeleteObjectCommand(params);
+  
+  //     // Execute the delete command
+  //     const result = await s3.send(command);
+  
+  //     return result; // Return the result for further processing if needed
+  //   } catch (error) {
+  //     console.error('Error deleting file from S3:', error);
+  //     throw error; // Rethrow the error to be handled by the calling function
+  //   }
+  // };
+
   /**
    * Delete a clinic photo from S3
    * @param {string} clinicId - The ID of the clinic
    * @param {string} clinicName - The name of the clinic
    * @param {string} fileName - The file name to delete
+   * @param {string} key - The key of the file to delete
    * @returns {Promise<void>}
    */
-  async deleteClinicPhoto(clinicId, clinicName, fileName) {
+  async deleteClinicPhoto(key) {
     try {
-      const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
-      const fullPath = `${folderPath}/${fileName}`;
 
       const params = {
         Bucket: s3Config.bucket,
-        Key: fullPath
+        Key: key
       };
 
       await s3.deleteObject(params).promise();

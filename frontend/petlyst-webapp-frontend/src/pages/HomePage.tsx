@@ -6,6 +6,10 @@ const HomePage: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  const handleForgotPassword = () => {
+    setIsAuthModalOpen(false);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -72,6 +76,7 @@ const HomePage: React.FC = () => {
       <AuthModal 
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        onForgotPassword={handleForgotPassword}
       />
     </div>
   );

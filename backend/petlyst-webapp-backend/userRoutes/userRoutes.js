@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+const bcrypt = require('bcrypt');
+const pool = require('../config/db');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const authenticateToken = require('../middleware/authenticateToken');
 
 // Password validation function
 const validatePassword = (password) => {
@@ -103,7 +108,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-
 // Postman -> POST http://localhost:3000/api/users/login
 // Enhanced Login Endpoint with Admin Verification
 router.post('/login', async (req, res) => {
@@ -178,6 +182,304 @@ router.post('/login', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// Postman -> POST http://localhost:3000/api/users/update-theme
+// Update Theme Preference - Experimental
+router.post('/update-theme', authenticateToken, async (req, res) => {
+    try {
+      const { theme } = req.body;
+      const userId = req.user.userId;
+  
+      const query = `
+        UPDATE users 
+        SET theme_preference = $1 
+        WHERE user_id = $2 
+        RETURNING theme_preference
+      `;
+  
+      const result = await pool.query(query, [theme, userId]);
+  
+      res.json({ theme: result.rows[0].theme_preference });
+    } catch (error) {
+      console.error('Error updating theme preference:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Postman -> GET http://localhost:3000/api/users/theme-preference
+// Get Theme Preference - Experimental
+router.get('/theme-preference', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.userId;
+  
+      const query = `
+        SELECT theme_preference 
+        FROM users 
+        WHERE user_id = $1
+      `;
+  
+      const result = await pool.query(query, [userId]);
+      res.json({ theme: result.rows[0].theme_preference });
+    } catch (error) {
+      console.error('Error fetching theme preference:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Configure nodemailer for GoDaddy email
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  },
+  debug: true,
+  logger: true
+});
+
+// Verify transporter connection
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('SMTP connection error:', error);
+    console.error('SMTP settings:', {
+      host: transporter.options.host,
+      port: transporter.options.port,
+      secure: transporter.options.secure,
+      user: process.env.EMAIL_USER
+    });
+  } else {
+    console.log('SMTP server is ready to send emails');
+  }
+});
+
+// Add cleanup function
+async function cleanupExpiredTokens() {
+  try {
+    const query = `
+      DELETE FROM password_reset_tokens 
+      WHERE expires_at < CURRENT_TIMESTAMP 
+      OR is_used = TRUE
+    `;
+    await pool.query(query);
+  } catch (error) {
+    console.error('Error cleaning up expired tokens:', error);
+  }
+}
+
+// Run cleanup every hour
+setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
+
+// Request password reset
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if user exists
+    const userQuery = 'SELECT id, email FROM users WHERE email = $1';
+    const userResult = await pool.query(userQuery, [email]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address'
+      });
+    }
+
+    // Generate verification code
+    const verificationCode = crypto.randomInt(1000, 9999).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store the code in database
+    const insertQuery = `
+      INSERT INTO password_reset_tokens (user_id, email, reset_code, expires_at)
+      VALUES ($1, $2, $3, $4)
+    `;
+    await pool.query(insertQuery, [userResult.rows[0].id, email, verificationCode, expiresAt]);
+
+    // Clean up old tokens for this user
+    await pool.query(
+      'DELETE FROM password_reset_tokens WHERE email = $1 AND id NOT IN (SELECT id FROM password_reset_tokens WHERE email = $1 ORDER BY created_at DESC LIMIT 1)',
+      [email]
+    );
+
+    // Send email
+    const mailOptions = {
+      from: {
+        name: 'Petlyst Support',
+        address: process.env.EMAIL_USER
+      },
+      to: email,
+      subject: 'Password Reset Code - Petlyst',
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc;">
+          <div style="background-color: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <img src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" alt="Petlyst Logo" style="width: 180px; height: auto;">
+            </div>
+            
+            <h1 style="color: #0f172a; font-size: 24px; font-weight: 600; text-align: center; margin-bottom: 30px;">
+              Password Reset Code
+            </h1>
+            
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px; text-align: center;">
+              You've requested to reset your password. Here's your verification code:
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 20px; border-radius: 12px; text-align: center; margin: 30px 0;">
+              <h2 style="color: white; font-size: 36px; letter-spacing: 8px; margin: 0; font-weight: 700;">
+                ${verificationCode}
+              </h2>
+            </div>
+            
+            <p style="color: #64748b; font-size: 14px; text-align: center; margin-bottom: 20px;">
+              This code will expire in <strong>15 minutes</strong>.
+            </p>
+            
+            <div style="border-top: 1px solid #e2e8f0; margin: 30px 0; padding-top: 30px;">
+              <p style="color: #94a3b8; font-size: 13px; text-align: center; margin: 0;">
+                If you didn't request this password reset, please ignore this email and ensure your account is secure.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Petlyst. All rights reserved. Yes, we’re Super Official
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Verification email sent successfully to:', email);
+      
+      res.json({
+        success: true,
+        message: 'Verification code has been sent to your email'
+      });
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification code email',
+        error: emailError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process password reset request',
+      error: error.message
+    });
+  }
+});
+
+// Verify reset code
+router.post('/verify-code', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    // Check if reset token exists and is valid
+    const tokenQuery = `
+      SELECT * FROM password_reset_tokens 
+      WHERE email = $1 
+      AND reset_code = $2 
+      AND expires_at > CURRENT_TIMESTAMP 
+      AND is_used = FALSE 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    const tokenResult = await pool.query(tokenQuery, [email, code]);
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification code'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Verification code is valid'
+    });
+
+  } catch (error) {
+    console.error('Code verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify code'
+    });
+  }
+});
+
+// Verify code and reset password
+router.post('/verify-reset', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    // Validate password
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements',
+        error: 'INVALID_PASSWORD',
+        passwordErrors: passwordValidation.errors
+      });
+    }
+
+    // Check if reset token exists and is valid
+    const tokenQuery = `
+      SELECT * FROM password_reset_tokens 
+      WHERE email = $1 
+      AND reset_code = $2 
+      AND expires_at > CURRENT_TIMESTAMP 
+      AND is_used = FALSE 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `;
+    const tokenResult = await pool.query(tokenQuery, [email, code]);
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset code'
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    const updateQuery = 'UPDATE users SET password = $1 WHERE email = $2';
+    await pool.query(updateQuery, [hashedPassword, email]);
+
+    // Mark token as used
+    await pool.query(
+      'UPDATE password_reset_tokens SET is_used = TRUE WHERE id = $1',
+      [tokenResult.rows[0].id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Password reset verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password'
+    });
+  }
 });
 
 module.exports = router; 

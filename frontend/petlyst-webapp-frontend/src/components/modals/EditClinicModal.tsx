@@ -34,7 +34,7 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
   const [photos, setPhotos] = useState<PhotoWithPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing] = useState(true);
   const [updateLoading, setUpdateLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -55,7 +55,7 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
       phone_number: clinic.phone_number || '',
       description: clinic.description || ''
     });
-    setIsEditing(false);
+    setHasChanges(false);
   }, [clinic]);
 
   useEffect(() => {

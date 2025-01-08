@@ -5,9 +5,10 @@ import { setCredentials } from '../../store/slices/authSlice';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onForgotPassword: () => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword }) => {
   const dispatch = useAppDispatch();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [userType, setUserType] = useState<'pet_owner' | 'veterinarian'>('pet_owner');
@@ -196,191 +197,211 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {activeTab === 'register' && (
-            <>
-              {/* User Type Selection */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setUserType('pet_owner')}
-                  className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
-                    userType === 'pet_owner'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
-                  </svg>
-                  <span className="font-medium">Pet Owner</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserType('veterinarian')}
-                  className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
-                    userType === 'veterinarian'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                  </svg>
-                  <span className="font-medium">Veterinarian</span>
-                </button>
-              </div>
-
-              {/* Name fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
+        <div className="p-6">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {activeTab === 'register' && (
+              <>
+                {/* User Type Selection */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setUserType('pet_owner')}
+                    className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
+                      userType === 'pet_owner'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
                     }`}
-                  />
-                  {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="surname" className="block text-sm font-medium text-gray-700">
-                    Surname
-                  </label>
-                  <input
-                    type="text"
-                    id="surname"
-                    name="surname"
-                    value={formData.surname}
-                    onChange={handleInputChange}
-                    className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.surname ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.surname && (
-                    <p className="mt-1 text-sm text-red-600">{errors.surname}</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Email field */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="example@email.com"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Password field */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.password ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="********"
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <div className="group">
-                  <svg
-                    className="w-5 h-5 text-gray-400 cursor-help"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                    </svg>
+                    <span className="font-medium">Pet Owner</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType('veterinarian')}
+                    className={`p-4 border rounded-lg flex flex-col items-center justify-center transition-all ${
+                      userType === 'veterinarian'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                    </svg>
+                    <span className="font-medium">Veterinarian</span>
+                  </button>
+                </div>
+
+                {/* Name fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.name ? 'border-red-500' : 'border-gray-300'
+                      }`}
                     />
-                  </svg>
-                  <div className="invisible group-hover:visible absolute right-0 mt-2 w-64 p-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-10">
-                    Password must:
-                    <ul className="list-disc list-inside mt-1">
-                      <li>Be at least 8 characters long</li>
-                      <li>Include at least one uppercase letter</li>
-                      <li>Include at least one lowercase letter</li>
-                      <li>Include at least one number</li>
-                      <li>Special characters are optional</li>
-                    </ul>
+                    {errors.name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="surname" className="block text-sm font-medium text-gray-700">
+                      Surname
+                    </label>
+                    <input
+                      type="text"
+                      id="surname"
+                      name="surname"
+                      value={formData.surname}
+                      onChange={handleInputChange}
+                      className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                        errors.surname ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.surname && (
+                      <p className="mt-1 text-sm text-red-600">{errors.surname}</p>
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              </>
             )}
-          </div>
 
-          {/* Confirm Password field (only for registration) */}
-          {activeTab === 'register' && (
+            {/* Email field */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
               </label>
               <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
                 onChange={handleInputChange}
                 className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  errors.email ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="********"
+                placeholder="example@email.com"
               />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
-          )}
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            {activeTab === 'login' ? 'Login' : 'Register'}
-          </button>
+            {/* Password field */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="********"
+                />
+                {activeTab === 'register' && (
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <div className="group">
+                      <svg
+                        className="w-5 h-5 text-gray-400 cursor-help"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="invisible group-hover:visible absolute right-0 mt-2 w-64 p-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg z-10">
+                        Password must:
+                        <ul className="list-disc list-inside mt-1">
+                          <li>Be at least 8 characters long</li>
+                          <li>Include at least one uppercase letter</li>
+                          <li>Include at least one lowercase letter</li>
+                          <li>Include at least one number</li>
+                          <li>Special characters are optional</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
 
-          {/* General error message */}
-          {errors.submit && (
-            <p className="mt-2 text-sm text-red-600 text-center">{errors.submit}</p>
+            {/* Confirm Password field (only for registration) */}
+            {activeTab === 'register' && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="********"
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                )}
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {activeTab === 'login' ? 'Login' : 'Register'}
+            </button>
+
+            {/* General error message */}
+            {errors.submit && (
+              <p className="mt-2 text-sm text-red-600 text-center">{errors.submit}</p>
+            )}
+          </form>
+
+          {/* Forgot Password button */}
+          {activeTab === 'login' && (
+            <div className="mt-4 text-center border-t pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Forgot password clicked'); // Debug log
+                  onForgotPassword();
+                }}
+                className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
+              >
+                Forgot Password?
+              </button>
+            </div>
           )}
-        </form>
+        </div>
       </div>
     </div>
   );

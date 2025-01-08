@@ -5,6 +5,11 @@ const { checkVerificationStatus } = require('../middleware/verificationMiddlewar
 const pool = require('../config/db');
 const multer = require('multer');
 const s3Service = require('../aws/s3Service');
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { deleteClinicPhoto } = require('../aws/s3Service');
+
+
+
 
 // Configure multer for memory storage
 const upload = multer({
@@ -428,10 +433,10 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete clinic photo
-router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificationStatus, async (req, res) => {
+// Delete clinic photo by Tarık
+router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    const { clinicId, photoKey } = req.params;
+    const { clinicId, photoDisplayId } = req.params;
     const operator_id = req.user.userId;
 
     // Check if clinic exists and belongs to the operator
@@ -445,15 +450,47 @@ router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificatio
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Clinic not found or you do not have permission to delete photos'
+        message: 'Clinic not found or you do not have permission to delete photos',
       });
     }
 
     const clinic = checkResult.rows[0];
 
+    // Find the specific occurrence of clinic_id based on photoDisplayId
+    const findPhotoQuery = `
+      WITH RankedPhotos AS (
+        SELECT photo_id, s3_url, ROW_NUMBER() OVER (PARTITION BY clinic_id ORDER BY photo_id) AS occurrence
+        FROM clinic_photos
+        WHERE clinic_id = $1
+      )
+      SELECT photo_id, s3_url 
+      FROM RankedPhotos
+      WHERE occurrence = $2
+    `;
+    const photoResult = await pool.query(findPhotoQuery, [clinicId, photoDisplayId]);
+
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Photo not found for the given display ID',
+      });
+    }
+
+    const { photo_id, s3_url } = photoResult.rows[0];
+
+    // Parse the S3 URL to get the key
+    const s3Key = s3_url.split('.amazonaws.com/')[1];
+
     // Delete from S3
     try {
-      await s3Service.deleteClinicPhoto(clinic.id, clinic.name, photoKey);
+      await deleteClinicPhoto(s3Key);
+
+      // Delete the record from the database
+      const deletePhotoQuery = `
+        DELETE FROM clinic_photos 
+        WHERE photo_id = $1
+      `;
+      await pool.query(deletePhotoQuery, [photo_id]);
 
       // Update verification status to pending if it was verified or archived
       if (['verified', 'archived'].includes(clinic.verification_status)) {
@@ -461,31 +498,89 @@ router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificatio
           UPDATE clinics 
           SET verification_status = 'pending'
           WHERE id = $1 AND operator_id = $2
-          RETURNING *
         `;
         await pool.query(updateQuery, [clinicId, operator_id]);
       }
 
       res.status(200).json({
         success: true,
-        message: 'Photo deleted successfully'
+        message: 'Photo deleted successfully',
       });
     } catch (s3Error) {
       console.error('S3 delete error:', s3Error);
       return res.status(500).json({
         success: false,
-        message: `Failed to delete photo from storage: ${s3Error.message}`
+        message: `Failed to delete photo from storage: ${s3Error.message}`,
       });
     }
-
   } catch (error) {
     console.error('Error deleting clinic photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });
+
+// Delete clinic photo
+// router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificationStatus, async (req, res) => {
+//   try {
+//     const { clinicId, photoKey } = req.params;
+//     const operator_id = req.user.userId;
+
+//     // Check if clinic exists and belongs to the operator
+//     const checkQuery = `
+//       SELECT id, name, verification_status 
+//       FROM clinics 
+//       WHERE id = $1 AND operator_id = $2
+//     `;
+//     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+//     if (checkResult.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Clinic not found or you do not have permission to delete photos'
+//       });
+//     }
+
+//     const clinic = checkResult.rows[0];
+
+//     // Delete from S3
+//     try {
+//       await s3Service.deleteClinicPhoto(clinic.id, clinic.name, photoKey);
+
+//       // Update verification status to pending if it was verified or archived
+//       if (['verified', 'archived'].includes(clinic.verification_status)) {
+//         const updateQuery = `
+//           UPDATE clinics 
+//           SET verification_status = 'pending'
+//           WHERE id = $1 AND operator_id = $2
+//           RETURNING *
+//         `;
+//         await pool.query(updateQuery, [clinicId, operator_id]);
+//       }
+
+//       res.status(200).json({
+//         success: true,
+//         message: 'Photo deleted successfully'
+//       });
+//     } catch (s3Error) {
+//       console.error('S3 delete error:', s3Error);
+//       return res.status(500).json({
+//         success: false,
+//         message: `Failed to delete photo from storage: ${s3Error.message}`
+//       });
+//     }
+
+//   } catch (error) {
+//     console.error('Error deleting clinic photo:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: error.message || 'Internal server error',
+//       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+//     });
+//   }
+// });
 
 module.exports = router; 

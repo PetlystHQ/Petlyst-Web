@@ -4,10 +4,12 @@ import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout } from '../../store/slices/authSlice';
 import AuthModal from '../../components/modals/AuthModal';
+import ResetPasswordModal from '../../components/modals/ResetPasswordModal';
 
 const DefaultHeader: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const { user } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
 
@@ -22,6 +24,16 @@ const DefaultHeader: React.FC = () => {
   const handleLogout = () => {
     dispatch(logout());
     setIsDropdownOpen(false);
+  };
+
+  const handleForgotPassword = () => {
+    setIsAuthModalOpen(false);
+    setIsResetPasswordModalOpen(true);
+  };
+
+  const handleBackToLogin = () => {
+    setIsResetPasswordModalOpen(false);
+    setIsAuthModalOpen(true);
   };
 
   // Function to get initials from name and surname
@@ -90,7 +102,16 @@ const DefaultHeader: React.FC = () => {
           </div>
         </div>
       </header>
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onForgotPassword={handleForgotPassword}
+      />
+      <ResetPasswordModal
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => setIsResetPasswordModalOpen(false)}
+        onBackToLogin={handleBackToLogin}
+      />
     </>
   );
 };
