@@ -184,49 +184,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Postman -> POST http://localhost:3000/api/users/update-theme
-// Update Theme Preference - Experimental
-router.post('/update-theme', authenticateToken, async (req, res) => {
-    try {
-      const { theme } = req.body;
-      const userId = req.user.userId;
-  
-      const query = `
-        UPDATE users 
-        SET theme_preference = $1 
-        WHERE user_id = $2 
-        RETURNING theme_preference
-      `;
-  
-      const result = await pool.query(query, [theme, userId]);
-  
-      res.json({ theme: result.rows[0].theme_preference });
-    } catch (error) {
-      console.error('Error updating theme preference:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// Postman -> GET http://localhost:3000/api/users/theme-preference
-// Get Theme Preference - Experimental
-router.get('/theme-preference', authenticateToken, async (req, res) => {
-    try {
-      const userId = req.user.userId;
-  
-      const query = `
-        SELECT theme_preference 
-        FROM users 
-        WHERE user_id = $1
-      `;
-  
-      const result = await pool.query(query, [userId]);
-      res.json({ theme: result.rows[0].theme_preference });
-    } catch (error) {
-      console.error('Error fetching theme preference:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
 // Configure nodemailer for GoDaddy email
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,

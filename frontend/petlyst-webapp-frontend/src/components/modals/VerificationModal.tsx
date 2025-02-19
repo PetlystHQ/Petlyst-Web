@@ -85,6 +85,17 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // For TC number, only allow digits and max 11 characters
+    if (name === 'tc_number') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 11);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
