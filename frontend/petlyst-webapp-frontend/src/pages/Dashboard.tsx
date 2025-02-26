@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
-import AddClinicModal from '../components/modals/AddClinicModal';
 import EditClinicModal from '../components/modals/EditClinicModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
@@ -14,7 +13,6 @@ import { Clinic } from '../types/dashboard';
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
-  const [isAddClinicModalOpen, setIsAddClinicModalOpen] = useState(false);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { 
@@ -27,15 +25,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const handleAddClinic = () => {
-    setIsAddClinicModalOpen(true);
-  };
-
-  const handleAddClinicSuccess = () => {
-    // Klinik listesini yenile
-    setRefreshKey(prev => prev + 1);
-    
-    // Modal'ı kapat
-    setIsAddClinicModalOpen(false);
+    // Navigate to the add clinic page instead of opening a modal
+    navigate('/add-clinic');
   };
 
   const handleEditClinic = (clinic: Clinic) => {
@@ -141,12 +132,6 @@ const Dashboard: React.FC = () => {
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
         onSubmitSuccess={handleVerificationSubmit}
-      />
-
-      <AddClinicModal 
-        isOpen={isAddClinicModalOpen}
-        onClose={() => setIsAddClinicModalOpen(false)}
-        onSuccess={handleAddClinicSuccess}
       />
 
       {selectedClinic && (

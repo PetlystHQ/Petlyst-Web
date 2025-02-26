@@ -6,12 +6,13 @@ import DefaultHeader from './components/layout/DefaultHeader';
 import HomePage from './pages/HomePage';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
+import AddClinicPage from './pages/AddClinicPage';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/add-clinic';
   const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
@@ -33,6 +34,14 @@ const AppContent: React.FC = () => {
           element={
             <ProtectedRoute allowedUserType="veterinarian">
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/add-clinic" 
+          element={
+            <ProtectedRoute allowedUserType="veterinarian">
+              <AddClinicPage />
             </ProtectedRoute>
           } 
         />
