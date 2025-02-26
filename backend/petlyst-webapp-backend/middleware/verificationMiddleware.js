@@ -48,11 +48,11 @@ const checkVerificationStatus = async (req, res, next) => {
             });
         }
 
-        // Then check verification status in veterinarianprofile table
+        // Then check verification status in veterinarians table
         const verificationQuery = `
-            SELECT verification_status 
-            FROM veterinarianprofile 
-            WHERE user_id = $1
+            SELECT veterinarian_verification_status 
+            FROM veterinarians 
+            WHERE veterinarian_id = $1
         `;
         const verificationResult = await pool.query(verificationQuery, [userId]);
         console.log('Verification status result:', verificationResult.rows[0]); // Debug log
@@ -63,7 +63,7 @@ const checkVerificationStatus = async (req, res, next) => {
             });
         }
 
-        if (verificationResult.rows[0].verification_status !== 'verified') {
+        if (verificationResult.rows[0].veterinarian_verification_status !== 'verified') {
             return res.status(403).json({ 
                 message: 'Access denied. Veterinarian must be verified to perform this action.' 
             });

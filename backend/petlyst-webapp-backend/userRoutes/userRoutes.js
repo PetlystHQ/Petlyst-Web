@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+const PetOwner = require('../models/petOwnerModel');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 const nodemailer = require('nodemailer');
@@ -94,6 +95,15 @@ router.post('/register', async (req, res) => {
 
         // Create new user
         const newUser = await User.createUser(name, surname, email, password, user_type);
+        
+        // Create user type specific profile
+        try {
+            await createUserTypeProfile(newUser.id, user_type);
+        } catch (profileError) {
+            console.error(`Error creating ${user_type} profile:`, profileError);
+            // Continue despite profile creation error
+        }
+        
         res.status(201).json({ 
             message: 'User registered successfully', 
             user: newUser 
@@ -303,7 +313,7 @@ router.post('/reset-password', async (req, res) => {
             
             <div style="text-align: center; margin-top: 30px;">
               <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-                © ${new Date().getFullYear()} Petlyst. All rights reserved. Yes, we’re Super Official
+                © ${new Date().getFullYear()} Petlyst. All rights reserved. Yes, we're Super Official
               </p>
             </div>
           </div>
@@ -437,6 +447,157 @@ router.post('/verify-reset', async (req, res) => {
       message: 'Failed to reset password'
     });
   }
+});
+
+// Update Theme Preference - Experimental
+router.post('/update-theme', authenticateToken, async (req, res) => {
+    try {
+      const { theme } = req.body;
+      const userId = req.user.userId;
+  
+      const query = `
+        UPDATE "users" 
+        SET theme_preference = $1 
+        WHERE user_id = $2 
+        RETURNING theme_preference
+      `;
+  
+      const result = await pool.query(query, [theme, userId]);
+  
+      res.json({ theme: result.rows[0].theme_preference });
+    } catch (error) {
+      console.error('Error updating theme preference:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Get Theme Preference - Experimental
+router.get('/theme-preference', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user.userId;
+  
+      const query = `
+        SELECT theme_preference 
+        FROM "users" 
+        WHERE user_id = $1
+      `;
+  
+      const result = await pool.query(query, [userId]);
+      res.json({ theme: result.rows[0].theme_preference });
+    } catch (error) {
+      console.error('Error fetching theme preference:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Function to create user type specific profile
+async function createUserTypeProfile(userId, userType) {
+    try {
+        console.log(`Creating ${userType} profile for user ID: ${userId}`);
+        
+        let result = null;
+        
+        if (userType === 'pet_owner') {
+            // Insert into petowners table
+            const petOwnerQuery = {
+                text: `INSERT INTO "petowners" (pet_owner_id) 
+                      VALUES ($1) 
+                      RETURNING pet_owner_id`,
+                values: [userId]
+            };
+            result = await pool.query(petOwnerQuery);
+            console.log('Pet owner profile created:', result.rows[0]);
+            
+        } else if (userType === 'veterinarian') {
+            // Insert into veterinarians table
+            const veterinarianQuery = {
+                text: `INSERT INTO "veterinarians" (veterinarian_id) 
+                      VALUES ($1) 
+                      RETURNING veterinarian_id`,
+                values: [userId]
+            };
+            result = await pool.query(veterinarianQuery);
+            console.log('Veterinarian profile created:', result.rows[0]);
+        }
+        
+        return result?.rows[0] || null;
+    } catch (error) {
+        console.error(`Error creating ${userType} profile:`, error);
+        throw error;
+    }
+}
+
+// API endpoint to create user type profile manually (for testing)
+router.post('/create-profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const userType = req.user.userType;
+        
+        // Check if user exists
+        const userQuery = {
+            text: 'SELECT user_id, user_type FROM "users" WHERE user_id = $1',
+            values: [userId]
+        };
+        const userResult = await pool.query(userQuery);
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        
+        // Check if profile already exists
+        if (userType === 'pet_owner') {
+            const checkQuery = {
+                text: 'SELECT pet_owner_id FROM "petowners" WHERE pet_owner_id = $1',
+                values: [userId]
+            };
+            const checkResult = await pool.query(checkQuery);
+            
+            if (checkResult.rows.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Pet owner profile already exists'
+                });
+            }
+        } else if (userType === 'veterinarian') {
+            const checkQuery = {
+                text: 'SELECT veterinarian_id FROM "veterinarians" WHERE veterinarian_id = $1',
+                values: [userId]
+            };
+            const checkResult = await pool.query(checkQuery);
+            
+            if (checkResult.rows.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Veterinarian profile already exists'
+                });
+            }
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user type'
+            });
+        }
+        
+        // Create profile
+        const profile = await createUserTypeProfile(userId, userType);
+        
+        res.status(201).json({
+            success: true,
+            message: `${userType} profile created successfully`,
+            profile
+        });
+        
+    } catch (error) {
+        console.error('Error creating user profile:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create profile',
+            error: error.message
+        });
+    }
 });
 
 module.exports = router; 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
-import DashboardSidebar from '../components/layout/DashboardSidebar';
+import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
 import AddClinicModal from '../components/modals/AddClinicModal';
 import EditClinicModal from '../components/modals/EditClinicModal';
@@ -93,55 +93,49 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-gray-100">
-        <DashboardSidebar 
-          currentView={currentView} 
-          onViewChange={setCurrentView}
-          verificationStatus={verificationStatus}
-        />
-        <main className="flex-1 p-6">
-          <div className="bg-red-50 border-l-4 border-red-500 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
+      <DashboardLayout
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        verificationStatus={verificationStatus}
+      >
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
               </div>
             </div>
           </div>
-        </main>
-      </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <DashboardSidebar 
-        currentView={currentView} 
-        onViewChange={setCurrentView}
-        verificationStatus={verificationStatus}
-      />
-      <main className="flex-1 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">{VIEW_TITLES[currentView]}</h1>
-          <button
-            onClick={handleBackToPetlyst}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Petlyst
-          </button>
-        </div>
-        {renderContent()}
-      </main>
+    <DashboardLayout
+      currentView={currentView}
+      onViewChange={setCurrentView}
+      verificationStatus={verificationStatus}
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">{VIEW_TITLES[currentView]}</h1>
+        <button
+          onClick={handleBackToPetlyst}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Petlyst
+        </button>
+      </div>
+      {renderContent()}
 
       <VerificationModal
         isOpen={isVerificationModalOpen}
@@ -149,7 +143,7 @@ const Dashboard: React.FC = () => {
         onSubmitSuccess={handleVerificationSubmit}
       />
 
-      <AddClinicModal
+      <AddClinicModal 
         isOpen={isAddClinicModalOpen}
         onClose={() => setIsAddClinicModalOpen(false)}
         onSuccess={handleAddClinicSuccess}
@@ -157,13 +151,13 @@ const Dashboard: React.FC = () => {
 
       {selectedClinic && (
         <EditClinicModal
-          isOpen={selectedClinic !== null}
-          onClose={() => setSelectedClinic(null)}
           clinic={selectedClinic}
+          isOpen={Boolean(selectedClinic)}
+          onClose={() => setSelectedClinic(null)}
           onUpdate={handleClinicUpdate}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 
