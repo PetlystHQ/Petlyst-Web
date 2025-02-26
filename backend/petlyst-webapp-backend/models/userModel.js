@@ -9,9 +9,9 @@ class User {
             const hashedPassword = await bcrypt.hash(password, 10);
             
             const query = {
-                text: `INSERT INTO users (name, surname, email, password, user_type) 
+                text: `INSERT INTO "users" (user_name, user_surname, user_email, user_password, user_type) 
                        VALUES ($1, $2, $3, $4, $5) 
-                       RETURNING id, name, surname, email, user_type`,
+                       RETURNING user_id, user_name, user_surname, user_email, user_type`,
                 values: [name, surname, email, hashedPassword, user_type]
             };
 
@@ -21,7 +21,16 @@ class User {
                 throw new Error('User creation failed');
             }
             
-            return result.rows[0];
+            // Map the returned columns to the expected format
+            const user = {
+                id: result.rows[0].user_id,
+                name: result.rows[0].user_name,
+                surname: result.rows[0].user_surname,
+                email: result.rows[0].user_email,
+                user_type: result.rows[0].user_type
+            };
+            
+            return user;
             
         } catch (error) {
             console.error('Error in createUser:', error);
@@ -30,9 +39,24 @@ class User {
     }
 
     static async findByEmail(email) {
-        const query = 'SELECT * FROM users WHERE email = $1';
-        const result = await pool.query(query, [email]);
-        return result.rows[0];
+        const query = {
+            text: 'SELECT * FROM "users" WHERE user_email = $1',
+            values: [email]
+        };
+        const result = await pool.query(query);
+        
+        if (result.rows[0]) {
+            // Map the returned columns to the expected format
+            return {
+                id: result.rows[0].user_id,
+                name: result.rows[0].user_name,
+                surname: result.rows[0].user_surname,
+                email: result.rows[0].user_email,
+                password: result.rows[0].user_password,
+                user_type: result.rows[0].user_type
+            };
+        }
+        return null;
     }
 
     static async validatePassword(plainPassword, hashedPassword) {

@@ -2,14 +2,12 @@ const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/authenticateToken');
 const { checkVerificationStatus } = require('../middleware/verificationMiddleware');
+const Clinic = require('../models/clinicModel');
 const pool = require('../config/db');
 const multer = require('multer');
 const s3Service = require('../aws/s3Service');
 const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { deleteClinicPhoto } = require('../aws/s3Service');
-
-
-
 
 // Configure multer for memory storage
 const upload = multer({
@@ -28,28 +26,23 @@ const upload = multer({
 
 // Base route: /api/clinics
 
-// Clinics verified to archived
+// Archive clinic (change status from verified to archived)
 router.patch('/archive/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
 
     // Check if clinic exists and belongs to the operator
-    const checkQuery = `
-      SELECT verification_status 
-      FROM clinics 
-      WHERE id = $1 AND operator_id = $2
-    `;
-    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+    const clinic = await Clinic.getClinicById(clinicId);
 
-    if (checkResult.rows.length === 0) {
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
       return res.status(404).json({ 
         success: false,
         message: 'Clinic not found or you do not have permission to archive this clinic' 
       });
     }
 
-    if (checkResult.rows[0].verification_status !== 'verified') {
+    if (clinic.clinic_verification_status !== 'verified') {
       return res.status(400).json({
         success: false,
         message: 'Only verified clinics can be archived'
@@ -57,19 +50,14 @@ router.patch('/archive/:clinicId', authenticateToken, checkVerificationStatus, a
     }
 
     // Update clinic status to archived
-    const updateQuery = `
-      UPDATE clinics 
-      SET verification_status = 'archived'
-      WHERE id = $1 AND operator_id = $2
-      RETURNING *
-    `;
-
-    const result = await pool.query(updateQuery, [clinicId, operator_id]);
+    const updatedClinic = await Clinic.updateClinic(clinicId, {
+      clinic_verification_status: 'archived'
+    });
 
     res.status(200).json({
       success: true,
       message: 'Clinic archived successfully',
-      clinic: result.rows[0]
+      clinic: updatedClinic
     });
 
   } catch (error) {
@@ -88,21 +76,16 @@ router.patch('/restore/:clinicId', authenticateToken, checkVerificationStatus, a
     const operator_id = req.user.userId;
 
     // Check if clinic exists and belongs to the operator
-    const checkQuery = `
-      SELECT verification_status 
-      FROM clinics 
-      WHERE id = $1 AND operator_id = $2
-    `;
-    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+    const clinic = await Clinic.getClinicById(clinicId);
 
-    if (checkResult.rows.length === 0) {
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
       return res.status(404).json({ 
         success: false,
         message: 'Clinic not found or you do not have permission to restore this clinic' 
       });
     }
 
-    if (checkResult.rows[0].verification_status !== 'archived') {
+    if (clinic.clinic_verification_status !== 'archived') {
       return res.status(400).json({
         success: false,
         message: 'Only archived clinics can be restored'
@@ -110,19 +93,14 @@ router.patch('/restore/:clinicId', authenticateToken, checkVerificationStatus, a
     }
 
     // Update clinic status to verified
-    const updateQuery = `
-      UPDATE clinics 
-      SET verification_status = 'verified'
-      WHERE id = $1 AND operator_id = $2
-      RETURNING *
-    `;
-
-    const result = await pool.query(updateQuery, [clinicId, operator_id]);
+    const updatedClinic = await Clinic.updateClinic(clinicId, {
+      clinic_verification_status: 'verified'
+    });
 
     res.status(200).json({
       success: true,
       message: 'Clinic restored successfully',
-      clinic: result.rows[0]
+      clinic: updatedClinic
     });
 
   } catch (error) {
@@ -139,18 +117,11 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
   try {
     const userId = req.user.userId;
     
-    const query = `
-      SELECT id, name, address, phone_number, description, verification_status
-      FROM clinics 
-      WHERE operator_id = $1
-      ORDER BY created_at DESC
-    `;
-    
-    const result = await pool.query(query, [userId]);
+    const clinics = await Clinic.getClinicsByOperatorId(userId);
     
     res.status(200).json({
       message: "Clinics fetched successfully",
-      clinics: result.rows
+      clinics: clinics
     });
   } catch (error) {
     console.error('Error fetching clinics:', error);
@@ -161,34 +132,46 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
 // Add a new clinic (requires verified veterinarian)
 router.post('/add', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    const { name, address, phone_number, description } = req.body;
-    const operator_id = req.user.userId;
+    const { 
+      clinic_name, 
+      clinic_address, 
+      clinic_phone, 
+      clinic_email, 
+      clinic_description, 
+      available_days, 
+      emergency_available_days, 
+      opening_time, 
+      closing_time 
+    } = req.body;
+    
+    const clinic_operator_id = req.user.userId;
 
-    // Validate required field
-    if (!name) {
-      return res.status(400).json({ message: 'Clinic name is required' });
+    // Validate required fields
+    if (!clinic_name || !clinic_address || !available_days || !opening_time || !closing_time) {
+      return res.status(400).json({ 
+        message: 'Clinic name, address, available days, opening time, and closing time are required' 
+      });
     }
 
-    // Insert clinic into database
-    const query = `
-      INSERT INTO clinics (
-        name, 
-        address, 
-        phone_number,  
-        description, 
-        operator_id,
-        verification_status
-      ) 
-      VALUES ($1, $2, $3, $4, $5, 'pending') 
-      RETURNING *
-    `;
+    // Create clinic in database
+    const clinicData = {
+      clinic_name,
+      clinic_address,
+      clinic_phone,
+      clinic_email,
+      clinic_operator_id,
+      clinic_description,
+      available_days,
+      emergency_available_days,
+      opening_time,
+      closing_time
+    };
 
-    const values = [name, address || null, phone_number || null, description || null, operator_id];
-    const result = await pool.query(query, values);
+    const newClinic = await Clinic.createClinic(clinicData);
 
     res.status(201).json({
       message: "Clinic added successfully",
-      clinic: result.rows[0]
+      clinic: newClinic
     });
   } catch (error) {
     console.error('Error adding clinic:', error);
@@ -199,8 +182,35 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
 // Get single clinic details
 router.get('/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    // TODO: Implement get single clinic logic
-    res.status(200).json({ message: "Get single clinic endpoint" });
+    const { clinicId } = req.params;
+    
+    // Get the clinic
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic) {
+      return res.status(404).json({ message: "Clinic not found" });
+    }
+    
+    // Get the operator details
+    const operatorQuery = `
+      SELECT user_name, user_surname, user_email
+      FROM "users"
+      WHERE user_id = $1
+    `;
+    
+    const operatorResult = await pool.query(operatorQuery, [clinic.clinic_operator_id]);
+    
+    const clinicWithOperator = {
+      ...clinic,
+      operator_name: operatorResult.rows[0]?.user_name,
+      operator_surname: operatorResult.rows[0]?.user_surname,
+      operator_email: operatorResult.rows[0]?.user_email
+    };
+    
+    res.status(200).json({
+      message: "Clinic details fetched successfully",
+      clinic: clinicWithOperator
+    });
   } catch (error) {
     console.error('Error fetching clinic:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -211,11 +221,11 @@ router.get('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
 router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
     const { clinicId } = req.params;
-    const { name, address, phone_number, description } = req.body;
+    const updateData = req.body;
     const operator_id = req.user.userId;
 
     // Validate required field
-    if (!name) {
+    if (!updateData.clinic_name) {
       return res.status(400).json({ 
         success: false,
         message: 'Clinic name is required' 
@@ -223,53 +233,27 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     }
 
     // Check if clinic exists and belongs to the operator
-    const checkQuery = `
-      SELECT verification_status 
-      FROM clinics 
-      WHERE id = $1 AND operator_id = $2
-    `;
-    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+    const clinic = await Clinic.getClinicById(clinicId);
 
-    if (checkResult.rows.length === 0) {
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to update this clinic'
       });
     }
 
-    const currentStatus = checkResult.rows[0].verification_status;
-    const newStatus = ['verified', 'archived'].includes(currentStatus) ? 'pending' : currentStatus;
+    // Only update verification status to pending if it was verified or archived
+    if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
+      updateData.clinic_verification_status = 'pending';
+    }
 
-    // Update clinic in database
-    const updateQuery = `
-      UPDATE clinics 
-      SET 
-        name = $1,
-        address = $2,
-        phone_number = $3,
-        description = $4,
-        verification_status = $5,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6 AND operator_id = $7
-      RETURNING *
-    `;
-
-    const values = [
-      name,
-      address || null,
-      phone_number || null,
-      description || null,
-      newStatus,
-      clinicId,
-      operator_id
-    ];
-
-    const result = await pool.query(updateQuery, values);
+    // Update clinic
+    const updatedClinic = await Clinic.updateClinic(clinicId, updateData);
 
     res.status(200).json({
       success: true,
       message: 'Clinic updated successfully',
-      clinic: result.rows[0]
+      clinic: updatedClinic
     });
 
   } catch (error) {
@@ -282,11 +266,29 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
   }
 });
 
-// Delete clinic (requires verified status)
+// Delete clinic
 router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    // TODO: Implement delete clinic logic
-    res.status(200).json({ message: "Delete clinic endpoint" });
+    const { clinicId } = req.params;
+    const operator_id = req.user.userId;
+    
+    // Check if clinic exists and belongs to the operator
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to delete this clinic'
+      });
+    }
+    
+    // Delete clinic
+    await Clinic.deleteClinic(clinicId);
+    
+    res.status(200).json({
+      success: true,
+      message: "Clinic deleted successfully"
+    });
   } catch (error) {
     console.error('Error deleting clinic:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -316,14 +318,9 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
     // Check if clinic exists and belongs to the operator
-    const checkQuery = `
-      SELECT id 
-      FROM clinics 
-      WHERE id = $1 AND operator_id = $2
-    `;
-    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
-
-    if (checkResult.rows.length === 0) {
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to upload photos'
@@ -441,9 +438,9 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
-      SELECT id, name, verification_status 
+      SELECT clinic_id, clinic_name, clinic_verification_status 
       FROM clinics 
-      WHERE id = $1 AND operator_id = $2
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
     `;
     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
 
@@ -493,11 +490,11 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
       await pool.query(deletePhotoQuery, [photo_id]);
 
       // Update verification status to pending if it was verified or archived
-      if (['verified', 'archived'].includes(clinic.verification_status)) {
+      if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
         const updateQuery = `
           UPDATE clinics 
-          SET verification_status = 'pending'
-          WHERE id = $1 AND operator_id = $2
+          SET clinic_verification_status = 'pending'
+          WHERE clinic_id = $1 AND clinic_operator_id = $2
         `;
         await pool.query(updateQuery, [clinicId, operator_id]);
       }
@@ -531,9 +528,9 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
 
 //     // Check if clinic exists and belongs to the operator
 //     const checkQuery = `
-//       SELECT id, name, verification_status 
+//       SELECT clinic_id, clinic_name, clinic_verification_status 
 //       FROM clinics 
-//       WHERE id = $1 AND operator_id = $2
+//       WHERE clinic_id = $1 AND clinic_operator_id = $2
 //     `;
 //     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
 
@@ -548,14 +545,14 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
 
 //     // Delete from S3
 //     try {
-//       await s3Service.deleteClinicPhoto(clinic.id, clinic.name, photoKey);
+//       await s3Service.deleteClinicPhoto(clinic.clinic_id, clinic.clinic_name, photoKey);
 
 //       // Update verification status to pending if it was verified or archived
-//       if (['verified', 'archived'].includes(clinic.verification_status)) {
+//       if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
 //         const updateQuery = `
 //           UPDATE clinics 
-//           SET verification_status = 'pending'
-//           WHERE id = $1 AND operator_id = $2
+//           SET clinic_verification_status = 'pending'
+//           WHERE clinic_id = $1 AND clinic_operator_id = $2
 //           RETURNING *
 //         `;
 //         await pool.query(updateQuery, [clinicId, operator_id]);

@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
-  id: string;
-  email: string;
-  name: string;
-  surname: string;
-  userType: string;
+  id: string;  // Maps to user_id
+  email: string;  // Maps to user_email
+  name: string;  // Maps to user_name
+  surname: string;  // Maps to user_surname
+  userType: string;  // Maps to user_type
+  phone?: string;  // Maps to user_phone
+  address?: string;  // Maps to user_address
+  profilePhoto?: string;  // Maps to user_profile_photo
 }
 
 interface AuthContextType {
@@ -52,4 +55,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
+
+export default AuthContext; 

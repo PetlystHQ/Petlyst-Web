@@ -1,11 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface User {
-  id: number;
-  name: string;
-  surname: string;
-  email: string;
+  id: number;  // Maps to user_id
+  name: string;  // Maps to user_name
+  surname: string;  // Maps to user_surname
+  email: string;  // Maps to user_email
   user_type: string;
+  phone?: string;  // Maps to user_phone
+  address?: string;  // Maps to user_address
+  profile_photo?: string;  // Maps to user_profile_photo
 }
 
 interface AuthState {
@@ -14,12 +17,9 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
-// Get initial state from localStorage
-const storedUser = localStorage.getItem('user');
+// Get stored values
 const storedToken = localStorage.getItem('token');
-
-console.log('Initial auth state - Stored token:', storedToken);
-console.log('Initial auth state - Stored user:', storedUser);
+const storedUser = localStorage.getItem('user');
 
 const initialState: AuthState = {
   user: storedUser ? JSON.parse(storedUser) : null,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
@@ -10,12 +10,16 @@ interface DashboardSidebarProps {
   currentView: DashboardView;
   onViewChange: (view: DashboardView) => void;
   verificationStatus: VerificationStatus;
+  isMobileOpen?: boolean;
+  onMobileToggle?: () => void;
 }
 
 const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ 
   currentView, 
   onViewChange,
-  verificationStatus 
+  verificationStatus,
+  isMobileOpen = false,
+  onMobileToggle
 }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -61,66 +65,126 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     }
   };
 
+  // Apply classes based on mobile state - adding !important to force the position in mobile view
+  const sidebarClasses = `bg-white shadow-md flex flex-col h-screen fixed lg:static z-20 transition-all duration-300 ${
+    isMobileOpen ? 'left-0 !w-64' : '-left-64 lg:left-0 w-64'
+  }`;
+
+  // Ensuring direct access to the toggle function
+  const handleMobileToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Mobile toggle button clicked');
+    if (onMobileToggle) {
+      onMobileToggle();
+      console.log('Mobile menu toggle handler called, new state should be:', !isMobileOpen);
+    } else {
+      console.error('Mobile toggle function is not defined');
+    }
+  };
+
   return (
-    <div className="w-64 bg-white shadow-md flex flex-col h-screen">
-      {/* Profile Section */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col items-center">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-            <span className="text-2xl font-semibold text-blue-600">
-              {user?.name?.[0]?.toUpperCase()}{user?.surname?.[0]?.toUpperCase()}
-            </span>
-          </div>
-          <h2 className="text-lg font-semibold text-gray-800">
-            {user?.name} {user?.surname}
-          </h2>
-          {getVerificationStatusDisplay()}
-        </div>
+    <>
+      {/* Mobile Menu Toggle Button - Visible only on small screens */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white shadow-sm h-16 px-4 flex items-center">
+        <button 
+          onClick={handleMobileToggle}
+          className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Toggle menu"
+          type="button"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            strokeWidth={1.5} 
+            stroke="currentColor" 
+            className="w-6 h-6"
+          >
+            {isMobileOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            )}
+          </svg>
+        </button>
+        <h1 className="ml-4 text-lg font-semibold text-gray-800">Dashboard</h1>
       </div>
 
-      {/* Navigation Items */}
-      <div className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="space-y-2 font-medium">
-          <li>
-            <button
-              onClick={() => onViewChange(DASHBOARD_VIEWS.overview)}
-              className={`flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100 ${
-                isActive(DASHBOARD_VIEWS.overview) ? 'bg-gray-100' : ''
-              }`}
-            >
-              <span className="ml-3">Overview</span>
-            </button>
-          </li>
+      {/* Overlay for mobile - only visible when sidebar is open on mobile */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden"
+          onClick={handleMobileToggle}
+        ></div>
+      )}
 
-          {/* Conditional Navigation Items */}
-          {isFeatureAccessible && (
+      <div className={sidebarClasses}>
+        {/* Profile Section */}
+        <div className="p-6 border-b border-gray-200 mt-16 lg:mt-0">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+              <span className="text-xl sm:text-2xl font-semibold text-blue-600">
+                {user?.name?.[0]?.toUpperCase()}{user?.surname?.[0]?.toUpperCase()}
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+              {user?.name} {user?.surname}
+            </h2>
+            {getVerificationStatusDisplay()}
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <div className="flex-1 px-3 py-4 overflow-y-auto">
+          <ul className="space-y-2 font-medium">
             <li>
               <button
-                onClick={() => onViewChange(DASHBOARD_VIEWS.clinics)}
+                onClick={() => {
+                  onViewChange(DASHBOARD_VIEWS.overview);
+                  if (isMobileOpen && onMobileToggle) onMobileToggle();
+                }}
                 className={`flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100 ${
-                  isActive(DASHBOARD_VIEWS.clinics) ? 'bg-gray-100' : ''
+                  isActive(DASHBOARD_VIEWS.overview) ? 'bg-gray-100' : ''
                 }`}
               >
-                <span className="ml-3">Clinics</span>
+                <span className="ml-3">Overview</span>
               </button>
             </li>
-          )}
-        </ul>
-      </div>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t border-gray-200">
-        <button
-          onClick={handleLogout}
-          className="flex items-center w-full p-2 text-red-600 rounded-lg hover:bg-red-50"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span>Logout</span>
-        </button>
+            {/* Conditional Navigation Items */}
+            {isFeatureAccessible && (
+              <li>
+                <button
+                  onClick={() => {
+                    onViewChange(DASHBOARD_VIEWS.clinics);
+                    if (isMobileOpen && onMobileToggle) onMobileToggle();
+                  }}
+                  className={`flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100 ${
+                    isActive(DASHBOARD_VIEWS.clinics) ? 'bg-gray-100' : ''
+                  }`}
+                >
+                  <span className="ml-3">Clinics</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {/* Logout Button */}
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="flex items-center w-full p-2 text-red-600 rounded-lg hover:bg-red-50"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

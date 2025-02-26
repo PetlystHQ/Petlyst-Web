@@ -22,12 +22,12 @@ router.get('/pending-clinics', authenticateToken, isAdmin, async (req, res) => {
         const query = `
             SELECT 
                 c.*,
-                u.name as operator_name,
-                u.surname as operator_surname
+                u.user_name as operator_name,
+                u.user_surname as operator_surname
             FROM clinics c
-            JOIN users u ON c.operator_id = u.id
-            WHERE c.verification_status = 'pending'
-            ORDER BY c.created_at DESC
+            JOIN "users" u ON c.clinic_operator_id = u.user_id
+            WHERE c.clinic_verification_status = 'pending'
+            ORDER BY c.clinic_created_at DESC
         `;
 
         const result = await pool.query(query);
@@ -59,9 +59,9 @@ router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async 
 
         // Check if the clinic exists and is pending
         const checkQuery = `
-            SELECT verification_status 
+            SELECT clinic_verification_status 
             FROM clinics 
-            WHERE id = $1
+            WHERE clinic_id = $1
         `;
         const checkResult = await pool.query(checkQuery, [clinicId]);
 
@@ -72,7 +72,7 @@ router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async 
             });
         }
 
-        if (checkResult.rows[0].verification_status !== 'pending') {
+        if (checkResult.rows[0].clinic_verification_status !== 'pending') {
             return res.status(400).json({
                 success: false,
                 message: 'Can only update pending verification requests'
@@ -85,8 +85,8 @@ router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async 
         // Update the clinic status
         const updateQuery = `
             UPDATE clinics 
-            SET verification_status = $1
-            WHERE id = $2 
+            SET clinic_verification_status = $1
+            WHERE clinic_id = $2 
             RETURNING *
         `;
 
@@ -96,12 +96,12 @@ router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async 
         const pendingQuery = `
             SELECT 
                 c.*,
-                u.name as operator_name,
-                u.surname as operator_surname
+                u.user_name as operator_name,
+                u.user_surname as operator_surname
             FROM clinics c
-            JOIN users u ON c.operator_id = u.id
-            WHERE c.verification_status = 'pending'
-            ORDER BY c.created_at DESC
+            JOIN "users" u ON c.clinic_operator_id = u.user_id
+            WHERE c.clinic_verification_status = 'pending'
+            ORDER BY c.clinic_created_at DESC
         `;
 
         const pendingResult = await pool.query(pendingQuery);
@@ -137,15 +137,15 @@ router.get('/pending-review-status', authenticateToken, isAdmin, async (req, res
     try {
         const query = `
             SELECT 
-                v.user_id,
-                v.tc_number,
-                v.graduation_barcode,
-                v.verification_status,
-                u.name,
-                u.surname
-            FROM veterinarianprofile v
-            JOIN users u ON v.user_id = u.id
-            WHERE v.verification_status = 'pending'
+                v.veterinarian_id,
+                v.veterinarian_tc_number,
+                v.veterinarian_graduate_barcode,
+                v.veterinarian_verification_status,
+                u.user_name as name,
+                u.user_surname as surname
+            FROM veterinarians v
+            JOIN "users" u ON v.veterinarian_id = u.user_id
+            WHERE v.veterinarian_verification_status = 'pending'
         `;
 
         const result = await pool.query(query);
@@ -177,9 +177,9 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
 
         // Check if the profile exists and is pending
         const checkQuery = `
-            SELECT verification_status 
-            FROM veterinarianprofile 
-            WHERE user_id = $1
+            SELECT veterinarian_verification_status 
+            FROM veterinarians 
+            WHERE veterinarian_id = $1
         `;
         const checkResult = await pool.query(checkQuery, [userId]);
 
@@ -190,7 +190,7 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
             });
         }
 
-        if (checkResult.rows[0].verification_status !== 'pending') {
+        if (checkResult.rows[0].veterinarian_verification_status !== 'pending') {
             return res.status(400).json({
                 success: false,
                 message: 'Can only update pending verification requests'
@@ -202,9 +202,9 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
 
         // Update the profile
         const updateQuery = `
-            UPDATE veterinarianprofile 
-            SET verification_status = $1
-            WHERE user_id = $2 
+            UPDATE veterinarians 
+            SET veterinarian_verification_status = $1
+            WHERE veterinarian_id = $2 
             RETURNING *
         `;
 
@@ -213,15 +213,15 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
         // Get updated list of pending verifications
         const pendingQuery = `
             SELECT 
-                v.user_id,
-                v.tc_number,
-                v.graduation_barcode,
-                v.verification_status,
-                u.name,
-                u.surname
-            FROM veterinarianprofile v
-            JOIN users u ON v.user_id = u.id
-            WHERE v.verification_status = 'pending'
+                v.veterinarian_id,
+                v.veterinarian_tc_number,
+                v.veterinarian_graduate_barcode,
+                v.veterinarian_verification_status,
+                u.user_name as name,
+                u.user_surname as surname
+            FROM veterinarians v
+            JOIN "users" u ON v.veterinarian_id = u.user_id
+            WHERE v.veterinarian_verification_status = 'pending'
         `;
 
         const pendingResult = await pool.query(pendingQuery);

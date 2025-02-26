@@ -13,11 +13,11 @@ router.get('/verification-status', authenticateToken, async (req, res) => {
 
         const userId = req.user.userId;
 
-        // Query to get verification status from veterinarianprofile table
+        // Query to get verification status from veterinarians table
         const query = `
-            SELECT verification_status 
-            FROM veterinarianprofile 
-            WHERE user_id = $1
+            SELECT veterinarian_verification_status 
+            FROM veterinarians 
+            WHERE veterinarian_id = $1
         `;
 
         const result = await pool.query(query, [userId]);
@@ -27,7 +27,7 @@ router.get('/verification-status', authenticateToken, async (req, res) => {
         }
 
         res.json({ 
-            verification_status: result.rows[0].verification_status,
+            verification_status: result.rows[0].veterinarian_verification_status,
         });
     } catch (error) {
         console.error('Error checking verification status:', error);
@@ -58,29 +58,29 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
 
         // First, check if a profile already exists
         const checkQuery = `
-            SELECT user_id 
-            FROM veterinarianprofile 
-            WHERE user_id = $1
+            SELECT veterinarian_id 
+            FROM veterinarians 
+            WHERE veterinarian_id = $1
         `;
         const existingProfile = await pool.query(checkQuery, [userId]);
 
         if (existingProfile.rows.length > 0) {
             // Update existing profile
             const updateQuery = `
-                UPDATE veterinarianprofile 
+                UPDATE veterinarians 
                 SET 
-                    graduation_barcode = $1,
-                    tc_number = $2,
-                    verification_status = 'pending'
-                WHERE user_id = $3
+                    veterinarian_graduate_barcode = $1,
+                    veterinarian_tc_number = $2,
+                    veterinarian_verification_status = 'pending'
+                WHERE veterinarian_id = $3
                 RETURNING *
             `;
             await pool.query(updateQuery, [graduation_barcode, tc_number, userId]);
         } else {
             // Create new profile
             const insertQuery = `
-                INSERT INTO veterinarianprofile 
-                (user_id, graduation_barcode, tc_number, verification_status)
+                INSERT INTO veterinarians 
+                (veterinarian_id, veterinarian_graduate_barcode, veterinarian_tc_number, veterinarian_verification_status)
                 VALUES ($1, $2, $3, 'pending')
                 RETURNING *
             `;
