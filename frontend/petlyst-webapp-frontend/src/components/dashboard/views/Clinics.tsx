@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../../store';
 import axios from 'axios';
 import { Clinic } from '../../../types/dashboard';
@@ -22,6 +23,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const token = useSelector((state: RootState) => state.auth.token);
+  const navigate = useNavigate();
 
   const fetchClinics = async () => {
     setIsLoading(true);
@@ -80,6 +82,10 @@ export const Clinics: React.FC<ClinicsProps> = ({
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleAddClinicClick = () => {
+    navigate('/add-clinic');
   };
 
   useEffect(() => {
@@ -145,8 +151,8 @@ export const Clinics: React.FC<ClinicsProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div 
-        onClick={onAddClinic}
-        className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group h-[250px]"
+        onClick={clinics.length === 0 ? handleAddClinicClick : undefined}
+        className={`bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 p-8 flex flex-col items-center justify-center ${clinics.length === 0 ? 'cursor-pointer hover:border-blue-500 hover:bg-blue-50' : 'cursor-not-allowed opacity-60'} transition-all duration-200 group h-[250px]`}
       >
         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
           <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,9 +160,15 @@ export const Clinics: React.FC<ClinicsProps> = ({
           </svg>
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600">Add New Clinic</h3>
-        <p className="text-sm text-gray-500 text-center group-hover:text-blue-600">
-          Add another clinic to your practice
-        </p>
+        {clinics.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center group-hover:text-blue-600">
+            Add a clinic to your practice
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500 text-center">
+            You can only register one clinic
+          </p>
+        )}
       </div>
 
       {clinics && clinics.map(clinic => (
