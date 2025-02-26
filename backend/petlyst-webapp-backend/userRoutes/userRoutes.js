@@ -99,6 +99,19 @@ router.post('/register', async (req, res) => {
         // Create user type specific profile
         try {
             await createUserTypeProfile(newUser.id, user_type);
+            
+            // For veterinarians, directly set status to not_verified
+            if (user_type === 'veterinarian') {
+                // Direct SQL update to ensure status is not_verified
+                const updateQuery = {
+                    text: `UPDATE "veterinarians" 
+                           SET veterinarian_verification_status = 'not_verified' 
+                           WHERE veterinarian_id = $1`,
+                    values: [newUser.id]
+                };
+                await pool.query(updateQuery);
+                console.log('Veterinarian status set to not_verified');
+            }
         } catch (profileError) {
             console.error(`Error creating ${user_type} profile:`, profileError);
             // Continue despite profile creation error
@@ -268,7 +281,7 @@ router.post('/reset-password', async (req, res) => {
 
     // Clean up old tokens for this user
     await pool.query(
-      'DELETE FROM password_reset_tokens WHERE email = $1 AND id NOT IN (SELECT id FROM password_reset_tokens WHERE email = $1 ORDER BY created_at DESC LIMIT 1)',
+      'DELETE FROM password_reset_tokens WHERE email = $1 AND token_id NOT IN (SELECT token_id FROM password_reset_tokens WHERE email = $1 ORDER BY created_at DESC LIMIT 1)',
       [email]
     );
 
@@ -431,8 +444,8 @@ router.post('/verify-reset', async (req, res) => {
 
     // Mark token as used
     await pool.query(
-      'UPDATE password_reset_tokens SET is_used = TRUE WHERE id = $1',
-      [tokenResult.rows[0].id]
+      'UPDATE password_reset_tokens SET is_used = TRUE WHERE token_id = $1',
+      [tokenResult.rows[0].token_id]
     );
 
     res.json({
@@ -509,15 +522,30 @@ async function createUserTypeProfile(userId, userType) {
             console.log('Pet owner profile created:', result.rows[0]);
             
         } else if (userType === 'veterinarian') {
-            // Insert into veterinarians table
+            // Insert into veterinarians table with explicit not_verified status
+            console.log('Creating veterinarian profile with status: not_verified');
             const veterinarianQuery = {
-                text: `INSERT INTO "veterinarians" (veterinarian_id) 
-                      VALUES ($1) 
-                      RETURNING veterinarian_id`,
+                text: `INSERT INTO "veterinarians" (veterinarian_id, veterinarian_verification_status) 
+                      VALUES ($1, 'not_verified') 
+                      RETURNING veterinarian_id, veterinarian_verification_status`,
                 values: [userId]
             };
             result = await pool.query(veterinarianQuery);
-            console.log('Veterinarian profile created:', result.rows[0]);
+            console.log('Veterinarian profile created with status:', result.rows[0]);
+            
+            // Double-check the status and force update if needed
+            if (result.rows[0]?.veterinarian_verification_status !== 'not_verified') {
+                console.log('Status not set correctly, forcing update to not_verified');
+                const updateQuery = {
+                    text: `UPDATE "veterinarians" 
+                           SET veterinarian_verification_status = 'not_verified' 
+                           WHERE veterinarian_id = $1 
+                           RETURNING veterinarian_id, veterinarian_verification_status`,
+                    values: [userId]
+                };
+                result = await pool.query(updateQuery);
+                console.log('Updated veterinarian status:', result.rows[0]);
+            }
         }
         
         return result?.rows[0] || null;
@@ -595,6 +623,43 @@ router.post('/create-profile', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to create profile',
+            error: error.message
+        });
+    }
+});
+
+// API endpoint to update all veterinarians with 'pending' status to 'not_verified'
+router.post('/update-veterinarian-status', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin privileges required.'
+            });
+        }
+        
+        // Update all veterinarians with 'pending' status to 'not_verified'
+        const updateQuery = {
+            text: `UPDATE "veterinarians" 
+                   SET veterinarian_verification_status = 'not_verified' 
+                   WHERE veterinarian_verification_status = 'pending' 
+                   RETURNING veterinarian_id, veterinarian_verification_status`
+        };
+        
+        const result = await pool.query(updateQuery);
+        
+        res.status(200).json({
+            success: true,
+            message: `Updated ${result.rows.length} veterinarians from 'pending' to 'not_verified'`,
+            updated: result.rows
+        });
+        
+    } catch (error) {
+        console.error('Error updating veterinarian status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update veterinarian status',
             error: error.message
         });
     }

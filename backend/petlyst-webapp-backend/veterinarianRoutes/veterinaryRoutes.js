@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
+const { encrypt } = require('../utils/encryption');
 
 // Get Veterinarian Verification Status for Authenticated Veterinary
 router.get('/verification-status', authenticateToken, async (req, res) => {
@@ -56,6 +57,9 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
             return res.status(400).json({ message: 'Invalid TC Kimlik No format.' });
         }
 
+        // Encrypt the TC number before storing
+        const encryptedTcNumber = encrypt(tc_number);
+
         // First, check if a profile already exists
         const checkQuery = `
             SELECT veterinarian_id 
@@ -75,7 +79,7 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
                 WHERE veterinarian_id = $3
                 RETURNING *
             `;
-            await pool.query(updateQuery, [graduation_barcode, tc_number, userId]);
+            await pool.query(updateQuery, [graduation_barcode, encryptedTcNumber, userId]);
         } else {
             // Create new profile
             const insertQuery = `
@@ -84,7 +88,7 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
                 VALUES ($1, $2, $3, 'pending')
                 RETURNING *
             `;
-            await pool.query(insertQuery, [userId, graduation_barcode, tc_number]);
+            await pool.query(insertQuery, [userId, graduation_barcode, encryptedTcNumber]);
         }
 
         res.status(200).json({ 
