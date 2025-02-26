@@ -31,7 +31,7 @@ const checkVerificationStatus = async (req, res, next) => {
         const userQuery = `
             SELECT user_type 
             FROM users 
-            WHERE id = $1
+            WHERE user_id = $1
         `;
         const userResult = await pool.query(userQuery, [userId]);
         console.log('User type result:', userResult.rows[0]); // Debug log

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
+const { decrypt, encrypt } = require('../utils/encryption');
 
 // Test route - no authentication required
 router.get('/test', (req, res) => {
@@ -149,10 +150,16 @@ router.get('/pending-review-status', authenticateToken, isAdmin, async (req, res
         `;
 
         const result = await pool.query(query);
+        
+        // Decrypt TC numbers for admin review
+        const pendingVerifications = result.rows.map(vet => ({
+            ...vet,
+            veterinarian_tc_number: decrypt(vet.veterinarian_tc_number)
+        }));
 
         res.json({
             message: 'Showing All Pending Veterinarians',
-            pendingVerifications: result.rows
+            pendingVerifications
         });
 
     } catch (error) {
@@ -226,12 +233,18 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
 
         const pendingResult = await pool.query(pendingQuery);
 
+        // Decrypt TC numbers for admin review
+        const pendingVerifications = pendingResult.rows.map(vet => ({
+            ...vet,
+            veterinarian_tc_number: decrypt(vet.veterinarian_tc_number)
+        }));
+
         // Send response
         res.json({
             success: true,
             message: `Veterinarian verification ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
             updatedProfile: updateResult.rows[0],
-            pendingVerifications: pendingResult.rows
+            pendingVerifications
         });
 
     } catch (error) {
@@ -247,6 +260,111 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
         res.status(500).json({
             success: false,
             message: 'Failed to update verification status',
+            error: error.message
+        });
+    }
+});
+
+// Check if all TC numbers are encrypted
+router.get('/check-tc-encryption', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT veterinarian_id, veterinarian_tc_number 
+            FROM veterinarians 
+            WHERE veterinarian_tc_number IS NOT NULL
+        `;
+        
+        const result = await pool.query(query);
+        
+        const unencryptedTcNumbers = result.rows.filter(vet => {
+            const tcNumber = vet.veterinarian_tc_number;
+            // Check if it's not encrypted (doesn't contain a colon which separates IV and encrypted data)
+            return !tcNumber.includes(':');
+        });
+        
+        if (unencryptedTcNumbers.length > 0) {
+            return res.json({
+                allEncrypted: false,
+                message: `Found ${unencryptedTcNumbers.length} unencrypted TC numbers`,
+                unencryptedCount: unencryptedTcNumbers.length,
+                totalCount: result.rows.length
+            });
+        }
+        
+        res.json({
+            allEncrypted: true,
+            message: 'All TC numbers are encrypted',
+            totalCount: result.rows.length
+        });
+        
+    } catch (error) {
+        console.error('Error checking TC number encryption:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Re-encrypt any unencrypted TC numbers
+router.post('/encrypt-tc-numbers', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const query = `
+            SELECT veterinarian_id, veterinarian_tc_number 
+            FROM veterinarians 
+            WHERE veterinarian_tc_number IS NOT NULL
+        `;
+        
+        const result = await pool.query(query);
+        
+        let encryptedCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+        
+        // Process each veterinarian
+        for (const vet of result.rows) {
+            const tcNumber = vet.veterinarian_tc_number;
+            
+            // Skip if already encrypted
+            if (tcNumber.includes(':')) {
+                skippedCount++;
+                continue;
+            }
+            
+            try {
+                // Only encrypt if it looks like a TC number (11 digits)
+                if (/^\d{11}$/.test(tcNumber)) {
+                    const encryptedTcNumber = encrypt(tcNumber);
+                    
+                    // Update the database with the encrypted value
+                    const updateQuery = `
+                        UPDATE veterinarians 
+                        SET veterinarian_tc_number = $1 
+                        WHERE veterinarian_id = $2
+                    `;
+                    
+                    await pool.query(updateQuery, [encryptedTcNumber, vet.veterinarian_id]);
+                    encryptedCount++;
+                } else {
+                    skippedCount++;
+                }
+            } catch (error) {
+                console.error(`Error encrypting TC number for veterinarian ID ${vet.veterinarian_id}:`, error);
+                errorCount++;
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: 'TC number encryption process completed',
+            encryptedCount,
+            skippedCount,
+            errorCount,
+            totalProcessed: result.rows.length
+        });
+        
+    } catch (error) {
+        console.error('Error encrypting TC numbers:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Internal server error',
             error: error.message
         });
     }
