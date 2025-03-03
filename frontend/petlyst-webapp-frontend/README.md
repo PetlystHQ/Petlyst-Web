@@ -48,3 +48,17 @@ export default tseslint.config({
   },
 });
 ```
+
+## Environment Variables
+
+This project uses environment variables to store sensitive information like API keys. To set up your local environment:
+
+1. Create a `.env` file in the root of the project (this file will be ignored by git)
+2. Copy the contents from `.env.example` to your `.env` file
+3. Replace the placeholder values with your actual API keys
+
+### Required Environment Variables
+
+- `VITE_GOOGLE_MAPS_API_KEY`: Your Google Maps API key for the location features
+
+Never commit your actual API keys to version control. The `.env` file is already listed in the `.gitignore` file.
