@@ -23,6 +23,10 @@ export interface ClinicFormData {
   
   phone_number: string;
   description: string;
+  
+  // Communication preferences
+  showPhoneNumber: boolean;
+  allowDirectMessages: boolean;
 }
 
 export type FormStep = 'clinic_details' | 'locations' | 'communication' | 'visuals' | 'services' | 'tax_registration'; 

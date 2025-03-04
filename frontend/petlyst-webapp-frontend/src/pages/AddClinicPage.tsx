@@ -11,6 +11,7 @@ import { PlaceholderSection } from '../components/clinic/forms/PlaceholderSectio
 import { StepProgressBar } from '../components/clinic/progress/StepProgressBar';
 import { MobileStepIndicator } from '../components/clinic/progress/MobileStepIndicator';
 import { SuccessMessage } from '../components/clinic/SuccessMessage';
+import { CommunicationForm } from '../components/clinic/forms/CommunicationForm';
 
 const AddClinicPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,7 +30,11 @@ const AddClinicPage: React.FC = () => {
     address: '',
     
     phone_number: '',
-    description: ''
+    description: '',
+    
+    // New fields with default values
+    showPhoneNumber: false,
+    allowDirectMessages: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -85,6 +90,12 @@ const AddClinicPage: React.FC = () => {
       }
     }
   }, [verificationStatus, verificationLoading, navigate]);
+
+  // Clear error message when step changes
+  useEffect(() => {
+    // Adım değiştiğinde hata mesajını temizle
+    setError('');
+  }, [currentStep]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -213,6 +224,7 @@ const AddClinicPage: React.FC = () => {
   const handleNextStep = () => {
     const currentIndex = steps.findIndex(step => step.id === currentStep);
     if (currentIndex < steps.length - 1) {
+      setError('');
       setCurrentStep(steps[currentIndex + 1].id);
     }
   };
@@ -220,19 +232,41 @@ const AddClinicPage: React.FC = () => {
   const handlePreviousStep = () => {
     const currentIndex = steps.findIndex(step => step.id === currentStep);
     if (currentIndex > 0) {
+      setError('');
       setCurrentStep(steps[currentIndex - 1].id);
     }
   };
 
   const handleGoToStep = (stepId: FormStep) => {
+    setError('');
     setCurrentStep(stepId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if we're in communication step and the form data is valid
+    if (currentStep === 'communication') {
+      // Telefon numarası validasyonunu kontrol et
+      const isCommunicationFormValid = document.body.dataset.communicationFormValid === 'true';
+      
+      // Eğer telefon numarası geçerli değilse, ilerlemesini engelle
+      if (!isCommunicationFormValid && formData.phone_number) {
+        setError('Please enter a valid phone number.');
+        // Telefon numarası input'una odaklan
+        const phoneInput = document.querySelector('input[name="phone_number"]') as HTMLInputElement;
+        if (phoneInput) phoneInput.focus();
+        return;
+      } else {
+        // Telefon numarası validasyonu başarılı, hata mesajını temizle
+        setError('');
+      }
+    }
+    
     // If not on the final step, go to next step
     if (currentStep !== 'tax_registration') {
+      // Hata mesajını temizle ve sonraki adıma geç
+      setError('');
       handleNextStep();
       return;
     }
@@ -280,7 +314,9 @@ const AddClinicPage: React.FC = () => {
           district: '',
           address: '',
           phone_number: '',
-          description: ''
+          description: '',
+          showPhoneNumber: false,
+          allowDirectMessages: false
         });
         setSelectedPhotos([]);
         setPhotoPreviewUrls([]);
@@ -386,10 +422,15 @@ const AddClinicPage: React.FC = () => {
 
             {/* Communication Section */}
             {currentStep === 'communication' && (
-              <PlaceholderSection
-                title="Communication"
-                subtitle="Add your clinic's contact details"
-                tooltipText="Specify how clients can contact your clinic"
+              <CommunicationForm
+                formData={formData}
+                handleInputChange={handleInputChange}
+                handleSocialMediaChange={handleSocialMediaChange}
+                handleAddEmptySocialMedia={handleAddEmptySocialMedia}
+                handleRemoveSocialMedia={handleRemoveSocialMedia}
+                hasExistingClinic={hasExistingClinic}
+                loading={loading}
+                setError={setError}
               />
             )}
 
