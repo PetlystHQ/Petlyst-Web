@@ -1,5 +1,4 @@
 import React from 'react';
-import { SocialMediaSection } from './SocialMediaSection';
 import { Tooltip } from '../shared/Tooltip';
 import { ClinicFormData } from '../../../types/clinic';
 
@@ -122,15 +121,6 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           />
         </div>
-
-        <SocialMediaSection
-          socialMediaLinks={formData.social_media_links}
-          handleSocialMediaChange={handleSocialMediaChange}
-          handleAddEmptySocialMedia={handleAddEmptySocialMedia}
-          handleRemoveSocialMedia={handleRemoveSocialMedia}
-          hasExistingClinic={hasExistingClinic}
-          loading={loading}
-        />
       </div>
     </div>
   );

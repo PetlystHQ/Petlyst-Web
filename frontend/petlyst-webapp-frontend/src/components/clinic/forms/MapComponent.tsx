@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { ClinicFormData, LocationCoordinates } from '../../../types/clinic';
+import { ClinicFormData } from '../../../types/clinic';
 import { ErrorBoundary } from '../../common/ErrorBoundary';
 // Heroicons kütüphanesi yüklü değil, SVG ikonlarını manuel olarak tanımlayalım
 
@@ -36,9 +36,6 @@ interface LatLng {
 }
 
 // Tip güvenliği için bu metodu ekleyelim
-const isLatLng = (coords: any): coords is LatLng => {
-  return coords && typeof coords.lat === 'number' && typeof coords.lng === 'number';
-};
 
 // Try multiple ways to access the API key
 const getApiKey = (): string => {
