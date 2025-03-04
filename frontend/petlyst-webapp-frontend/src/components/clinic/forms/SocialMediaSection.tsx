@@ -10,6 +10,9 @@ interface SocialMediaSectionProps {
   loading: boolean;
 }
 
+// Maximum number of social media links allowed
+const MAX_SOCIAL_MEDIA_LINKS = 4;
+
 export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
   socialMediaLinks,
   handleSocialMediaChange,
@@ -18,6 +21,9 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
   hasExistingClinic,
   loading
 }) => {
+  // Check if maximum number of links is reached
+  const isMaxLinksReached = socialMediaLinks.length >= MAX_SOCIAL_MEDIA_LINKS;
+
   return (
     <div>
       <div className="flex items-center mb-1">
@@ -28,7 +34,7 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
       
       <div className="space-y-3">
         {socialMediaLinks.length === 0 && (
-          <p className="text-sm text-gray-500 italic">Optional: Add your clinic's social media links</p>
+          <p className="text-sm text-gray-500 italic">Optional: Add your clinic's social media links (max 4)</p>
         )}
         
         {socialMediaLinks.map((link, index) => (
@@ -89,14 +95,22 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
         <button
           type="button"
           onClick={handleAddEmptySocialMedia}
-          disabled={hasExistingClinic || loading}
-          className="w-full mt-2 py-3 px-3 border border-dashed border-gray-300 rounded-md hover:border-blue-500 hover:bg-blue-50 focus:outline-none transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={hasExistingClinic || loading || isMaxLinksReached}
+          className={`w-full mt-2 py-3 px-3 border border-dashed ${isMaxLinksReached ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'} rounded-md focus:outline-none transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <svg className="h-4 w-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className={`h-4 w-4 mr-2 ${isMaxLinksReached ? 'text-gray-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
           </svg>
-          <span className="text-sm text-blue-600 font-medium">Add social media link</span>
+          <span className={`text-sm font-medium ${isMaxLinksReached ? 'text-gray-400' : 'text-blue-600'}`}>
+            {isMaxLinksReached ? 'Maximum links reached (4)' : 'Add social media link'}
+          </span>
         </button>
+        
+        {socialMediaLinks.length > 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            Maximum 4 social media links allowed. Each platform can only be added once.
+          </p>
+        )}
       </div>
     </div>
   );

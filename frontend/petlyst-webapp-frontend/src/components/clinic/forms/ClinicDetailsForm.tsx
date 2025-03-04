@@ -108,7 +108,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
         <div>
           <div className="flex items-center">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clinic Establishment Date
+              Clinic Establishment Date <span className="text-red-500">*</span>
             </label>
             <Tooltip text="The month and year when your clinic was officially established" />
           </div>
@@ -117,6 +117,8 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             name="establishment_date"
             value={formData.establishment_date}
             onChange={handleInputChange}
+            required
+            max={new Date().toISOString().slice(0, 7)}
             disabled={hasExistingClinic || loading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           />
