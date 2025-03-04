@@ -222,9 +222,24 @@ const AddClinicPage: React.FC = () => {
   };
 
   const handleNextStep = () => {
+    setError('');
+    
+    // If we're on the communication step, check if any social media platforms have empty URLs
+    if (currentStep === 'communication') {
+      const emptyUrlPlatforms = formData.social_media_links.filter(link => 
+        link.platform && !link.url.trim()
+      );
+      
+      if (emptyUrlPlatforms.length > 0) {
+        // Get the names of platforms with empty URLs for the error message
+        const platformNames = emptyUrlPlatforms.map(link => link.platform).join(', ');
+        setError(`Please add URLs for the following platforms: ${platformNames}`);
+        return;
+      }
+    }
+
     const currentIndex = steps.findIndex(step => step.id === currentStep);
     if (currentIndex < steps.length - 1) {
-      setError('');
       setCurrentStep(steps[currentIndex + 1].id);
     }
   };
@@ -244,6 +259,32 @@ const AddClinicPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for required fields in clinic_details step
+    if (currentStep === 'clinic_details') {
+      if (!formData.establishment_date) {
+        setError('Clinic Establishment Date is required.');
+        // Establishment date input'una odaklan
+        const dateInput = document.querySelector('input[name="establishment_date"]') as HTMLInputElement;
+        if (dateInput) dateInput.focus();
+        return;
+      }
+      
+      // Check if establishment date is in the future
+      const establishmentDate = new Date(formData.establishment_date);
+      const currentDate = new Date();
+      
+      // Set both dates to the first day of their respective months to compare just the year and month
+      establishmentDate.setDate(1);
+      currentDate.setDate(1);
+      
+      if (establishmentDate > currentDate) {
+        setError('Clinic Establishment Date cannot be in the future.');
+        const dateInput = document.querySelector('input[name="establishment_date"]') as HTMLInputElement;
+        if (dateInput) dateInput.focus();
+        return;
+      }
+    }
     
     // Check if we're in communication step and the form data is valid
     if (currentStep === 'communication') {
