@@ -27,6 +27,15 @@ export interface ClinicFormData {
   // Communication preferences
   showPhoneNumber: boolean;
   allowDirectMessages: boolean;
+  
+  // Service information
+  servedAnimalTypes: string[];
+  medicalServices: string[];
+  additionalServices: string[];
+  
+  // Registration information
+  taxIdentificationNumber: string;
+  veterinaryLicenseNumber: string;
 }
 
 export type FormStep = 'clinic_details' | 'locations' | 'communication' | 'visuals' | 'services' | 'tax_registration'; 

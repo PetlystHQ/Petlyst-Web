@@ -1,6 +1,4 @@
 const pool = require('../config/db');
-const jwt = require('jsonwebtoken');
-
 
 // Returns 404 if user not found
 // Returns 403 if user is not a veterinarian
@@ -8,24 +6,12 @@ const jwt = require('jsonwebtoken');
 
 const checkVerificationStatus = async (req, res, next) => {
     try {
-        // Check if token exists and is valid
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-
-        if (!token) {
-            return res.status(401).json({ message: 'Authentication token is required' });
-        }
-
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = decoded;
-            console.log('Decoded token:', decoded); // Debug log
-        } catch (error) {
-            return res.status(403).json({ message: 'Invalid or expired token' });
+        // Assumes authenticateToken middleware has already run and req.user is available
+        if (!req.user || !req.user.userId) {
+            return res.status(401).json({ message: 'User not authenticated' });
         }
 
         const userId = req.user.userId;
-        console.log('Checking verification for userId:', userId); // Debug log
 
         // First check if user is a veterinarian in users table
         const userQuery = `
@@ -34,7 +20,6 @@ const checkVerificationStatus = async (req, res, next) => {
             WHERE user_id = $1
         `;
         const userResult = await pool.query(userQuery, [userId]);
-        console.log('User type result:', userResult.rows[0]); // Debug log
 
         if (!userResult.rows.length) {
             return res.status(404).json({ 
@@ -55,7 +40,6 @@ const checkVerificationStatus = async (req, res, next) => {
             WHERE veterinarian_id = $1
         `;
         const verificationResult = await pool.query(verificationQuery, [userId]);
-        console.log('Verification status result:', verificationResult.rows[0]); // Debug log
 
         if (!verificationResult.rows.length) {
             return res.status(404).json({ 

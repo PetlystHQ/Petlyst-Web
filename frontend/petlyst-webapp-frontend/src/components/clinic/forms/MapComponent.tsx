@@ -231,26 +231,20 @@ const MapContainer = ({
 
         console.log('[DEBUG] Extracted address data:', { province, district, formattedAddress });
 
+        // Always update all fields at once for consistency
         if (province) {
           updateField("province", province);
-          // DOM güncelleme - doğrudan il alanını güncelle
-          const provinceInput = document.getElementById("province") as HTMLInputElement;
-          if (provinceInput) provinceInput.value = province;
         }
 
         if (district) {
           updateField("district", district);
-          // DOM güncelleme - doğrudan ilçe alanını güncelle
-          const districtInput = document.getElementById("district") as HTMLInputElement;
-          if (districtInput) districtInput.value = district;
         }
         
-        // Detaylı adres güncellemesi
+        // Detailed address update
         if (formattedAddress) {
           updateField("detailedAddress", formattedAddress);
-          // DOM güncelleme - doğrudan detaylı adres alanını güncelle
-          const detailedAddressInput = document.getElementById("detailedAddress") as HTMLTextAreaElement;
-          if (detailedAddressInput) detailedAddressInput.value = formattedAddress;
+          // Also update the address field that's used in the form
+          updateField("address", formattedAddress);
         }
       }
     } catch (error) {
@@ -360,22 +354,44 @@ const MapContainer = ({
       // Add map click event
       if (!hasExistingClinic) {
         console.log('[DEBUG] Adding map click event listener');
-        mapInstance.current.addListener('click', (e: any) => {
-          const newLat = e.latLng.lat();
-          const newLng = e.latLng.lng();
+        google.maps.event.addListener(mapInstance.current, 'click', async (event: any) => {
+          const latLng = event.latLng;
+          const lat = latLng.lat();
+          const lng = latLng.lng();
           
+          // Update marker
           if (marker.current) {
-            if (marker.current.position) {
-              marker.current.position = e.latLng;
-            } else if (marker.current.setPosition) {
-              marker.current.setPosition(e.latLng);
-            }
+            marker.current.setPosition(latLng);
+          } else {
+            marker.current = new google.maps.Marker({
+              position: latLng,
+              map: mapInstance.current,
+              draggable: true,
+              animation: google.maps.Animation.DROP
+            });
+            
+            // Add draggend event listener to marker
+            google.maps.event.addListener(marker.current, 'dragend', async function() {
+              if (marker.current) {
+                const pos = marker.current.getPosition();
+                if (pos) {
+                  updateField("coordinates", { 
+                    lat: pos.lat(), 
+                    lng: pos.lng() 
+                  });
+                  
+                  // Perform reverse geocoding when marker is dragged
+                  await performReverseGeocoding(pos.lat(), pos.lng());
+                }
+              }
+            });
           }
           
-          console.log('[DEBUG] Map click - updating coordinates to:', { lat: newLat, lng: newLng });
+          // Update the form coordinates
+          updateField("coordinates", { lat, lng });
           
-          updateField("coordinates", { lat: newLat, lng: newLng });
-          performReverseGeocoding(newLat, newLng);
+          // Always perform reverse geocoding when a location is selected
+          await performReverseGeocoding(lat, lng);
         });
       }
       
@@ -458,64 +474,9 @@ const MapContainer = ({
     <>
       <div 
         ref={mapContainerRef} 
-        style={{ height: '320px', width: '100%' }}
+        style={{ height: '370px', width: '100%' }}
         className={`rounded-lg border border-gray-300 ${hasExistingClinic || loading ? 'opacity-75 pointer-events-none' : ''}`}
       ></div>
-      
-      {formData.coordinates && (
-        <div className="flex flex-col gap-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium text-md text-gray-700">Seçilen Konum Detayları</h3>
-            {!hasExistingClinic && !loading && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddressLoading(true);
-                  performReverseGeocoding(
-                    formData.coordinates?.lat || 0,
-                    formData.coordinates?.lng || 0
-                  );
-                }}
-                className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <ArrowPathIcon className="-ml-0.5 mr-1 h-4 w-4" aria-hidden="true" />
-                Adresi Yenile
-              </button>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="font-medium text-gray-500">Enlem (Lat):</span> {formData.coordinates.lat.toFixed(6)}
-            </div>
-            <div>
-              <span className="font-medium text-gray-500">Boylam (Lng):</span> {formData.coordinates.lng.toFixed(6)}
-            </div>
-          </div>
-          
-          {isAddressLoading ? (
-            <div className="flex items-center space-x-2 mt-2 text-sm text-gray-500">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-              <span>Adres bilgileri alınıyor...</span>
-            </div>
-          ) : formData.province || formData.district || (formData as ExtendedClinicFormData).detailedAddress ? (
-            <div className="mt-2 text-sm text-gray-600">
-              {formData.province && <div><span className="font-medium text-gray-500">İl:</span> {formData.province}</div>}
-              {formData.district && <div><span className="font-medium text-gray-500">İlçe:</span> {formData.district}</div>}
-              {(formData as ExtendedClinicFormData).detailedAddress && (
-                <div>
-                  <span className="font-medium text-gray-500">Adres:</span> 
-                  <div className="mt-1">{(formData as ExtendedClinicFormData).detailedAddress}</div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mt-2 text-sm text-gray-500">
-              Adres bilgisi bulunamadı.
-            </div>
-          )}
-        </div>
-      )}
     </>
   );
 };
@@ -584,7 +545,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
   return (
     <ErrorBoundary>
-      <div className="w-full">
+      <div className="h-full flex flex-col">
         {/* Alt+D ile gösterilen debug bilgisi */}
         {showDebug && (
           <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-100 rounded">
@@ -630,9 +591,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <button
                       type="button"
                       onClick={() => window.location.reload()}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
-                      <ArrowPathIcon className="-ml-0.5 mr-1 h-4 w-4" aria-hidden="true" />
                       Sayfayı Yenile
                     </button>
                   </div>
@@ -641,36 +601,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {/* Map Container çağrısı */}
-            <MapContainer 
+          <div>
+            <MapContainer
               formData={formData}
               updateField={updateField}
               hasExistingClinic={hasExistingClinic}
               loading={loading}
               onError={handleMapError}
             />
-            
-            {/* Konum bilgilerinin kısa özeti - sadece seçim yapıldıysa göster */}
-            {formData.coordinates && (
-              <div className="flex items-center justify-between p-3 border border-gray-300 rounded-lg bg-gray-50">
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-500">Seçilen Konum: </span>
-                  <span className="text-sm font-medium">
-                    {formData.province || 'İl bilgisi yok'}, {formData.district || 'İlçe bilgisi yok'}
-                  </span>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => updateField("coordinates", null)}
-                    className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    Seçimi Temizle
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

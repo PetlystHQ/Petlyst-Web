@@ -129,29 +129,74 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
   }
 });
 
+// Handle removed draft routes explicitly
+router.post('/draft', authenticateToken, (req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: 'Draft functionality has been removed.'
+  });
+});
+
+router.get('/draft', authenticateToken, (req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: 'Draft functionality has been removed.'
+  });
+});
+
+router.delete('/draft', authenticateToken, (req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: 'Draft functionality has been removed.'
+  });
+});
+
 // Add a new clinic (requires verified veterinarian)
 router.post('/add', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    const { 
-      clinic_name, 
-      clinic_address, 
-      clinic_phone, 
-      clinic_email, 
-      clinic_description, 
-      available_days, 
-      emergency_available_days, 
-      opening_time, 
-      closing_time 
+    const {
+      clinic_name,
+      clinic_address,
+      clinic_phone,
+      clinic_email,
+      clinic_description,
+      available_days,
+      emergency_available_days,
+      opening_time,
+      closing_time,
+      coordinates,
+      establishment_date,
+      show_phone_number,
+      allow_direct_messages,
+      province,
+      district,
+      social_media_links,
+      is_partial_submission
     } = req.body;
     
     const clinic_operator_id = req.user.userId;
 
-    // Validate required fields
-    if (!clinic_name || !clinic_address || !available_days || !opening_time || !closing_time) {
-      return res.status(400).json({ 
-        message: 'Clinic name, address, available days, opening time, and closing time are required' 
-      });
+    // Validate required fields - Modified to allow partial submissions
+    if (is_partial_submission) {
+      // For partial submissions, only require name and establishment_date
+      if (!clinic_name || !establishment_date) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Clinic name and establishment date are required even for partial submissions' 
+        });
+      }
+    } else {
+      // For complete submissions, validate all required fields
+      if (!clinic_name || !clinic_address || !available_days || !opening_time || !closing_time || !establishment_date) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Required fields are missing' 
+        });
+      }
     }
+
+    // Determine clinic creation status
+    const clinic_creation_status = is_partial_submission ? 'incomplete' : 'complete';
 
     // Create clinic in database
     const clinicData = {
@@ -164,18 +209,94 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       available_days,
       emergency_available_days,
       opening_time,
-      closing_time
+      closing_time,
+      coordinates,
+      establishment_date,
+      show_phone_number,
+      allow_direct_messages,
+      province,
+      district,
+      clinic_creation_status
     };
 
-    const newClinic = await Clinic.createClinic(clinicData);
-
-    res.status(201).json({
-      message: "Clinic added successfully",
-      clinic: newClinic
-    });
+    // Begin a transaction
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Insert clinic - Updated to include clinic_creation_status
+      const newClinicQuery = `
+        INSERT INTO clinics (
+          clinic_name, clinic_address, clinic_phone, clinic_email, 
+          clinic_operator_id, clinic_description, available_days, 
+          emergency_available_days, opening_time, closing_time,
+          coordinates, establishment_date, show_phone_number,
+          allow_direct_messages, province, district, clinic_creation_status
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17
+        )
+        RETURNING *
+      `;
+      
+      const clinicResult = await client.query(newClinicQuery, [
+        clinicData.clinic_name,
+        clinicData.clinic_address || null,
+        clinicData.clinic_phone || null,
+        clinicData.clinic_email || null,
+        clinicData.clinic_operator_id,
+        clinicData.clinic_description || null,
+        clinicData.available_days || null,
+        clinicData.emergency_available_days || null,
+        clinicData.opening_time || null,
+        clinicData.closing_time || null,
+        clinicData.coordinates || null,
+        clinicData.establishment_date,
+        clinicData.show_phone_number || false,
+        clinicData.allow_direct_messages || false,
+        clinicData.province || null,
+        clinicData.district || null,
+        clinicData.clinic_creation_status
+      ]);
+      
+      const newClinic = clinicResult.rows[0];
+      
+      // Add social media links if provided
+      if (social_media_links && social_media_links.length > 0) {
+        for (const link of social_media_links) {
+          if (link.platform && link.url) {
+            const socialMediaQuery = `
+              INSERT INTO clinic_social_media (clinic_id, platform, url)
+              VALUES ($1, $2, $3)
+            `;
+            await client.query(socialMediaQuery, [newClinic.clinic_id, link.platform, link.url]);
+          }
+        }
+      }
+      
+      // Commit the transaction
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        success: true,
+        message: "Clinic added successfully",
+        clinic: newClinic
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Error adding clinic:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -345,9 +466,9 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         clinicName
       );
 
-      // Insert photo URL into clinic_photos table
+      // Insert photo URL into clinicalbum table instead of clinic_photos
       const insertPhotoQuery = `
-        INSERT INTO clinic_photos (clinic_id, s3_url)
+        INSERT INTO clinicalbum (clinic_id, clinic_album_photo_url)
         VALUES ($1, $2)
         RETURNING *
       `;
@@ -388,9 +509,9 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
-      SELECT id, name 
+      SELECT clinic_id, clinic_name 
       FROM clinics 
-      WHERE id = $1 AND operator_id = $2
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
     `;
     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
 
@@ -401,24 +522,21 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
       });
     }
 
-    const clinic = checkResult.rows[0];
+    // Get photos from clinicalbum table
+    const getPhotosQuery = `
+      SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
+      FROM clinicalbum
+      WHERE clinic_id = $1
+      ORDER BY clinic_album_photo_url_created_at DESC
+    `;
     
-    // Get photos from S3
-    try {
-      const photos = await s3Service.listClinicPhotos(clinic.id, clinic.name);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Photos fetched successfully',
-        photos: photos
-      });
-    } catch (s3Error) {
-      console.error('S3 list error:', s3Error);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to fetch photos from storage: ${s3Error.message}`
-      });
-    }
+    const photosResult = await pool.query(getPhotosQuery, [clinicId]);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Photos fetched successfully',
+      photos: photosResult.rows
+    });
 
   } catch (error) {
     console.error('Error fetching clinic photos:', error);
@@ -430,10 +548,10 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete clinic photo by Tarık
-router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerificationStatus, async (req, res) => {
+// Delete clinic photo
+router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
-    const { clinicId, photoDisplayId } = req.params;
+    const { clinicId, photoId } = req.params;
     const operator_id = req.user.userId;
 
     // Check if clinic exists and belongs to the operator
@@ -453,30 +571,25 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
 
     const clinic = checkResult.rows[0];
 
-    // Find the specific occurrence of clinic_id based on photoDisplayId
+    // Find the photo in clinicalbum
     const findPhotoQuery = `
-      WITH RankedPhotos AS (
-        SELECT photo_id, s3_url, ROW_NUMBER() OVER (PARTITION BY clinic_id ORDER BY photo_id) AS occurrence
-        FROM clinic_photos
-        WHERE clinic_id = $1
-      )
-      SELECT photo_id, s3_url 
-      FROM RankedPhotos
-      WHERE occurrence = $2
+      SELECT clinic_album_photo_id, clinic_album_photo_url 
+      FROM clinicalbum
+      WHERE clinic_album_photo_id = $1 AND clinic_id = $2
     `;
-    const photoResult = await pool.query(findPhotoQuery, [clinicId, photoDisplayId]);
+    const photoResult = await pool.query(findPhotoQuery, [photoId, clinicId]);
 
     if (photoResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Photo not found for the given display ID',
+        message: 'Photo not found',
       });
     }
 
-    const { photo_id, s3_url } = photoResult.rows[0];
+    const { clinic_album_photo_url } = photoResult.rows[0];
 
     // Parse the S3 URL to get the key
-    const s3Key = s3_url.split('.amazonaws.com/')[1];
+    const s3Key = clinic_album_photo_url.split('.amazonaws.com/')[1];
 
     // Delete from S3
     try {
@@ -484,10 +597,10 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
 
       // Delete the record from the database
       const deletePhotoQuery = `
-        DELETE FROM clinic_photos 
-        WHERE photo_id = $1
+        DELETE FROM clinicalbum 
+        WHERE clinic_album_photo_id = $1
       `;
-      await pool.query(deletePhotoQuery, [photo_id]);
+      await pool.query(deletePhotoQuery, [photoId]);
 
       // Update verification status to pending if it was verified or archived
       if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
@@ -519,65 +632,5 @@ router.delete('/:clinicId/photos/:photoDisplayId', authenticateToken, checkVerif
     });
   }
 });
-
-// Delete clinic photo
-// router.delete('/:clinicId/photos/:photoKey', authenticateToken, checkVerificationStatus, async (req, res) => {
-//   try {
-//     const { clinicId, photoKey } = req.params;
-//     const operator_id = req.user.userId;
-
-//     // Check if clinic exists and belongs to the operator
-//     const checkQuery = `
-//       SELECT clinic_id, clinic_name, clinic_verification_status 
-//       FROM clinics 
-//       WHERE clinic_id = $1 AND clinic_operator_id = $2
-//     `;
-//     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
-
-//     if (checkResult.rows.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: 'Clinic not found or you do not have permission to delete photos'
-//       });
-//     }
-
-//     const clinic = checkResult.rows[0];
-
-//     // Delete from S3
-//     try {
-//       await s3Service.deleteClinicPhoto(clinic.clinic_id, clinic.clinic_name, photoKey);
-
-//       // Update verification status to pending if it was verified or archived
-//       if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
-//         const updateQuery = `
-//           UPDATE clinics 
-//           SET clinic_verification_status = 'pending'
-//           WHERE clinic_id = $1 AND clinic_operator_id = $2
-//           RETURNING *
-//         `;
-//         await pool.query(updateQuery, [clinicId, operator_id]);
-//       }
-
-//       res.status(200).json({
-//         success: true,
-//         message: 'Photo deleted successfully'
-//       });
-//     } catch (s3Error) {
-//       console.error('S3 delete error:', s3Error);
-//       return res.status(500).json({
-//         success: false,
-//         message: `Failed to delete photo from storage: ${s3Error.message}`
-//       });
-//     }
-
-//   } catch (error) {
-//     console.error('Error deleting clinic photo:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: error.message || 'Internal server error',
-//       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-//     });
-//   }
-// });
 
 module.exports = router; 

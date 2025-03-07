@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Provider } from 'react-redux';
+import { Toaster } from 'react-hot-toast';
 import store from './store';
 import DefaultHeader from './components/layout/DefaultHeader';
 import HomePage from './pages/HomePage';
@@ -46,6 +47,7 @@ const AppContent: React.FC = () => {
           } 
         />
       </Routes>
+      <Toaster position="top-right" />
     </div>
   );
 };
