@@ -33,9 +33,15 @@ export interface ClinicFormData {
   medicalServices: string[];
   additionalServices: string[];
   
+  // Appointment information
+  available_days: string[];
+  emergency_available_days: string[];
+  opening_time: string;
+  closing_time: string;
+  
   // Registration information
   taxIdentificationNumber: string;
   veterinaryLicenseNumber: string;
 }
 
-export type FormStep = 'clinic_details' | 'locations' | 'communication' | 'visuals' | 'services' | 'tax_registration'; 
+export type FormStep = 'clinic_details' | 'locations' | 'communication' | 'visuals' | 'services' | 'appointments' | 'tax_registration'; 

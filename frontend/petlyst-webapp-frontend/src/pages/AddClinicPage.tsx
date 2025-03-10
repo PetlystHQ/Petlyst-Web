@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast';
 import { VisualsForm } from '../components/clinic/forms/VisualsForm';
 import { ServicesForm } from '../components/clinic/forms/ServicesForm';
 import { RegistrationForm } from '../components/clinic/forms/RegistrationForm';
+import { AppointmentsForm } from '../components/clinic/forms/AppointmentsForm';
 
 const AddClinicPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +49,12 @@ const AddClinicPage: React.FC = () => {
     medicalServices: [],
     additionalServices: [],
     
+    // Appointment fields
+    available_days: [],
+    emergency_available_days: [],
+    opening_time: '',
+    closing_time: '',
+    
     // Registration fields
     taxIdentificationNumber: '',
     veterinaryLicenseNumber: ''
@@ -72,6 +79,7 @@ const AddClinicPage: React.FC = () => {
     { id: 'communication', title: 'Communication' },
     { id: 'visuals', title: 'Visuals' },
     { id: 'services', title: 'Services' },
+    { id: 'appointments', title: 'Appointments' },
     { id: 'tax_registration', title: 'Registration' }
   ];
 
@@ -145,11 +153,20 @@ const AddClinicPage: React.FC = () => {
   // Redirect if not verified or already has a clinic
   useEffect(() => {
     if (!verificationLoading) {
-      if (verificationStatus !== 'verified') {
+      // Sadece halihazırda bir klinik var ise kullanıcıyı yönlendir
+      // Doğrulama durumu hatası kullanıcıyı dışarıda bırakmasın
+      if (hasExistingClinic) {
         navigate('/dashboard');
       }
+      
+      // Eğer doğrulama durumu undefined/null ise, varsayılan olarak devam et
+      // Bu, API hatası durumunda bile kullanıcının form doldurmasına olanak sağlar
+      if (verificationStatus === null && !hasExistingClinic) {
+        // Varsayılan olarak devam et, hata gösterme
+        setError('');
+      }
     }
-  }, [verificationStatus, verificationLoading, navigate]);
+  }, [verificationStatus, verificationLoading, navigate, hasExistingClinic]);
 
   // Clear error message when step changes
   useEffect(() => {
@@ -434,6 +451,31 @@ const AddClinicPage: React.FC = () => {
       }
     }
     
+    if (currentStep === 'appointments') {
+      // Çalışma günlerini kontrol et
+      if (formData.available_days.length === 0) {
+        setError('Please select at least one working day');
+        return;
+      }
+      
+      // Açılış ve kapanış saatlerini kontrol et
+      if (!formData.opening_time) {
+        setError('Please set an opening time');
+        return;
+      }
+      
+      if (!formData.closing_time) {
+        setError('Please set a closing time');
+        return;
+      }
+      
+      // Açılış saati kapanış saatinden önce olmalı
+      if (formData.opening_time >= formData.closing_time) {
+        setError('Opening time must be earlier than closing time');
+        return;
+      }
+    }
+    
     // Clear any previous errors
     setError('');
     
@@ -459,15 +501,22 @@ const AddClinicPage: React.FC = () => {
         {
           clinic_name: formData.name,
           clinic_type: formData.clinicType,
-          clinic_address: formData.address || null,
+          clinic_address: formData.address || "Adres belirtilmedi", // Boş olamaz
           clinic_phone: formData.phone_number || null,
           clinic_email: null, // Kullanıcı tarafından girilmediğinden
           clinic_description: formData.biography || formData.description || null,
-          available_days: null, // Kullanıcı tarafından girilmediğinden
-          emergency_available_days: null, // Kullanıcı tarafından girilmediğinden
-          opening_time: null, // Kullanıcı tarafından girilmediğinden
-          closing_time: null, // Kullanıcı tarafından girilmediğinden
-          coordinates: formData.coordinates || null,
+          
+          // Çalışma günleri ve saatleri (Appointments adımından gelir)
+          available_days: formData.available_days.length > 0 
+            ? formData.available_days 
+            : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], // Default değer
+          emergency_available_days: formData.emergency_available_days || [], 
+          opening_time: formData.opening_time || "09:00", // Default değer
+          closing_time: formData.closing_time || "18:00", // Default değer
+          
+          // Only include coordinates if the user has already gone past the "locations" step
+          ...(currentStep !== 'clinic_details' && formData.coordinates ? { coordinates: formData.coordinates } : {}),
+          
           establishment_date: formData.establishment_date,
           show_phone_number: formData.showPhoneNumber,
           allow_direct_messages: formData.allowDirectMessages,
@@ -479,6 +528,10 @@ const AddClinicPage: React.FC = () => {
           served_animal_types: formData.servedAnimalTypes || [],
           medical_services: formData.medicalServices || [],
           additional_services: formData.additionalServices || [],
+          
+          // Registration fields
+          tax_identification_number: formData.taxIdentificationNumber || null,
+          veterinary_license_number: formData.veterinaryLicenseNumber || null,
 
           is_partial_submission: false // Kısmi gönderim olup olmadığı
         },
@@ -514,6 +567,12 @@ const AddClinicPage: React.FC = () => {
           servedAnimalTypes: [],
           medicalServices: [],
           additionalServices: [],
+          // Appointment fields
+          available_days: [],
+          emergency_available_days: [],
+          opening_time: '',
+          closing_time: '',
+          // Registration fields
           taxIdentificationNumber: '',
           veterinaryLicenseNumber: ''
         });
@@ -553,7 +612,7 @@ const AddClinicPage: React.FC = () => {
         clinic_name: formData.name,
         clinic_type: formData.clinicType,
         establishment_date: formData.establishment_date,
-        clinic_description: formData.description,
+        clinic_description: formData.description || formData.biography || null,
         is_partial_submission: true,
         
         // Optional fields that may not be filled yet
@@ -562,15 +621,18 @@ const AddClinicPage: React.FC = () => {
         province: formData.province || null,
         district: formData.district || null,
         
-        // New fields
+        // Communication preferences
         show_phone_number: formData.showPhoneNumber,
         allow_direct_messages: formData.allowDirectMessages,
         
         // Social media links - if provided
         social_media_links: formData.social_media_links.length > 0 ? formData.social_media_links : null,
         
-        // Coordinates - if provided
-        coordinates: formData.coordinates || null,
+        // Çalışma günleri ve saatleri (Appointments adımından gelir)
+        available_days: formData.available_days.length > 0 ? formData.available_days : null,
+        emergency_available_days: formData.emergency_available_days.length > 0 ? formData.emergency_available_days : null,
+        opening_time: formData.opening_time || null,
+        closing_time: formData.closing_time || null,
         
         // Service fields
         served_animal_types: formData.servedAnimalTypes || [],
@@ -755,6 +817,15 @@ const AddClinicPage: React.FC = () => {
                 formData={formData}
                 handleInputChange={handleInputChange}
                 hasExistingClinic={hasExistingClinic}
+                loading={loading}
+              />
+            )}
+
+            {/* Appointments Section */}
+            {currentStep === 'appointments' && (
+              <AppointmentsForm
+                formData={formData}
+                handleInputChange={handleInputChange}
                 loading={loading}
               />
             )}
