@@ -164,7 +164,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     isActive(DASHBOARD_VIEWS.clinics) ? 'bg-gray-100' : ''
                   }`}
                 >
-                  <span className="ml-3">Clinics</span>
+                  <span className="ml-3">My Clinic</span>
                 </button>
               </li>
             )}

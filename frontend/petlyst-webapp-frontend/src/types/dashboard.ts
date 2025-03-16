@@ -1,14 +1,16 @@
 export type DashboardView = 'overview' | 'clinics';
 
-export type VerificationStatus = 'pending' | 'verified' | 'unverified' | null;
+export type VerificationStatus = 'pending' | 'verified' | 'not_verified' | 'archived' | 'pending_submission';
 
 export interface Clinic {
-  id: string;
-  name: string;
-  address: string | null;
-  phone_number: string | null;
-  description: string | null;
-  verification_status: 'pending' | 'verified' | 'not_verified' | 'archived';
+  clinic_id: string;
+  clinic_name: string;
+  clinic_email: string | null;
+  clinic_operator_id: string;
+  clinic_description: string | null;
+  clinic_verification_status: VerificationStatus;
+  clinic_address: string | null;
+  clinic_phone_number: string | null;
 }
 
 export interface Appointment {

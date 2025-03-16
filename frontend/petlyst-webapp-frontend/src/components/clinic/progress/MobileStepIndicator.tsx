@@ -9,11 +9,13 @@ interface Step {
 interface MobileStepIndicatorProps {
   steps: Step[];
   currentStep: FormStep;
+  handleBackToDashboard: () => void;
 }
 
 export const MobileStepIndicator: React.FC<MobileStepIndicatorProps> = ({
   steps,
-  currentStep
+  currentStep,
+  handleBackToDashboard
 }) => {
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
   
@@ -32,6 +34,14 @@ export const MobileStepIndicator: React.FC<MobileStepIndicatorProps> = ({
           className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
           style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
         ></div>
+      </div>
+      <div className="mt-3">
+        <button
+          onClick={handleBackToDashboard}
+          className="w-full px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Back to Dashboard
+        </button>
       </div>
     </div>
   );

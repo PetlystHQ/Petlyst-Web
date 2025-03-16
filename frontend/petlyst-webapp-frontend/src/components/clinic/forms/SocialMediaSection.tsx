@@ -28,13 +28,13 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
     <div>
       <div className="flex items-center mb-1">
         <label className="block text-sm font-medium text-gray-700">
-          URLs
+          Social Media Accounts
         </label>
       </div>
       
       <div className="space-y-3">
         {socialMediaLinks.length === 0 && (
-          <p className="text-sm text-gray-500 italic">Optional: Add your clinic's social media links (max 4)</p>
+          <p className="text-sm text-gray-500 italic">Optional: Add your clinic's social media accounts (max 4)</p>
         )}
         
         {socialMediaLinks.map((link, index) => (
@@ -102,7 +102,7 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
           </svg>
           <span className={`text-sm font-medium ${isMaxLinksReached ? 'text-gray-400' : 'text-blue-600'}`}>
-            {isMaxLinksReached ? 'Maximum links reached (4)' : 'Add social media link'}
+            {isMaxLinksReached ? 'Maximum links reached (4)' : 'Add Social Media Link'}
           </span>
         </button>
         

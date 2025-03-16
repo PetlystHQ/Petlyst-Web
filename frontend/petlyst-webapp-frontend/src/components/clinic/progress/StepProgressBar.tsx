@@ -1,5 +1,6 @@
 import React from 'react';
 import { FormStep } from '../../../types/clinic';
+import { useNavigate } from 'react-router-dom';
 
 interface Step {
   id: FormStep;
@@ -11,14 +12,17 @@ interface StepProgressBarProps {
   currentStep: FormStep;
   handleGoToStep: (stepId: FormStep) => void;
   loading: boolean;
+  handleBackToDashboard: () => void;
 }
 
 export const StepProgressBar: React.FC<StepProgressBarProps> = ({
   steps,
   currentStep,
   handleGoToStep,
-  loading
+  loading,
+  handleBackToDashboard
 }) => {
+  const navigate = useNavigate();
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
   
   // Icons for each step type
@@ -55,6 +59,12 @@ export const StepProgressBar: React.FC<StepProgressBarProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
         );
+      case 'appointments':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
       case 'tax_registration':
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -65,68 +75,67 @@ export const StepProgressBar: React.FC<StepProgressBarProps> = ({
   };
   
   return (
-    <div className="hidden md:block bg-white py-6 border-t border-gray-200">
-      <div className="max-w-6xl mx-auto px-12">
-        <div className="flex items-center justify-evenly space-x-4">
+    <div className="hidden md:flex bg-white border-r border-gray-200 fixed left-0 top-0 h-full w-60 overflow-y-auto flex-col">
+      {/* Logo Section at top */}
+      <div className="pt-8 pb-6 px-4 border-b border-gray-200 bg-gray-50">
+        <div className="text-center">
+          <img 
+            src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
+            alt="Petlyst Logo" 
+            className="h-14 w-auto mx-auto mb-3"
+          />
+          <h1 className="text-xl font-semibold text-gray-800">Petlyst</h1>
+          <p className="text-xs text-gray-500 mt-1">Clinic Submission Page</p>
+        </div>
+      </div>
+      
+      {/* Steps in the middle */}
+      <div className="flex-grow flex items-center">
+        <div className="flex flex-col space-y-3 px-4 w-full">
           {steps.map((step, index) => {
             const isActive = index === currentStepIndex;
             const isCompleted = index < currentStepIndex;
             
             return (
-              <React.Fragment key={step.id}>
-                {/* Step indicator box with text and icon */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => handleGoToStep(step.id)}
-                    disabled={loading || index > currentStepIndex}
-                    className={`w-[150px] h-10 rounded shadow-sm flex items-center justify-center transition-colors duration-200 ${
-                      isActive
-                        ? 'bg-blue-600 text-white ring-1 ring-blue-100'
-                        : isCompleted
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-500 border border-gray-300'
-                    }`}
-                  >
-                    <div className={`${isActive || isCompleted ? 'text-white' : 'text-gray-400'} mr-2`}>
-                      {isCompleted ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        getStepIcon(step.id)
-                      )}
-                    </div>
-                    <span className="text-sm font-medium truncate">
-                      {step.title}
-                    </span>
-                  </button>
-                </div>
-                
-                {/* Connector between steps */}
-                {index < steps.length - 1 && (
-                  <div className="flex items-center justify-center">
-                    <svg 
-                      className={`w-5 h-5 ${
-                        isCompleted ? 'text-blue-500' : 'text-gray-300'
-                      } transition-colors duration-200`}
-                      fill="none" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        d="M9 6l6 6-6 6" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                      />
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => handleGoToStep(step.id)}
+                disabled={loading || index > currentStepIndex}
+                className={`w-full h-14 rounded shadow-sm flex items-center px-4 transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white ring-1 ring-blue-100'
+                    : isCompleted
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-500 border border-gray-300'
+                }`}
+              >
+                <div className={`${isActive || isCompleted ? 'text-white' : 'text-gray-400'} mr-3`}>
+                  {isCompleted ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                  </div>
-                )}
-              </React.Fragment>
+                  ) : (
+                    getStepIcon(step.id)
+                  )}
+                </div>
+                <span className="text-sm font-medium">
+                  {step.title}
+                </span>
+              </button>
             );
           })}
         </div>
+      </div>
+      
+      {/* Dashboard button at bottom */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleBackToDashboard}
+          className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Back to Dashboard
+        </button>
       </div>
     </div>
   );
