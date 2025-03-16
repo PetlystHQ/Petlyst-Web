@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
-import EditClinicModal from '../components/modals/EditClinicModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import { DashboardView } from '../types/dashboard';
@@ -12,8 +11,8 @@ import { Clinic } from '../types/dashboard';
 
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
+  const location = useLocation();
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
-  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { 
     verificationStatus, 
@@ -24,20 +23,24 @@ const Dashboard: React.FC = () => {
   } = useVerificationStatus();
   const navigate = useNavigate();
 
+  // Set active view from navigation state
+  useEffect(() => {
+    const state = location.state as { activeView?: DashboardView };
+    if (state?.activeView) {
+      setCurrentView(state.activeView);
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   const handleAddClinic = () => {
     // Navigate to the add clinic page instead of opening a modal
     navigate('/add-clinic');
   };
 
   const handleEditClinic = (clinic: Clinic) => {
-    setSelectedClinic(clinic);
-  };
-
-  const handleClinicUpdate = () => {
-    // Klinik listesini güncelle
-    setRefreshKey(prev => prev + 1);
-    // Modal'ı kapat
-    setSelectedClinic(null);
+    // Navigate to the add clinic page with clinic ID for editing
+    navigate(`/add-clinic?clinicId=${clinic.clinic_id}`);
   };
 
   const handleVerificationSubmit = async () => {
@@ -133,15 +136,6 @@ const Dashboard: React.FC = () => {
         onClose={() => setIsVerificationModalOpen(false)}
         onSubmitSuccess={handleVerificationSubmit}
       />
-
-      {selectedClinic && (
-        <EditClinicModal
-          clinic={selectedClinic}
-          isOpen={Boolean(selectedClinic)}
-          onClose={() => setSelectedClinic(null)}
-          onUpdate={handleClinicUpdate}
-        />
-      )}
     </DashboardLayout>
   );
 };

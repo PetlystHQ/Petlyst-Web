@@ -23,9 +23,10 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
 }) => {
   return (
     <div>
+      {/* Clinic Details Section - Yeni başlık */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Let's Start</h2>
-        <p className="text-sm text-gray-600 mt-1">Adding clinic details will help us to create inclusive page for your clinic!</p>
+        <h3 className="text-xl font-semibold text-gray-800">Clinic Details</h3>
+        <p className="text-sm text-gray-600 mt-1">Enter the basic information about your veterinary clinic.</p>
       </div>
 
       <div className="space-y-6">
@@ -108,7 +109,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
         <div>
           <div className="flex items-center">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clinic Establishment Date <span className="text-red-500">*</span>
+              Clinic Establishment Date
             </label>
             <Tooltip text="The month and year when your clinic was officially established" />
           </div>
@@ -117,7 +118,6 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             name="establishment_date"
             value={formData.establishment_date}
             onChange={handleInputChange}
-            required
             max={new Date().toISOString().slice(0, 7)}
             disabled={hasExistingClinic || loading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"

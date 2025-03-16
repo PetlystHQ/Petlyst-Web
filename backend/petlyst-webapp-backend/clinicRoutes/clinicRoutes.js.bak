@@ -151,112 +151,6 @@ router.delete('/draft', authenticateToken, (req, res) => {
   });
 });
 
-// Function to convert day names to a boolean array
-const convertDaysToArray = (daysArray) => {
-  if (!daysArray || !Array.isArray(daysArray)) {
-    return [false, false, false, false, false, false, false];
-  }
-  
-  // If array already contains boolean values, return it directly
-  if (daysArray.length === 7 && daysArray.every(item => typeof item === 'boolean')) {
-    return daysArray;
-  }
-  
-  // If it's a string array, convert to lowercase for consistency
-  const lowerDays = daysArray.map(day => {
-    if (typeof day === 'string') {
-      return day.toLowerCase();
-    }
-    return null; // Handle non-string values safely
-  });
-  
-  // Map to a boolean array [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
-  return [
-    lowerDays.includes('monday'),
-    lowerDays.includes('tuesday'),
-    lowerDays.includes('wednesday'),
-    lowerDays.includes('thursday'),
-    lowerDays.includes('friday'),
-    lowerDays.includes('saturday'),
-    lowerDays.includes('sunday')
-  ];
-};
-
-// Hayvan türlerini kaydet
-async function saveAnimalTypes(client, clinicId, animalTypes) {
-  if (!animalTypes || animalTypes.length === 0) return;
-  
-  for (const animalType of animalTypes) {
-    // Önce animal_types tablosunda bu türün var olup olmadığını kontrol et
-    let animalTypeId;
-    const checkTypeQuery = 'SELECT animal_type_id FROM animal_types WHERE animal_type_name = $1';
-    const typeResult = await client.query(checkTypeQuery, [animalType]);
-    
-    if (typeResult.rows.length > 0) {
-      animalTypeId = typeResult.rows[0].animal_type_id;
-    } else {
-      // Tür yoksa ekle
-      const insertTypeQuery = 'INSERT INTO animal_types (animal_type_name) VALUES ($1) RETURNING animal_type_id';
-      const newTypeResult = await client.query(insertTypeQuery, [animalType]);
-      animalTypeId = newTypeResult.rows[0].animal_type_id;
-    }
-    
-    // Klinik-hayvan türü ilişkisini kaydet
-    const linkQuery = 'INSERT INTO clinic_animal_types (clinic_id, animal_type_id) VALUES ($1, $2) ON CONFLICT DO NOTHING';
-    await client.query(linkQuery, [clinicId, animalTypeId]);
-  }
-}
-
-// Medikal hizmetleri kaydet
-async function saveMedicalServices(client, clinicId, medicalServices) {
-  if (!medicalServices || medicalServices.length === 0) return;
-  
-  for (const serviceName of medicalServices) {
-    // Önce medical_services tablosunda bu hizmetin var olup olmadığını kontrol et
-    let serviceId;
-    const checkServiceQuery = 'SELECT medical_service_id FROM medical_services WHERE service_name = $1';
-    const serviceResult = await client.query(checkServiceQuery, [serviceName]);
-    
-    if (serviceResult.rows.length > 0) {
-      serviceId = serviceResult.rows[0].medical_service_id;
-    } else {
-      // Hizmet yoksa ekle (kategori olmadan)
-      const insertServiceQuery = 'INSERT INTO medical_services (service_name) VALUES ($1) RETURNING medical_service_id';
-      const newServiceResult = await client.query(insertServiceQuery, [serviceName]);
-      serviceId = newServiceResult.rows[0].medical_service_id;
-    }
-    
-    // Klinik-medikal hizmet ilişkisini kaydet
-    const linkQuery = 'INSERT INTO clinic_medical_services (clinic_id, medical_service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING';
-    await client.query(linkQuery, [clinicId, serviceId]);
-  }
-}
-
-// Ek hizmetleri kaydet
-async function saveAdditionalServices(client, clinicId, additionalServices) {
-  if (!additionalServices || additionalServices.length === 0) return;
-  
-  for (const serviceName of additionalServices) {
-    // Önce additional_services tablosunda bu hizmetin var olup olmadığını kontrol et
-    let serviceId;
-    const checkServiceQuery = 'SELECT additional_service_id FROM additional_services WHERE service_name = $1';
-    const serviceResult = await client.query(checkServiceQuery, [serviceName]);
-    
-    if (serviceResult.rows.length > 0) {
-      serviceId = serviceResult.rows[0].additional_service_id;
-    } else {
-      // Hizmet yoksa ekle (açıklama olmadan)
-      const insertServiceQuery = 'INSERT INTO additional_services (service_name) VALUES ($1) RETURNING additional_service_id';
-      const newServiceResult = await client.query(insertServiceQuery, [serviceName]);
-      serviceId = newServiceResult.rows[0].additional_service_id;
-    }
-    
-    // Klinik-ek hizmet ilişkisini kaydet
-    const linkQuery = 'INSERT INTO clinic_additional_services (clinic_id, additional_service_id) VALUES ($1, $2) ON CONFLICT DO NOTHING';
-    await client.query(linkQuery, [clinicId, serviceId]);
-  }
-}
-
 // Add a new clinic (requires verified veterinarian)
 router.post('/add', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
@@ -270,24 +164,16 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       emergency_available_days,
       opening_time,
       closing_time,
+      coordinates,
       establishment_date,
       show_phone_number,
-      show_mail_address,
       allow_direct_messages,
-      allow_online_meetings,
       province,
       district,
       social_media_links,
       is_partial_submission,
       tax_identification_number,
-      veterinary_license_number,
-      // Yeni alanlar
-      slot_duration,
-      is_open_24_7,
-      // Servis bilgilerini al
-      served_animal_types,
-      medical_services,
-      additional_services
+      veterinary_license_number
     } = req.body;
     
     const clinic_operator_id = req.user.userId;
@@ -296,16 +182,16 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
     // Not changing establishment_date validation as it's the format that comes from frontend
     // We'll parse establishment_date into year and month later for database storage
     if (is_partial_submission) {
-      // For partial submissions, only require name
-      if (!clinic_name) {
+      // For partial submissions, only require name and establishment_date
+      if (!clinic_name || !establishment_date) {
         return res.status(400).json({ 
           success: false,
-          message: 'Clinic name is required even for partial submissions' 
+          message: 'Clinic name and establishment date are required even for partial submissions' 
         });
       }
     } else {
-      // For complete submissions, validate all required fields - artık address bilgisi district ve province üzerinden kontrol ediliyor
-      if (!clinic_name || !province || !district || !clinic_address || !available_days || !opening_time || !closing_time || !establishment_date) {
+      // For complete submissions, validate all required fields
+      if (!clinic_name || !clinic_address || !available_days || !opening_time || !closing_time || !establishment_date) {
         return res.status(400).json({ 
           success: false,
           message: 'Required fields are missing' 
@@ -316,26 +202,21 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
     // Determine clinic creation status
     const clinic_creation_status = is_partial_submission ? 'incomplete' : 'complete';
 
-    // Create a clinic data object with proper defaults for required fields
+    // Create clinic in database
     const clinicData = {
       clinic_name,
+      clinic_address,
+      clinic_phone,
       clinic_email,
       clinic_operator_id,
-      clinic_verification_status: clinic_creation_status === 'incomplete' ? 'pending_submission' : 'pending',
       clinic_description,
-      establishment_year: establishment_date ? parseInt(establishment_date.split('-')[0], 10) : null,
-      establishment_month: establishment_date ? parseInt(establishment_date.split('-')[1], 10) : null,
+      available_days,
+      emergency_available_days,
+      opening_time,
+      closing_time,
       show_phone_number,
-      show_mail_address,
       allow_direct_messages,
-      allow_online_meetings,
       clinic_creation_status,
-      opening_time: opening_time || (is_partial_submission ? "09:00" : null),
-      closing_time: closing_time || (is_partial_submission ? "18:00" : null),
-      slot_duration: slot_duration || 60, // Default değer 60 (1 saat)
-      is_open_24_7: is_open_24_7 ? 'Yes' : 'No', // Boolean değeri string'e çeviriyoruz
-      available_days: available_days || (is_partial_submission ? [false, false, false, false, false, false, false] : null),
-      emergency_available_days: emergency_available_days || [false, false, false, false, false, false, false],
       tax_identification_number: tax_identification_number || null,
       veterinary_license_number: veterinary_license_number || null
     };
@@ -346,76 +227,56 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
     try {
       await client.query('BEGIN');
       
-      // Create a new clinic
+      // Parse establishment_date into year and month
+      let establishmentYear = null;
+      let establishmentMonth = null;
+      
+      if (establishment_date) {
+        // Format is typically YYYY-MM or YYYY-MM-DD
+        const dateParts = establishment_date.split('-');
+        if (dateParts.length >= 2) {
+          establishmentYear = parseInt(dateParts[0], 10);
+          establishmentMonth = parseInt(dateParts[1], 10);
+        }
+      }
+      
+      // Insert clinic - Updated to match the actual database schema
       const newClinicQuery = `
         INSERT INTO clinics (
-          clinic_name, 
-          clinic_email, 
-          clinic_operator_id, 
-          clinic_description, 
-          available_days, 
-          emergency_available_days, 
-          opening_time, 
-          closing_time,
-          establishment_year,
-          establishment_month,
-          show_phone_number,
-          show_mail_address,
-          allow_direct_messages,
-          allow_online_meetings,
-          clinic_creation_status,
-          clinic_verification_status,
-          tax_identification_number,
-          veterinary_license_number,
-          clinic_time_slots,
-          is_open_24_7
-        ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
+          clinic_name, clinic_phone, clinic_email, 
+          clinic_operator_id, clinic_description, available_days, 
+          emergency_available_days, opening_time, closing_time,
+          establishment_year, establishment_month, show_phone_number,
+          allow_direct_messages, clinic_creation_status, tax_identification_number,
+          veterinary_license_number
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9,
+          $10, $11, $12, $13, $14, $15, $16
+        )
         RETURNING *
       `;
       
       const clinicResult = await client.query(newClinicQuery, [
         clinicData.clinic_name,
-        clinicData.clinic_email,
+        clinicData.clinic_phone || null,
+        clinicData.clinic_email || null,
         clinicData.clinic_operator_id,
-        clinicData.clinic_description,
-        convertDaysToArray(clinicData.available_days),
-        convertDaysToArray(clinicData.emergency_available_days),
-        clinicData.opening_time,
-        clinicData.closing_time,
-        clinicData.establishment_year,
-        clinicData.establishment_month,
-        clinicData.show_phone_number,
-        clinicData.show_mail_address,
-        clinicData.allow_direct_messages,
-        clinicData.allow_online_meetings,
+        clinicData.clinic_description || null,
+        JSON.stringify(clinicData.available_days || null),
+        JSON.stringify(clinicData.emergency_available_days || null),
+        clinicData.opening_time || null,
+        clinicData.closing_time || null,
+        establishmentYear,
+        establishmentMonth,
+        clinicData.show_phone_number || false,
+        clinicData.allow_direct_messages || false,
         clinicData.clinic_creation_status,
-        clinicData.clinic_verification_status,
         clinicData.tax_identification_number,
-        clinicData.veterinary_license_number,
-        clinicData.slot_duration,
-        clinicData.is_open_24_7
+        clinicData.veterinary_license_number
       ]);
       
       const newClinic = clinicResult.rows[0];
-      
-      // Add phone numbers if provided
-      if (clinic_phone && Array.isArray(clinic_phone) && clinic_phone.length > 0) {
-        for (const phoneEntry of clinic_phone) {
-          // Only process phone entries with valid type and number
-          if (phoneEntry.number && phoneEntry.type && phoneEntry.type !== '') {
-            const phoneNumberQuery = `
-              INSERT INTO clinic_phone_numbers (clinic_id, phone_number, phone_type)
-              VALUES ($1, $2, $3)
-            `;
-            await client.query(phoneNumberQuery, [
-              newClinic.clinic_id,
-              phoneEntry.number,
-              phoneEntry.type // 'fixed_line' or 'mobile_number'
-            ]);
-          }
-        }
-      }
       
       // Add social media links if provided
       if (social_media_links && social_media_links.length > 0) {
@@ -430,39 +291,33 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         }
       }
       
-      // Add location information to clinic_locations table - only for complete submissions
-      if (!is_partial_submission) {
-        try {
-          const locationQuery = `
-            INSERT INTO clinic_locations (clinic_id, province, district, clinic_address)
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-          `;
-          
-          await client.query(locationQuery, [
-            newClinic.clinic_id,
-            province || null,
-            district || null,
-            clinic_address || null  // req.body'den doğrudan alıyoruz
-          ]);
-          
-          console.log(`Location info saved for clinic ${newClinic.clinic_id}`);
-        } catch (locationError) {
-          console.error('Error saving clinic location:', locationError);
-          // Continue processing even if location saving fails
-        }
-      } else {
-        console.log(`Skipping location info for partial submission of clinic ${newClinic.clinic_id}`);
+      // Add location information to clinic_locations table
+      // Now includes coordinates, province, and district
+      try {
+        const locationQuery = `
+          INSERT INTO clinic_locations (clinic_id, latitude, longitude, province, district, clinic_address)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `;
+
+        // Default coordinates if none provided
+        const lat = coordinates ? (coordinates.lat || coordinates.latitude) : null;
+        const lng = coordinates ? (coordinates.lng || coordinates.longitude) : null;
+        
+        await client.query(locationQuery, [
+          newClinic.clinic_id,
+          lat,
+          lng,
+          province || null,
+          district || null,
+          clinicData.clinic_address || null
+        ]);
+        
+        console.log(`Location info saved for clinic ${newClinic.clinic_id}`);
+      } catch (locationError) {
+        console.error('Error saving clinic location:', locationError);
+        // Continue processing even if location saving fails
       }
-      
-      // Add animal types
-      await saveAnimalTypes(client, newClinic.clinic_id, served_animal_types);
-      
-      // Add medical services
-      await saveMedicalServices(client, newClinic.clinic_id, medical_services);
-      
-      // Add additional services
-      await saveAdditionalServices(client, newClinic.clinic_id, additional_services);
       
       // Commit the transaction
       await client.query('COMMIT');
@@ -591,27 +446,16 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
       });
     }
     
-    // Verify that clinic is in a pending state before deletion
-    if (clinic.clinic_verification_status !== 'pending_submission' && clinic.clinic_verification_status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only clinics with pending or pending_submission status can be deleted'
-      });
-    }
-    
-    // Delete clinic and all related data
+    // Delete clinic
     await Clinic.deleteClinic(clinicId);
     
     res.status(200).json({
       success: true,
-      message: "Clinic and all associated data deleted successfully"
+      message: "Clinic deleted successfully"
     });
   } catch (error) {
     console.error('Error deleting clinic:', error);
-    res.status(error.message.includes('Only clinics with') ? 400 : 500).json({ 
-      success: false,
-      message: error.message || 'Internal server error' 
-    });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -630,15 +474,6 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
       });
     }
 
-    // Ensure clinicId is a valid number
-    const numericClinicId = parseInt(clinicId, 10);
-    if (isNaN(numericClinicId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid clinic ID format. Must be a numeric value.'
-      });
-    }
-
     if (!photo) {
       return res.status(400).json({
         success: false,
@@ -647,7 +482,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
     // Check if clinic exists and belongs to the operator
-    const clinic = await Clinic.getClinicById(numericClinicId);
+    const clinic = await Clinic.getClinicById(clinicId);
     
     if (!clinic || clinic.clinic_operator_id !== operator_id) {
       return res.status(404).json({
@@ -662,7 +497,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         fileName: photo.originalname,
         fileSize: photo.size,
         mimeType: photo.mimetype,
-        clinicId: numericClinicId,
+        clinicId,
         clinicName
       });
 
@@ -670,7 +505,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         photo.buffer,
         photo.originalname,
         photo.mimetype,
-        numericClinicId.toString(),
+        clinicId,
         clinicName
       );
 
@@ -681,7 +516,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         RETURNING *
       `;
       
-      await pool.query(insertPhotoQuery, [numericClinicId, result.url]);
+      await pool.query(insertPhotoQuery, [clinicId, result.url]);
 
       res.status(200).json({
         success: true,
@@ -784,91 +619,4 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
       SELECT clinic_album_photo_id, clinic_album_photo_url 
       FROM clinicalbum
       WHERE clinic_album_photo_id = $1 AND clinic_id = $2
-    `;
-    
-    const photoResult = await pool.query(findPhotoQuery, [photoId, clinicId]);
-
-    if (photoResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Photo not found',
-      });
-    }
-
-    const { clinic_album_photo_url } = photoResult.rows[0];
-
-    // Parse the S3 URL to get the key
-    const s3Key = clinic_album_photo_url.split('.amazonaws.com/')[1];
-
-    // Delete from S3
-    try {
-      await deleteClinicPhoto(s3Key);
-
-      // Delete the record from the database
-      const deletePhotoQuery = `
-        DELETE FROM clinicalbum 
-        WHERE clinic_album_photo_id = $1
-      `;
-      await pool.query(deletePhotoQuery, [photoId]);
-
-      // Update verification status to pending if it was verified or archived
-      if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
-        const updateQuery = `
-          UPDATE clinics 
-          SET clinic_verification_status = 'pending'
-          WHERE clinic_id = $1 AND clinic_operator_id = $2
-        `;
-        await pool.query(updateQuery, [clinicId, operator_id]);
-      }
-
-      res.status(200).json({
-        success: true,
-        message: 'Photo deleted successfully',
-      });
-    } catch (s3Error) {
-      console.error('S3 delete error:', s3Error);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to delete photo from storage: ${s3Error.message}`,
-      });
-    }
-  } catch (error) {
-    console.error('Error deleting clinic photo:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    });
-  }
-});
-
-// Get incomplete clinics for a veterinarian
-router.get('/incomplete', authenticateToken, checkVerificationStatus, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    
-    const incompleteClinicsQuery = `
-      SELECT clinic_id, clinic_name, clinic_creation_status, clinic_created_at
-      FROM clinics
-      WHERE clinic_operator_id = $1 
-      AND clinic_creation_status = 'incomplete'
-      ORDER BY clinic_created_at DESC
-    `;
-    
-    const result = await pool.query(incompleteClinicsQuery, [userId]);
-    
-    res.status(200).json({
-      success: true,
-      message: "Incomplete clinics fetched successfully",
-      clinics: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching incomplete clinics:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Internal server error' 
-    });
-  }
-});
-
-module.exports = router;
+    `

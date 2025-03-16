@@ -10,10 +10,11 @@ export const DASHBOARD_VIEWS: Record<DashboardView, DashboardView> = {
 
 export const VIEW_TITLES: Record<DashboardView, string> = {
   overview: 'Overview',
-  clinics: 'My Clinics',
+  clinics: 'My Clinic',
 };
 
 export const API_ENDPOINTS = {
   VERIFICATION_STATUS: `${API_URL}/api/veterinarian/verification-status`,
   CLINICS: `${API_URL}/api/veterinarian/clinics`,
+  INCOMPLETE_CLINICS: `${API_URL}/api/clinics/incomplete`,
 }; 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate, useBeforeUnload } from 'react-router-dom';
+import { useNavigate, useBeforeUnload, useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
 import axios from 'axios';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
@@ -20,11 +20,14 @@ import { AppointmentsForm } from '../components/clinic/forms/AppointmentsForm';
 
 const AddClinicPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clinicId = searchParams.get('clinicId');
   const token = useSelector((state: RootState) => state.auth.token);
   const [currentStep, setCurrentStep] = useState<FormStep>('clinic_details');
   const [formModified, setFormModified] = useState(false);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [exitDestination, setExitDestination] = useState('');
+  const [isEditMode, setIsEditMode] = useState(!!clinicId);
   const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     clinicType: 'Veterinary Clinic',
@@ -37,12 +40,15 @@ const AddClinicPage: React.FC = () => {
     district: '',
     address: '',
     
-    phone_number: '',
+    // Replace single phone number with array of phone numbers
+    phone_numbers: [],
+    email: '',
     description: '',
     
     // New fields with default values
     showPhoneNumber: false,
     allowDirectMessages: false,
+    showMailAddress: false,
     
     // Services fields
     servedAnimalTypes: [],
@@ -52,8 +58,12 @@ const AddClinicPage: React.FC = () => {
     // Appointment fields
     available_days: [],
     emergency_available_days: [],
+    has_emergency_service: false,
+    is_open_24_7: false,
+    slot_duration: 60,
     opening_time: '',
     closing_time: '',
+    allow_online_meetings: false,
     
     // Registration fields
     taxIdentificationNumber: '',
@@ -64,6 +74,9 @@ const AddClinicPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [hasExistingClinic, setHasExistingClinic] = useState(false);
   const { verificationStatus, isLoading: verificationLoading } = useVerificationStatus();
+  
+  // İletişim adımı için kullanıcının Continue tuşuna basıp basmadığını izlemek için state
+  const [attemptedCommunicationSubmit, setAttemptedCommunicationSubmit] = useState(false);
   
   // Photo upload states
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
@@ -84,22 +97,39 @@ const AddClinicPage: React.FC = () => {
   ];
 
   // Add cleanup function to the component animations
+  useEffect(() => {
   const style = document.createElement('style');
   style.innerHTML = `
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out forwards;
+        animation: fadeIn 0.3s ease-in-out forwards;
+      }
+      .animate-modal-slide-in {
+        animation: slideIn 0.3s ease-out forwards;
   }
   `;
   document.head.appendChild(style);
 
-  const cleanup = () => {
-    // Remove animation styles when component unmounts
-    document.head.removeChild(style);
-  };
+    // Return cleanup function
+    return () => {
+      if (style && style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    };
+  }, []);
 
   // Check if user already has a clinic
   useEffect(() => {
@@ -117,7 +147,10 @@ const AddClinicPage: React.FC = () => {
         // Kullanıcının kliniği varsa
         if (response.data.clinics && response.data.clinics.length > 0) {
           setHasExistingClinic(true);
+          // Düzenleme modu değilse hata göster
+          if (!clinicId) {
           setError('You already have a registered clinic. Each veterinarian can only register one clinic.');
+          }
         } else {
           // Kullanıcı daha önce klinik eklemediyse, formun ilk yüklenişini işaretle
           setHasExistingClinic(false);
@@ -146,16 +179,76 @@ const AddClinicPage: React.FC = () => {
     // Return cleanup function
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      cleanup();
     };
-  }, []);
+  }, [clinicId]);
+
+  // Load clinic data if in edit mode
+  useEffect(() => {
+    const fetchClinicData = async () => {
+      if (clinicId) {
+        try {
+          setLoading(true);
+          const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+          const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
+            headers: {
+              'Authorization': `Bearer ${token || localStorage.getItem('token')}`
+            }
+          });
+
+          if (response.data && response.data.clinic) {
+            const clinic = response.data.clinic;
+            
+            // Populate form data with clinic information
+            setFormData({
+              name: clinic.name || '',
+              clinicType: clinic.clinic_type || 'Veterinary Clinic',
+              biography: clinic.biography || '',
+              establishment_date: clinic.establishment_date || '',
+              social_media_links: clinic.social_media_links || [],
+              province: clinic.province || '',
+              district: clinic.district || '',
+              address: clinic.address || '',
+              phone_numbers: clinic.phone_numbers || [],
+              email: clinic.email || '',
+              description: clinic.description || '',
+              showPhoneNumber: clinic.show_phone_number || false,
+              allowDirectMessages: clinic.allow_direct_messages || false,
+              showMailAddress: clinic.show_mail_address || false,
+              servedAnimalTypes: clinic.served_animal_types || [],
+              medicalServices: clinic.medical_services || [],
+              additionalServices: clinic.additional_services || [],
+              available_days: clinic.available_days || [],
+              emergency_available_days: clinic.emergency_available_days || [],
+              has_emergency_service: clinic.has_emergency_service || false,
+              is_open_24_7: clinic.is_open_24_7 || false,
+              slot_duration: clinic.slot_duration || 60,
+              opening_time: clinic.opening_time || '',
+              closing_time: clinic.closing_time || '',
+              allow_online_meetings: clinic.allow_online_meetings || false,
+              taxIdentificationNumber: clinic.tax_identification_number || '',
+              veterinaryLicenseNumber: clinic.veterinary_license_number || ''
+            });
+            
+            // Don't mark the form as modified initially
+            setFormModified(false);
+          }
+        } catch (error) {
+          console.error('Error fetching clinic data:', error);
+          setError('Failed to load clinic data for editing.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchClinicData();
+  }, [clinicId, token]);
 
   // Redirect if not verified or already has a clinic
   useEffect(() => {
     if (!verificationLoading) {
-      // Sadece halihazırda bir klinik var ise kullanıcıyı yönlendir
-      // Doğrulama durumu hatası kullanıcıyı dışarıda bırakmasın
-      if (hasExistingClinic) {
+      // Sadece halihazırda bir klinik var ise ve düzenleme modunda değilse kullanıcıyı yönlendir
+      if (hasExistingClinic && !clinicId) {
         navigate('/dashboard');
       }
       
@@ -166,7 +259,7 @@ const AddClinicPage: React.FC = () => {
         setError('');
       }
     }
-  }, [verificationStatus, verificationLoading, navigate, hasExistingClinic]);
+  }, [verificationStatus, verificationLoading, navigate, hasExistingClinic, clinicId]);
 
   // Clear error message when step changes
   useEffect(() => {
@@ -180,7 +273,48 @@ const AddClinicPage: React.FC = () => {
       setExitDestination(path);
       setShowExitConfirmation(true);
     } else {
+      // Reset all states before navigation
+      setFormData({
+        name: '',
+        clinicType: 'Veterinary Clinic',
+        biography: '',
+        establishment_date: '',
+        social_media_links: [],
+        province: '',
+        district: '',
+        address: '',
+        phone_numbers: [],
+        email: '',
+        description: '',
+        showPhoneNumber: false,
+        allowDirectMessages: false,
+        showMailAddress: false,
+        servedAnimalTypes: [],
+        medicalServices: [],
+        additionalServices: [],
+        available_days: [],
+        emergency_available_days: [],
+        has_emergency_service: false,
+        is_open_24_7: false,
+        slot_duration: 60,
+        opening_time: '',
+        closing_time: '',
+        allow_online_meetings: false,
+        taxIdentificationNumber: '',
+        veterinaryLicenseNumber: ''
+      });
+      setSelectedPhotos([]);
+      setPhotoPreviewUrls([]);
+      setUploadProgress(0);
+      setFormModified(false);
+      setError('');
+      setLoading(false);
+      setSuccess(false);
+      setCurrentStep('clinic_details');
+      // Use setTimeout to ensure state updates are processed before navigation
+      setTimeout(() => {
       navigate(path);
+      }, 0);
     }
   }, [formModified, navigate, success]);
 
@@ -276,8 +410,11 @@ const AddClinicPage: React.FC = () => {
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    
+    // Maksimum fotoğraf sayısını kontrol et
     if (files.length + selectedPhotos.length > 10) {
-      setError('You can only upload up to 10 photos');
+      setError(`You can only upload up to 10 photos. Please select fewer photos. (${selectedPhotos.length}/10 already uploaded)`);
+      e.target.value = ''; // Input'u temizle
       return;
     }
 
@@ -286,6 +423,8 @@ const AddClinicPage: React.FC = () => {
     
     if (imageFiles.length < files.length) {
       setError('Only image files are allowed. Some files were not added.');
+      e.target.value = ''; // Input'u temizle
+      return;
     }
     
     // Create preview URLs for selected photos
@@ -294,6 +433,15 @@ const AddClinicPage: React.FC = () => {
     setSelectedPhotos(prev => [...prev, ...imageFiles]);
     setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
     setFormModified(true);
+    
+    // Seçim başarılı olduysa ana sayfadaki hata mesajını temizleyelim
+    if (selectedPhotos.length + imageFiles.length < 3) {
+      setError(`Please upload at least 3 photos of your clinic. (${selectedPhotos.length + imageFiles.length}/3 uploaded)`);
+    } else {
+      setError(''); // Yeterli sayıda fotoğraf varsa hata mesajını temizle
+    }
+    
+    e.target.value = ''; // Input'u her durumda temizle
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -303,19 +451,32 @@ const AddClinicPage: React.FC = () => {
     setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
     setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
     setFormModified(true);
+    
+    // Fotoğraf silindikten sonra kalan fotoğraf sayısını kontrol edelim
+    // ve gerekirse uyarı mesajı gösterelim
+    if (selectedPhotos.length - 1 < 3) {
+      setError(`Please upload at least 3 photos of your clinic. (${selectedPhotos.length - 1}/3 uploaded)`);
+    }
   };
 
-  const uploadPhotos = async (clinicId: string, clinicName: string) => {
+  const uploadPhotos = async (clinicId: string | number, clinicName: string) => {
     // API URL'yi kontrol et
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
     
     if (selectedPhotos.length === 0) return;
+    
+    // Ensure clinicId is valid
+    if (!clinicId) {
+      console.error('Attempted to upload photos with invalid clinicId:', clinicId);
+      setError('Cannot upload photos: Invalid clinic ID');
+      return;
+    }
 
     const uploadPromises = selectedPhotos.map(async (photo, index) => {
       setCurrentPhotoIndex(index);
       const formData = new FormData();
       formData.append('photo', photo);
-      formData.append('clinicId', clinicId);
+      formData.append('clinicId', clinicId.toString());
       formData.append('clinicName', clinicName);
 
       try {
@@ -354,8 +515,41 @@ const AddClinicPage: React.FC = () => {
   const handleNextStep = () => {
     setError('');
     
+    // Check validations based on current step
+    if (currentStep === 'clinic_details') {
+      // Validate clinic name
+      if (!formData.name || formData.name.trim() === '') {
+        setError('Please enter a clinic name');
+        return;
+      }
+      
+      // Establishment date is now optional for partial submissions
+    }
+    // Check if address is provided in the locations step
+    else if (currentStep === 'locations') {
+      // Validate refine address details
+      if (!formData.address || formData.address.trim() === '') {
+        setError('Please enter your clinic address');
+        return;
+      }
+      
+      // Validate province and district
+      if (!formData.province || formData.province.trim() === '') {
+        setError('Please select a province');
+        return;
+      }
+      
+      if (!formData.district || formData.district.trim() === '') {
+        setError('Please select a district');
+        return;
+      }
+    }
     // If we're on the communication step, check if any social media platforms have empty URLs
-    if (currentStep === 'communication') {
+    else if (currentStep === 'communication') {
+      // İletişim adımında Continue tuşuna basıldığında state'i true yapıyoruz
+      setAttemptedCommunicationSubmit(true);
+      
+      // First, check if any social media platforms have empty URLs
       const emptyUrlPlatforms = formData.social_media_links.filter(link => 
         link.platform && !link.url.trim()
       );
@@ -364,6 +558,103 @@ const AddClinicPage: React.FC = () => {
         // Get the names of platforms with empty URLs for the error message
         const platformNames = emptyUrlPlatforms.map(link => link.platform).join(', ');
         setError(`Please add URLs for the following platforms: ${platformNames}`);
+        return;
+      }
+      
+      // Check email validation
+      if (!formData.email) {
+        setError('Please enter an email address');
+        return;
+      }
+      
+      if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+      
+      // Check if there are any incomplete phone number entries (type filled but number empty or vice versa)
+      const incompletePhoneNumbers = formData.phone_numbers.filter(phone => 
+        (phone.type && (!phone.number || phone.number.trim() === '')) || 
+        (phone.number && phone.number.trim() !== '' && !phone.type)
+      );
+      
+      if (incompletePhoneNumbers.length > 0) {
+        setError('Please complete all phone number entries with both type and number, or remove incomplete entries');
+        return;
+      }
+      
+      // Check if at least one complete phone number is provided
+      const hasValidPhoneNumber = formData.phone_numbers.length > 0 && 
+        formData.phone_numbers.some(phone => phone.type && phone.number && phone.number.trim().length > 0);
+      
+      if (!hasValidPhoneNumber) {
+        setError('Please add at least one phone number with both type and number fields filled');
+        return;
+      }
+
+      // Check if all phone numbers have 11 digits
+      const invalidLengthPhoneNumbers = formData.phone_numbers.filter(phone => 
+        phone.type && phone.number && phone.number.trim() !== '' && 
+        phone.number.trim().replace(/\s+/g, '').length !== 11
+      );
+      
+      // Eğer geçersiz uzunlukta telefon numarası varsa, devam edemezsiniz
+      // Ancak üst kısımda genel hata mesajı göstermiyoruz, sadece kırmızı uyarı gösteriliyor
+      if (invalidLengthPhoneNumbers.length > 0) {
+        // setError yapmıyoruz, yerel olarak hatalar gösteriliyor
+        return;
+      }
+    }
+    // If we're on the visuals step, check if at least 3 photos are uploaded
+    else if (currentStep === 'visuals') {
+      if (selectedPhotos.length < 3) {
+        setError('Please upload at least 3 photos of your clinic');
+        return;
+      }
+    }
+    // If we're on the services step, check if required selections are made
+    else if (currentStep === 'services') {
+      // Check for animal types
+      if (formData.servedAnimalTypes.length === 0) {
+        setError('Please select at least one animal type you serve');
+        return;
+      }
+      
+      // Check for medical services
+      if (formData.medicalServices.length === 0) {
+        setError('Please select at least one medical service');
+        return;
+      }
+      
+      // Check for additional services
+      if (formData.additionalServices.length === 0) {
+        setError('Please select at least one additional service');
+        return;
+      }
+    }
+    // Appointments step validation
+    else if (currentStep === 'appointments') {
+      // Check if at least one working day is selected
+      if (formData.available_days.length === 0) {
+        setError('Please select at least one working day');
+        return;
+      }
+      
+      // Check if opening time is set
+      if (!formData.opening_time) {
+        setError('Please set an opening time');
+        return;
+      }
+      
+      // Check if closing time is set
+      if (!formData.closing_time) {
+        setError('Please set a closing time');
+        return;
+      }
+      
+      // Check if opening time is earlier than closing time
+      if (formData.opening_time >= formData.closing_time) {
+        setError('Opening time must be earlier than closing time');
         return;
       }
     }
@@ -390,90 +681,108 @@ const AddClinicPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation for each step
-    if (currentStep === 'clinic_details') {
-      // Check if establishment date is provided and not in the future
-      if (!formData.establishment_date) {
-        setError('Please provide an establishment date');
-        return;
-      }
-      
-      const establishmentDate = new Date(formData.establishment_date);
-      const currentDate = new Date();
-      if (establishmentDate > currentDate) {
-        setError('Establishment date cannot be in the future');
-        return;
-      }
+    // Clinic details validation
+    if (!formData.name || formData.name.trim() === '') {
+      setError('Please enter a clinic name');
+      return;
     }
     
-    if (currentStep === 'communication') {
-      // Phone number validation
-      const phoneRegex = /^\+90\d{10}$/;
-      if (formData.phone_number && !phoneRegex.test(formData.phone_number)) {
-        setError('Phone number must be in format: +90XXXXXXXXXX');
-        return;
-      }
+    // Establishment date is required for complete submissions
+    if (!formData.establishment_date) {
+      setError('Please enter the establishment date');
+      return;
     }
     
-    if (currentStep === 'visuals') {
-      // Check if at least 3 photos are uploaded
-      if (selectedPhotos.length < 3) {
-        setError('Please upload at least 3 photos');
-        return;
-      }
+    // Address validation
+    if (!formData.address || formData.address.trim() === '') {
+      setError('Please enter your clinic address');
+      return;
     }
     
-    if (currentStep === 'services') {
-      // Check if at least one animal type and one medical service are selected
-      if (formData.servedAnimalTypes.length === 0) {
-        setError('Please select at least one animal type');
-        return;
-      }
-      
-      if (formData.medicalServices.length === 0) {
-        setError('Please select at least one medical service');
-        return;
-      }
+    // Check if user already has a clinic
+    if (hasExistingClinic && !clinicId) {
+      setError('You already have a registered clinic. Each veterinarian can only register one clinic.');
+      return;
+    }
+
+    // Check if user is not verified
+    if (verificationStatus === null && !hasExistingClinic) {
+      setError('Your clinic is not verified. Please complete the verification process.');
+      return;
     }
     
-    if (currentStep === 'tax_registration') {
-      // Validate tax identification number (VKN) - Should be 10 digits
-      const vknRegex = /^\d{10}$/;
-      if (!formData.taxIdentificationNumber || !vknRegex.test(formData.taxIdentificationNumber)) {
-        setError('Tax identification number (VKN) must be 10 digits');
-        return;
-      }
-      
-      // Validate veterinary license number
-      if (!formData.veterinaryLicenseNumber) {
-        setError('Please enter your veterinary license number');
-        return;
-      }
+    // Only allow complete form submission on the final step
+    if (currentStep !== 'tax_registration') {
+      // If not on the final step, just move to the next step instead
+      handleNextStep();
+      return;
+    }
+
+    // At this point we're guaranteed to be on the tax_registration step
+    
+    // Validate tax identification number (VKN) - Should be 10 digits
+    const vknRegex = /^\d{10}$/;
+    if (!formData.taxIdentificationNumber || !vknRegex.test(formData.taxIdentificationNumber)) {
+      setError('Tax identification number (VKN) must be 10 digits');
+      return;
     }
     
-    if (currentStep === 'appointments') {
-      // Çalışma günlerini kontrol et
-      if (formData.available_days.length === 0) {
-        setError('Please select at least one working day');
-        return;
-      }
-      
-      // Açılış ve kapanış saatlerini kontrol et
-      if (!formData.opening_time) {
-        setError('Please set an opening time');
-        return;
-      }
-      
-      if (!formData.closing_time) {
-        setError('Please set a closing time');
-        return;
-      }
-      
-      // Açılış saati kapanış saatinden önce olmalı
-      if (formData.opening_time >= formData.closing_time) {
-        setError('Opening time must be earlier than closing time');
-        return;
-      }
+    // Validate veterinary license number
+    if (!formData.veterinaryLicenseNumber) {
+      setError('Please enter your veterinary license number');
+      return;
+    }
+    
+    // Validation for previous steps
+    // Clinic Details step
+    if (!formData.name || !formData.establishment_date) {
+      setError('Clinic name and establishment date are required');
+      return;
+    }
+    
+    // Locations step validation
+    if (!formData.address) {
+      setError('Clinic address is required');
+      return;
+    }
+    
+    // Visuals step validation
+    if (selectedPhotos.length < 3) {
+      setError('Please upload at least 3 photos of your clinic');
+      return;
+    }
+    
+    // Services step validation
+    if (formData.servedAnimalTypes.length === 0) {
+      setError('Please select at least one animal type you serve');
+      return;
+    }
+    
+    if (formData.medicalServices.length === 0) {
+      setError('Please select at least one medical service');
+      return;
+    }
+    
+    // Appointments step validation
+    if (formData.available_days.length === 0) {
+      setError('Please select at least one working day');
+      return;
+    }
+    
+    if (!formData.opening_time) {
+      setError('Please set an opening time');
+      return;
+    }
+    
+    if (!formData.closing_time) {
+      setError('Please set a closing time');
+      return;
+    }
+    
+    // Açılış saati kapanış saatinden önce olmalı
+    if (formData.opening_time >= formData.closing_time) {
+      setError('Opening time must be earlier than closing time');
+      return;
     }
     
     // Clear any previous errors
@@ -495,45 +804,60 @@ const AddClinicPage: React.FC = () => {
       // API URL'yi kontrol et
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
       
+      // Parse establishment_date into year and month
+      let establishmentYear = null;
+      let establishmentMonth = null;
+      
+      if (formData.establishment_date) {
+        // Format is typically YYYY-MM or YYYY-MM-DD
+        const dateParts = formData.establishment_date.split('-');
+        if (dateParts.length >= 2) {
+          establishmentYear = parseInt(dateParts[0], 10);
+          establishmentMonth = parseInt(dateParts[1], 10);
+        }
+      }
+      
       // First, create the clinic
       const response = await axios.post(
         `${apiUrl}/api/clinics/add`,
         {
-          clinic_name: formData.name,
+          clinic_name: formData.clinicType 
+            ? `${formData.name} ${formData.clinicType}` 
+            : formData.name,
           clinic_type: formData.clinicType,
-          clinic_address: formData.address || "Adres belirtilmedi", // Boş olamaz
-          clinic_phone: formData.phone_number || null,
-          clinic_email: null, // Kullanıcı tarafından girilmediğinden
+          clinic_address: formData.address || "Adres belirtilmedi",
+          clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
+          clinic_email: formData.email || null,
           clinic_description: formData.biography || formData.description || null,
           
-          // Çalışma günleri ve saatleri (Appointments adımından gelir)
+          // Çalışma günleri ve saatleri
           available_days: formData.available_days.length > 0 
             ? formData.available_days 
-            : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], // Default değer
+            : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
           emergency_available_days: formData.emergency_available_days || [], 
-          opening_time: formData.opening_time || "09:00", // Default değer
-          closing_time: formData.closing_time || "18:00", // Default değer
-          
-          // Only include coordinates if the user has already gone past the "locations" step
-          ...(currentStep !== 'clinic_details' && formData.coordinates ? { coordinates: formData.coordinates } : {}),
+          opening_time: formData.opening_time || "09:00",
+          closing_time: formData.closing_time || "18:00",
+          allow_online_meetings: formData.allow_online_meetings || false,
           
           establishment_date: formData.establishment_date,
+          establishment_year: establishmentYear,
+          establishment_month: establishmentMonth,
           show_phone_number: formData.showPhoneNumber,
+          show_mail_address: formData.showMailAddress,
           allow_direct_messages: formData.allowDirectMessages,
           province: formData.province || null,
           district: formData.district || null,
           social_media_links: formData.social_media_links || [],
           
-          // Service related data
           served_animal_types: formData.servedAnimalTypes || [],
           medical_services: formData.medicalServices || [],
           additional_services: formData.additionalServices || [],
           
-          // Registration fields
           tax_identification_number: formData.taxIdentificationNumber || null,
           veterinary_license_number: formData.veterinaryLicenseNumber || null,
 
-          is_partial_submission: false // Kısmi gönderim olup olmadığı
+          is_partial_submission: false,
+          verification_status: 'pending'
         },
         {
           headers: {
@@ -545,7 +869,13 @@ const AddClinicPage: React.FC = () => {
       if (response.status === 201) {
         // Then, upload photos if any are selected
         if (selectedPhotos.length > 0) {
-          await uploadPhotos(response.data.clinic.id, response.data.clinic.name);
+          // Make sure clinic ID is valid before attempting to upload photos
+          if (!response.data.clinic || !response.data.clinic.id) {
+            console.error('Clinic created but no valid ID received:', response.data);
+            setError('Error: Created clinic but unable to upload photos due to missing clinic ID');
+          } else {
+            await uploadPhotos(response.data.clinic.id, response.data.clinic.name);
+          }
         }
 
         setSuccess(true);
@@ -560,18 +890,24 @@ const AddClinicPage: React.FC = () => {
           province: '',
           district: '',
           address: '',
-          phone_number: '',
+          phone_numbers: [],
+          email: '',
           description: '',
           showPhoneNumber: false,
           allowDirectMessages: false,
+          showMailAddress: false,
           servedAnimalTypes: [],
           medicalServices: [],
           additionalServices: [],
           // Appointment fields
           available_days: [],
           emergency_available_days: [],
+          has_emergency_service: false,
+          is_open_24_7: false,
+          slot_duration: 60,
           opening_time: '',
           closing_time: '',
+          allow_online_meetings: false,
           // Registration fields
           taxIdentificationNumber: '',
           veterinaryLicenseNumber: ''
@@ -580,12 +916,8 @@ const AddClinicPage: React.FC = () => {
         setPhotoPreviewUrls([]);
         setUploadProgress(0);
 
-        // Redirect to dashboard after success message
-        setTimeout(() => {
-          // Form is successfully submitted, we can skip the confirmation
+        // Remove the automatic navigation timeout
           setFormModified(false);
-          navigate('/dashboard');
-        }, 3000);
       }
     } catch (err: any) {
       console.error('Clinic addition error:', err.response || err);
@@ -600,29 +932,53 @@ const AddClinicPage: React.FC = () => {
     }
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
-
   // Save partial clinic data when user wants to leave the page
   const savePartialClinicData = async () => {
     try {
       setLoading(true);
+
+      // Only require clinic name for partial submissions
+      if (!formData.name || formData.name.trim() === '') {
+        setError('Clinic name is required to save as draft');
+        setLoading(false);
+        return;
+      }
+
+      // Parse establishment_date into year and month if available
+      let establishmentYear = null;
+      let establishmentMonth = null;
+      
+      if (formData.establishment_date) {
+        // Format is typically YYYY-MM or YYYY-MM-DD
+        const dateParts = formData.establishment_date.split('-');
+        if (dateParts.length >= 2) {
+          establishmentYear = parseInt(dateParts[0], 10);
+          establishmentMonth = parseInt(dateParts[1], 10);
+        }
+      }
+      
       const partialClinicData = {
-        clinic_name: formData.name,
+        clinic_name: formData.clinicType 
+          ? `${formData.name} ${formData.clinicType}` 
+          : formData.name,
         clinic_type: formData.clinicType,
-        establishment_date: formData.establishment_date,
+        establishment_date: formData.establishment_date || null,
+        establishment_year: establishmentYear,
+        establishment_month: establishmentMonth,
         clinic_description: formData.description || formData.biography || null,
-        is_partial_submission: true,
+        is_partial_submission: true, // Mark explicitly as partial submission for saving as draft
+        verification_status: 'pending_submission', // Set verification status for draft saves
         
         // Optional fields that may not be filled yet
         clinic_address: formData.address || null,
-        clinic_phone: formData.phone_number || null,
+        clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
+        clinic_email: formData.email || null,
         province: formData.province || null,
         district: formData.district || null,
         
         // Communication preferences
         show_phone_number: formData.showPhoneNumber,
+        show_mail_address: formData.showMailAddress,
         allow_direct_messages: formData.allowDirectMessages,
         
         // Social media links - if provided
@@ -633,6 +989,7 @@ const AddClinicPage: React.FC = () => {
         emergency_available_days: formData.emergency_available_days.length > 0 ? formData.emergency_available_days : null,
         opening_time: formData.opening_time || null,
         closing_time: formData.closing_time || null,
+        allow_online_meetings: formData.allow_online_meetings || false,
         
         // Service fields
         served_animal_types: formData.servedAnimalTypes || [],
@@ -643,6 +1000,8 @@ const AddClinicPage: React.FC = () => {
         tax_identification_number: formData.taxIdentificationNumber || null,
         veterinary_license_number: formData.veterinaryLicenseNumber || null
       };
+      
+      console.log('Saving partial clinic data with is_partial_submission flag:', partialClinicData.is_partial_submission);
       
       const storedToken = token || localStorage.getItem('token');
       if (!storedToken) {
@@ -664,12 +1023,11 @@ const AddClinicPage: React.FC = () => {
       );
 
       if (response.status === 201) {
-        // Show quick success message
-        toast.success('Your clinic information has been saved as a draft.');
+        console.log('Partial clinic data saved successfully:', response.data);
         
-        // Navigate to dashboard after success
+        // Navigate to dashboard with state to set the active tab
         setFormModified(false);
-        navigate('/dashboard');
+        navigate('/dashboard', { state: { activeView: 'clinics' } });
       }
     } catch (err: any) {
       console.error('Partial clinic save error:', err.response || err);
@@ -691,223 +1049,341 @@ const AddClinicPage: React.FC = () => {
     setFormModified(true);
   };
 
+  const handleAddEmptyPhoneNumber = () => {
+    setFormData(prev => {
+      const newPhoneNumbers = [...(prev.phone_numbers || [])];
+      newPhoneNumbers.push({ type: '', number: '' });
+      return {
+        ...prev,
+        phone_numbers: newPhoneNumbers
+      };
+    });
+    setFormModified(true);
+  };
+
+  const handleRemovePhoneNumber = (index: number) => {
+    setFormData(prev => {
+      const newPhoneNumbers = [...(prev.phone_numbers || [])];
+      newPhoneNumbers.splice(index, 1);
+      return {
+        ...prev,
+        phone_numbers: newPhoneNumbers
+      };
+    });
+    setFormModified(true);
+  };
+
+  const handlePhoneNumberChange = (index: number, field: 'type' | 'number', value: string) => {
+    setFormData(prev => {
+      const newPhoneNumbers = [...(prev.phone_numbers || [])];
+      newPhoneNumbers[index] = {
+        ...newPhoneNumbers[index],
+        [field]: value
+      };
+      return {
+        ...prev,
+        phone_numbers: newPhoneNumbers
+      };
+    });
+    setFormModified(true);
+  };
+
   // Success message
   if (success) {
-    return <SuccessMessage handleBackToDashboard={handleBackToDashboard} />;
+    return <SuccessMessage handleBackToDashboard={() => {
+      // Reset all states before navigation
+      setFormData({
+        name: '',
+        clinicType: 'Veterinary Clinic',
+        biography: '',
+        establishment_date: '',
+        social_media_links: [],
+        province: '',
+        district: '',
+        address: '',
+        phone_numbers: [],
+        email: '',
+        description: '',
+        showPhoneNumber: false,
+        allowDirectMessages: false,
+        showMailAddress: false,
+        servedAnimalTypes: [],
+        medicalServices: [],
+        additionalServices: [],
+        available_days: [],
+        emergency_available_days: [],
+        has_emergency_service: false,
+        is_open_24_7: false,
+        slot_duration: 60,
+        opening_time: '',
+        closing_time: '',
+        allow_online_meetings: false,
+        taxIdentificationNumber: '',
+        veterinaryLicenseNumber: ''
+      });
+      setSelectedPhotos([]);
+      setPhotoPreviewUrls([]);
+      setUploadProgress(0);
+      setFormModified(false);
+      setError('');
+      setLoading(false);
+      setSuccess(false);
+      setCurrentStep('clinic_details');
+      // Use setTimeout to ensure state updates are processed before navigation
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 0);
+    }} />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
-        <div className="flex items-center">
-          <img 
-              src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
-              alt="Petlyst Logo" 
-              className="h-8 w-auto"
-          />
-          <span className="ml-3 text-xl font-semibold text-gray-800">Petlyst</span>
-        </div>
-        <button
-          onClick={handleBackToDashboard}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Back to Dashboard
-        </button>
-      </header>
       
-      {/* Progress bars - Mobile and Desktop */}
-      <MobileStepIndicator steps={steps} currentStep={currentStep} />
+      {/* Mobile Progress Indicator - Only visible on mobile */}
+      <div className="md:hidden">
+        <MobileStepIndicator steps={steps} currentStep={currentStep} handleBackToDashboard={() => handleNavigation('/dashboard')} />
+      </div>
+
+      {/* Desktop Progress Bar - Vertical sidebar */}
       <StepProgressBar 
         steps={steps} 
         currentStep={currentStep} 
         handleGoToStep={handleGoToStep} 
         loading={loading} 
+        handleBackToDashboard={() => handleNavigation('/dashboard')}
       />
       
-      <div className="flex-grow">
-        {/* Main Content */}
-        <div className={`mx-auto w-full my-8 bg-white rounded-lg shadow p-6 ${
-          currentStep === 'locations' || currentStep === 'services' ? 'max-w-6xl' : 'max-w-3xl'
-        }`}>
-          {error && (
-            <div className="p-4 bg-red-50 border-l-4 border-red-500 mb-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+      {/* Main content area - adjusted to work with the sidebar */}
+      <div className="flex-grow flex">
+        <div className="md:ml-60 w-full flex flex-col items-center justify-center min-h-screen py-6">
+          
+          {/* Let's Start Section - Form dışında, üstte, bağımsız kutu */}
+          {currentStep === 'clinic_details' && (
+            <div className="w-full max-w-3xl bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-green-100 p-3 rounded-full">
+                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                   </svg>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className="ml-4">
+                  <h2 className="text-xl font-semibold text-gray-800">Let's Start</h2>
+                  <p className="text-sm text-gray-600 mt-1">Adding clinic details will help us to create inclusive page for your clinic!</p>
                 </div>
               </div>
             </div>
           )}
-
-          <form onSubmit={handleSubmit}>
-            {/* Clinic Details Section */}
-            {currentStep === 'clinic_details' && (
-              <ClinicDetailsForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                handleSocialMediaChange={handleSocialMediaChange}
-                handleAddEmptySocialMedia={handleAddEmptySocialMedia}
-                handleRemoveSocialMedia={handleRemoveSocialMedia}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-              />
+          
+          {/* Form Container */}
+          <div className={`w-full bg-white rounded-lg shadow p-6 ${
+            currentStep === 'locations' || currentStep === 'services' ? 'max-w-6xl' : 'max-w-3xl'
+          }`}>
+            {error && currentStep !== 'visuals' && (
+              <div className="p-4 bg-red-50 border-l-4 border-red-500 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Locations Section */}
-            {currentStep === 'locations' && (
-              <LocationsForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                updateCoordinates={updateCoordinates}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-              />
-            )}
-
-            {/* Communication Section */}
-            {currentStep === 'communication' && (
-              <CommunicationForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                handleSocialMediaChange={handleSocialMediaChange}
-                handleAddEmptySocialMedia={handleAddEmptySocialMedia}
-                handleRemoveSocialMedia={handleRemoveSocialMedia}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-                setError={setError}
-              />
-            )}
-
-            {/* Visuals Section */}
-            {currentStep === 'visuals' && (
-              <VisualsForm
-                selectedPhotos={selectedPhotos}
-                photoPreviewUrls={photoPreviewUrls}
-                handlePhotoSelect={handlePhotoSelect}
-                handleRemovePhoto={handleRemovePhoto}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-                error={error}
-                setError={setError}
-              />
-            )}
-
-            {/* Services Section */}
-            {currentStep === 'services' && (
-              <ServicesForm
-                formData={{
-                  servedAnimalTypes: formData.servedAnimalTypes || [],
-                  medicalServices: formData.medicalServices || [],
-                  additionalServices: formData.additionalServices || []
-                }}
-                handleServicesChange={handleServicesChange}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-              />
-            )}
-
-            {/* Tax and Registration Section */}
-            {currentStep === 'tax_registration' && (
-              <RegistrationForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                hasExistingClinic={hasExistingClinic}
-                loading={loading}
-              />
-            )}
-
-            {/* Appointments Section */}
-            {currentStep === 'appointments' && (
-              <AppointmentsForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                loading={loading}
-              />
-            )}
-
-            {/* Navigation buttons */}
-            <div className="flex justify-between mt-8">
-              {currentStep !== 'clinic_details' && (
-                <button
-                  type="button"
-                  onClick={handlePreviousStep}
-                  disabled={loading}
-                  className={`px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                    loading
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                >
-                  Previous
-                </button>
+            <form onSubmit={handleSubmit}>
+              {/* Clinic Details Section */}
+              {currentStep === 'clinic_details' && (
+                <ClinicDetailsForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  handleSocialMediaChange={handleSocialMediaChange}
+                  handleAddEmptySocialMedia={handleAddEmptySocialMedia}
+                  handleRemoveSocialMedia={handleRemoveSocialMedia}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                />
               )}
-              <button
-                type="submit"
-                disabled={hasExistingClinic || loading}
-                className={`px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  hasExistingClinic || loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } ${currentStep === 'clinic_details' ? 'ml-auto' : ''}`}
-              >
-                {loading 
-                  ? 'Submitting...' 
-                  : currentStep === 'tax_registration' 
-                    ? 'Submit' 
-                    : (
-                      <span className="flex items-center">
-                        Continue
-                        <svg className="ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                      </span>
-                    )
-                }
-              </button>
-            </div>
-          </form>
+
+              {/* Locations Section */}
+              {currentStep === 'locations' && (
+                <LocationsForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  updateCoordinates={updateCoordinates}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                />
+              )}
+
+              {/* Communication Section */}
+              {currentStep === 'communication' && (
+                <CommunicationForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  handleSocialMediaChange={handleSocialMediaChange}
+                  handleAddEmptySocialMedia={handleAddEmptySocialMedia}
+                  handleRemoveSocialMedia={handleRemoveSocialMedia}
+                  handlePhoneNumberChange={handlePhoneNumberChange}
+                  handleAddEmptyPhoneNumber={handleAddEmptyPhoneNumber}
+                  handleRemovePhoneNumber={handleRemovePhoneNumber}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                  setError={setError}
+                  attemptedSubmit={attemptedCommunicationSubmit}
+                />
+              )}
+
+              {/* Visuals Section */}
+              {currentStep === 'visuals' && (
+                <VisualsForm
+                  selectedPhotos={selectedPhotos}
+                  photoPreviewUrls={photoPreviewUrls}
+                  handlePhotoSelect={handlePhotoSelect}
+                  handleRemovePhoto={handleRemovePhoto}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                  error={error}
+                  setError={setError}
+                />
+              )}
+
+              {/* Services Section */}
+              {currentStep === 'services' && (
+                <ServicesForm
+                  formData={{
+                    servedAnimalTypes: formData.servedAnimalTypes || [],
+                    medicalServices: formData.medicalServices || [],
+                    additionalServices: formData.additionalServices || []
+                  }}
+                  handleServicesChange={handleServicesChange}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                  setError={setError}
+                />
+              )}
+
+              {/* Tax and Registration Section */}
+              {currentStep === 'tax_registration' && (
+                <RegistrationForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  hasExistingClinic={hasExistingClinic}
+                  loading={loading}
+                />
+              )}
+
+              {/* Appointments Section */}
+              {currentStep === 'appointments' && (
+                <AppointmentsForm
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  loading={loading}
+                />
+              )}
+
+              {/* Navigation buttons */}
+              <div className="flex justify-between mt-8">
+                {currentStep !== 'clinic_details' && (
+                  <button
+                    type="button"
+                    onClick={handlePreviousStep}
+                    disabled={loading}
+                    className={`px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                      loading
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  >
+                    Previous
+                  </button>
+                )}
+                <button
+                  type={currentStep === 'tax_registration' ? 'submit' : 'button'}
+                  onClick={currentStep !== 'tax_registration' ? handleNextStep : undefined}
+                  disabled={hasExistingClinic || loading}
+                  className={`px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    hasExistingClinic || loading
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } ${currentStep === 'clinic_details' ? 'ml-auto' : ''}`}
+                >
+                  {loading 
+                    ? 'Submitting...' 
+                    : currentStep === 'tax_registration' 
+                      ? 'Submit' 
+                      : (
+                        <span className="flex items-center">
+                          Continue
+                          <svg className="ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </span>
+                      )
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
       {/* Exit Confirmation Dialog */}
       {showExitConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Unsaved Changes</h3>
-            <p className="text-gray-600 mb-6">
-              {formData.name && formData.establishment_date 
-                ? "You can save your progress as a draft or leave without saving."
-                : "All your changes will be lost if you leave this page."}
-            </p>
-            <div className="flex justify-end gap-3">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full animate-modal-slide-in">
+            <div className="p-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center">
+                    <svg className="h-5 w-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Unsaved Changes</h3>
+                  <p className="text-sm text-gray-500">
+                    {formData.name 
+                      ? "Your clinic information hasn't been saved yet. Would you like to save your progress as a draft before leaving?"
+                      : "You have unsaved changes. Are you sure you want to leave this page? All your changes will be lost."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
               <button
                 onClick={cancelNavigation}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                  className="mt-3 sm:mt-0 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium"
               >
-                Stay on this page
+                  Stay Here
               </button>
               
-              {formData.name && formData.establishment_date && (
+                {formData.name && (
                 <button
                   onClick={saveAndNavigate}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center justify-center"
                 >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
                   Save as Draft
                 </button>
               )}
               
               <button
                 onClick={confirmNavigation}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors font-medium inline-flex items-center justify-center"
               >
-                Leave without saving
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Leave without Saving
               </button>
+              </div>
             </div>
           </div>
         </div>

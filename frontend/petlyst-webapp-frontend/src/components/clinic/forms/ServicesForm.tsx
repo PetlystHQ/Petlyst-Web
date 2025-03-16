@@ -10,6 +10,7 @@ interface ServicesFormProps {
   handleServicesChange: (field: 'servedAnimalTypes' | 'medicalServices' | 'additionalServices', value: string[]) => void;
   hasExistingClinic: boolean;
   loading: boolean;
+  setError?: (error: string) => void;
 }
 
 // Accordion props için tip tanımlama
@@ -22,6 +23,7 @@ interface AccordionSectionProps {
   toggleOpen: () => void;
   selectedItemsCount: number;
   children: React.ReactNode;
+  isRequired?: boolean;
 }
 
 // Varsayılan seçenekler
@@ -40,7 +42,7 @@ const medicalServicesOptions = [
 const additionalServicesOptions = [
   'Grooming', 'Boarding', 'Pet Hotel', 'Pet Daycare', 'Pet Training',
   'Pet Transportation', 'Pet Adoption', 'Pet Insurance', 'Online Consultation',
-  'Home Visits', '24/7 Service', 'Microchipping', 'Pet Food & Supplies'
+  'Home Visits', 'Microchipping', 'Pet Food & Supplies'
 ];
 
 // Akordiyon bileşeni
@@ -52,7 +54,8 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
   isOpen,
   toggleOpen,
   selectedItemsCount,
-  children
+  children,
+  isRequired = false
 }) => {
   // Renk konfigürasyonları
   const colorClasses = {
@@ -96,6 +99,7 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
           <div>
             <h3 className={`text-lg font-medium ${colors.title} flex items-center`}>
               {title}
+              {isRequired && <span className="text-red-500 ml-1">*</span>}
               {selectedItemsCount > 0 && (
                 <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.count}`}>
                   {selectedItemsCount} selected
@@ -130,47 +134,42 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
   formData,
   handleServicesChange,
   hasExistingClinic,
-  loading
+  loading,
+  setError
 }) => {
-  // Accordion open states
-  const [openSections, setOpenSections] = useState({
-    animalTypes: true, // Başlangıçta açık
-    medicalServices: false,
-    additionalServices: false
-  });
+  // Track which accordion section is open
+  const [openSection, setOpenSection] = useState<string | null>('animalTypes');
   
-  // Toggle section open state
-  const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section);
   };
   
-  // Handle checkbox change
-  const handleCheckboxChange = (
-    category: 'servedAnimalTypes' | 'medicalServices' | 'additionalServices',
-    value: string,
-    checked: boolean
+  const handleOptionToggle = (
+    field: 'servedAnimalTypes' | 'medicalServices' | 'additionalServices',
+    option: string
   ) => {
-    const currentValues = [...formData[category]];
+    const currentValues = formData[field];
+    const updatedValues = currentValues.includes(option)
+      ? currentValues.filter(item => item !== option)
+      : [...currentValues, option];
     
-    if (checked) {
-      // Add value if not already in array
-      if (!currentValues.includes(value)) {
-        handleServicesChange(category, [...currentValues, value]);
-      }
-    } else {
-      // Remove value
-      handleServicesChange(
-        category,
-        currentValues.filter(item => item !== value)
-      );
+    handleServicesChange(field, updatedValues);
+    
+    // Temizle herhangi bir hata mesajını
+    if (setError) {
+      setError('');
     }
   };
 
+  // ServicesForm bileşenine yüklenir yüklenmez hata mesajını temizleyelim
+  React.useEffect(() => {
+    if (setError) {
+      setError('');
+    }
+  }, [setError]);
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto bg-white shadow-md rounded-lg p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center">
@@ -179,6 +178,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
         </div>
         <p className="text-sm text-gray-600 mt-1">
           Choose all the animals you treat and services you offer to help pet owners find your clinic.
+          <span className="text-red-500 ml-1">* At least one selection required in each category.</span>
         </p>
       </div>
 
@@ -194,9 +194,10 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
             </svg>
           }
           accentColor="blue"
-          isOpen={openSections.animalTypes}
+          isOpen={openSection === 'animalTypes'}
           toggleOpen={() => toggleSection('animalTypes')}
           selectedItemsCount={formData.servedAnimalTypes.length}
+          isRequired={true}
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {animalTypeOptions.map((animal) => (
@@ -205,7 +206,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`animal-${animal}`}
                   checked={formData.servedAnimalTypes.includes(animal)}
-                  onChange={(e) => handleCheckboxChange('servedAnimalTypes', animal, e.target.checked)}
+                  onChange={(e) => handleOptionToggle('servedAnimalTypes', animal)}
                   disabled={hasExistingClinic || loading}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -230,7 +231,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                     {!hasExistingClinic && !loading && (
                       <button
                         type="button"
-                        onClick={() => handleCheckboxChange('servedAnimalTypes', animal, false)}
+                        onClick={() => handleOptionToggle('servedAnimalTypes', animal)}
                         className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600 focus:outline-none"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -256,9 +257,10 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
             </svg>
           }
           accentColor="green"
-          isOpen={openSections.medicalServices}
+          isOpen={openSection === 'medicalServices'}
           toggleOpen={() => toggleSection('medicalServices')}
           selectedItemsCount={formData.medicalServices.length}
+          isRequired={true}
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {medicalServicesOptions.map((service) => (
@@ -267,7 +269,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`medical-${service}`}
                   checked={formData.medicalServices.includes(service)}
-                  onChange={(e) => handleCheckboxChange('medicalServices', service, e.target.checked)}
+                  onChange={(e) => handleOptionToggle('medicalServices', service)}
                   disabled={hasExistingClinic || loading}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                 />
@@ -292,7 +294,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                     {!hasExistingClinic && !loading && (
                       <button
                         type="button"
-                        onClick={() => handleCheckboxChange('medicalServices', service, false)}
+                        onClick={() => handleOptionToggle('medicalServices', service)}
                         className="ml-1.5 inline-flex text-green-400 hover:text-green-600 focus:outline-none"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -318,9 +320,10 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
             </svg>
           }
           accentColor="purple"
-          isOpen={openSections.additionalServices}
+          isOpen={openSection === 'additionalServices'}
           toggleOpen={() => toggleSection('additionalServices')}
           selectedItemsCount={formData.additionalServices.length}
+          isRequired={true}
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {additionalServicesOptions.map((service) => (
@@ -329,7 +332,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`additional-${service}`}
                   checked={formData.additionalServices.includes(service)}
-                  onChange={(e) => handleCheckboxChange('additionalServices', service, e.target.checked)}
+                  onChange={(e) => handleOptionToggle('additionalServices', service)}
                   disabled={hasExistingClinic || loading}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
@@ -354,7 +357,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                     {!hasExistingClinic && !loading && (
                       <button
                         type="button"
-                        onClick={() => handleCheckboxChange('additionalServices', service, false)}
+                        onClick={() => handleOptionToggle('additionalServices', service)}
                         className="ml-1.5 inline-flex text-purple-400 hover:text-purple-600 focus:outline-none"
                       >
                         <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
