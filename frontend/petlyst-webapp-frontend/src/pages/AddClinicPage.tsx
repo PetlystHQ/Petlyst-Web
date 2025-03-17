@@ -28,6 +28,9 @@ const AddClinicPage: React.FC = () => {
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [exitDestination, setExitDestination] = useState('');
   const [isEditMode, setIsEditMode] = useState(!!clinicId);
+  const [attemptedRegistrationSubmit, setAttemptedRegistrationSubmit] = useState(false);
+  const [attemptedAppointmentsSubmit, setAttemptedAppointmentsSubmit] = useState(false);
+  const [isUserInitiatedSubmit, setIsUserInitiatedSubmit] = useState(false);
   const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     clinicType: 'Veterinary Clinic',
@@ -265,15 +268,26 @@ const AddClinicPage: React.FC = () => {
   useEffect(() => {
     // Adım değiştiğinde hata mesajını temizle
     setError('');
+    
+    // Reset attempted submission flags when changing steps
+    if (currentStep === 'tax_registration') {
+      setAttemptedRegistrationSubmit(false);
+    } else if (currentStep === 'appointments') {
+      setAttemptedAppointmentsSubmit(false);
+    }
+    
+    // Always reset the user-initiated submit flag when changing steps
+    setIsUserInitiatedSubmit(false);
   }, [currentStep]);
 
   // Handle navigation away from the page
   const handleNavigation = useCallback((path: string) => {
     if (formModified && !success) {
+      // Show confirmation dialog if form has been modified
       setExitDestination(path);
       setShowExitConfirmation(true);
     } else {
-      // Reset all states before navigation
+      // If form is unmodified or success is true, navigate directly
       setFormData({
         name: '',
         clinicType: 'Veterinary Clinic',
@@ -311,10 +325,8 @@ const AddClinicPage: React.FC = () => {
       setLoading(false);
       setSuccess(false);
       setCurrentStep('clinic_details');
-      // Use setTimeout to ensure state updates are processed before navigation
-      setTimeout(() => {
+      // Navigate directly without setTimeout
       navigate(path);
-      }, 0);
     }
   }, [formModified, navigate, success]);
 
@@ -661,7 +673,27 @@ const AddClinicPage: React.FC = () => {
 
     const currentIndex = steps.findIndex(step => step.id === currentStep);
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1].id);
+      // If we're moving to tax_registration step, make sure we don't auto-submit
+      const nextStep = steps[currentIndex + 1].id;
+      
+      // Reset flag and clear error when moving to registration step
+      if (nextStep === 'tax_registration') {
+        setAttemptedRegistrationSubmit(false);
+        setError('');
+      }
+      
+      setCurrentStep(nextStep);
+    }
+
+    // If we're moving to the tax_registration step, reset the error and attempted submission flag
+    if (currentIndex < steps.length - 1 && steps[currentIndex + 1].id === 'tax_registration') {
+      setError('');
+      setAttemptedRegistrationSubmit(false);
+    }
+
+    // Set attempted submit flag for appointments step if we're on that step
+    if (currentStep === 'appointments') {
+      setAttemptedAppointmentsSubmit(true);
     }
   };
 
@@ -669,17 +701,79 @@ const AddClinicPage: React.FC = () => {
     const currentIndex = steps.findIndex(step => step.id === currentStep);
     if (currentIndex > 0) {
       setError('');
+      // Clear attempted registration submit when moving to different step
+      if (currentStep === 'tax_registration') {
+        setAttemptedRegistrationSubmit(false);
+      }
+      // Clear attempted appointments submit when moving away from appointments step
+      if (currentStep === 'appointments') {
+        setAttemptedAppointmentsSubmit(false);
+      }
       setCurrentStep(steps[currentIndex - 1].id);
     }
   };
 
   const handleGoToStep = (stepId: FormStep) => {
     setError('');
+    // Clear attempted registration submit when moving to different step
+    if (currentStep === 'tax_registration' && stepId !== 'tax_registration') {
+      setAttemptedRegistrationSubmit(false);
+    }
+    // Clear attempted appointments submit when moving away from appointments step
+    if (currentStep === 'appointments' && stepId !== 'appointments') {
+      setAttemptedAppointmentsSubmit(false);
+    }
+    // Also reset the flag when moving to the appointments step
+    if (stepId === 'appointments') {
+      setAttemptedAppointmentsSubmit(false);
+    }
     setCurrentStep(stepId);
+  };
+
+  // Modify the validateTaxRegistration function to work properly for both display and submission
+  const validateTaxRegistration = (forSubmission = false) => {
+    // Only check for display purposes if not attemptedRegistrationSubmit and not forSubmission
+    if (!attemptedRegistrationSubmit && !forSubmission) return [];
+    
+    const registrationErrors = [];
+    
+    // Validate tax identification number (VKN) - Should be exactly 10 digits
+    if (!formData.taxIdentificationNumber || formData.taxIdentificationNumber.length !== 10) {
+      registrationErrors.push('Tax identification number (VKN) must be exactly 10 characters');
+    }
+    
+    // Validate veterinary license number - Should be exactly 10 characters
+    if (!formData.veterinaryLicenseNumber || formData.veterinaryLicenseNumber.length !== 10) {
+      registrationErrors.push('Veterinary license number must be exactly 10 characters');
+    }
+    
+    return registrationErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Set flag to indicate this is a user-initiated submit
+    setIsUserInitiatedSubmit(true);
+    
+    // Set attempted submit flag for registration step if we're on that step
+    if (currentStep === 'tax_registration') {
+      setAttemptedRegistrationSubmit(true);
+      
+      // Always validate the tax identification and veterinary license numbers directly here
+      // regardless of the attemptedRegistrationSubmit flag
+      if (!formData.taxIdentificationNumber || formData.taxIdentificationNumber.length !== 10) {
+        setError('Tax identification number (VKN) must be exactly 10 characters');
+        setIsUserInitiatedSubmit(false); // Reset the flag if validation fails
+        return;
+      }
+      
+      if (!formData.veterinaryLicenseNumber || formData.veterinaryLicenseNumber.length !== 10) {
+        setError('Veterinary license number must be exactly 10 characters');
+        setIsUserInitiatedSubmit(false); // Reset the flag if validation fails
+        return;
+      }
+    }
     
     // Clinic details validation
     if (!formData.name || formData.name.trim() === '') {
@@ -720,16 +814,13 @@ const AddClinicPage: React.FC = () => {
 
     // At this point we're guaranteed to be on the tax_registration step
     
-    // Validate tax identification number (VKN) - Should be 10 digits
-    const vknRegex = /^\d{10}$/;
-    if (!formData.taxIdentificationNumber || !vknRegex.test(formData.taxIdentificationNumber)) {
-      setError('Tax identification number (VKN) must be 10 digits');
-      return;
-    }
+    // Use the validateTaxRegistration function to get any errors
+    // Pass true to indicate this is a submission check
+    const registrationErrors = validateTaxRegistration(true);
     
-    // Validate veterinary license number
-    if (!formData.veterinaryLicenseNumber) {
-      setError('Please enter your veterinary license number');
+    // If there are registration errors, show the first one and stop submission
+    if (registrationErrors.length > 0) {
+      setError(registrationErrors[0]);
       return;
     }
     
@@ -821,9 +912,7 @@ const AddClinicPage: React.FC = () => {
       const response = await axios.post(
         `${apiUrl}/api/clinics/add`,
         {
-          clinic_name: formData.clinicType 
-            ? `${formData.name} ${formData.clinicType}` 
-            : formData.name,
+          clinic_name: formData.name,
           clinic_type: formData.clinicType,
           clinic_address: formData.address || "Adres belirtilmedi",
           clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
@@ -849,12 +938,19 @@ const AddClinicPage: React.FC = () => {
           district: formData.district || null,
           social_media_links: formData.social_media_links || [],
           
+          // Location coordinates from Google Maps
+          latitude: formData.coordinates ? formData.coordinates.lat : null,
+          longitude: formData.coordinates ? formData.coordinates.lng : null,
+          
           served_animal_types: formData.servedAnimalTypes || [],
           medical_services: formData.medicalServices || [],
           additional_services: formData.additionalServices || [],
           
           tax_identification_number: formData.taxIdentificationNumber || null,
           veterinary_license_number: formData.veterinaryLicenseNumber || null,
+          
+          // Make sure is_open_24_7 is sent as a boolean
+          is_open_24_7: Boolean(formData.is_open_24_7),
 
           is_partial_submission: false,
           verification_status: 'pending'
@@ -958,47 +1054,52 @@ const AddClinicPage: React.FC = () => {
       }
       
       const partialClinicData = {
-        clinic_name: formData.clinicType 
-          ? `${formData.name} ${formData.clinicType}` 
-          : formData.name,
-        clinic_type: formData.clinicType,
-        establishment_date: formData.establishment_date || null,
-        establishment_year: establishmentYear,
-        establishment_month: establishmentMonth,
-        clinic_description: formData.description || formData.biography || null,
-        is_partial_submission: true, // Mark explicitly as partial submission for saving as draft
-        verification_status: 'pending_submission', // Set verification status for draft saves
-        
-        // Optional fields that may not be filled yet
+        clinic_name: formData.name,
+        clinic_type: formData.clinicType, 
         clinic_address: formData.address || null,
         clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
         clinic_email: formData.email || null,
+        clinic_description: formData.biography || formData.description || null,
+        
+        // Location coordinates
+        latitude: formData.coordinates ? formData.coordinates.lat : null,
+        longitude: formData.coordinates ? formData.coordinates.lng : null,
+        
+        // Partial address data
         province: formData.province || null,
         district: formData.district || null,
         
-        // Communication preferences
-        show_phone_number: formData.showPhoneNumber,
-        show_mail_address: formData.showMailAddress,
-        allow_direct_messages: formData.allowDirectMessages,
-        
-        // Social media links - if provided
-        social_media_links: formData.social_media_links.length > 0 ? formData.social_media_links : null,
-        
-        // Çalışma günleri ve saatleri (Appointments adımından gelir)
-        available_days: formData.available_days.length > 0 ? formData.available_days : null,
-        emergency_available_days: formData.emergency_available_days.length > 0 ? formData.emergency_available_days : null,
-        opening_time: formData.opening_time || null,
-        closing_time: formData.closing_time || null,
-        allow_online_meetings: formData.allow_online_meetings || false,
+        // Optional fields
+        social_media_links: formData.social_media_links || [],
         
         // Service fields
         served_animal_types: formData.servedAnimalTypes || [],
-        medical_services: formData.medicalServices || [],
+        medical_services: formData.medicalServices || [],  
         additional_services: formData.additionalServices || [],
+        
+        // Appointment fields
+        available_days: formData.available_days.length > 0 ? formData.available_days : null,
+        emergency_available_days: formData.emergency_available_days || null,
+        opening_time: formData.opening_time || null,
+        closing_time: formData.closing_time || null,
+        show_phone_number: formData.showPhoneNumber,
+        show_mail_address: formData.showMailAddress,
+        allow_direct_messages: formData.allowDirectMessages,
+        allow_online_meetings: formData.allow_online_meetings || false,
         
         // Registration fields - if provided
         tax_identification_number: formData.taxIdentificationNumber || null,
-        veterinary_license_number: formData.veterinaryLicenseNumber || null
+        veterinary_license_number: formData.veterinaryLicenseNumber || null,
+        
+        // Make sure is_open_24_7 is sent as a boolean
+        is_open_24_7: Boolean(formData.is_open_24_7),
+        
+        // Partial submission data
+        establishment_date: formData.establishment_date || null,
+        establishment_year: establishmentYear,
+        establishment_month: establishmentMonth,
+        is_partial_submission: true,
+        verification_status: 'pending_submission'
       };
       
       console.log('Saving partial clinic data with is_partial_submission flag:', partialClinicData.is_partial_submission);
@@ -1091,7 +1192,6 @@ const AddClinicPage: React.FC = () => {
   // Success message
   if (success) {
     return <SuccessMessage handleBackToDashboard={() => {
-      // Reset all states before navigation
       setFormData({
         name: '',
         clinicType: 'Veterinary Clinic',
@@ -1129,10 +1229,8 @@ const AddClinicPage: React.FC = () => {
       setLoading(false);
       setSuccess(false);
       setCurrentStep('clinic_details');
-      // Use setTimeout to ensure state updates are processed before navigation
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 0);
+      // Navigate directly without setTimeout
+      navigate('/dashboard');
     }} />;
   }
 
@@ -1178,16 +1276,24 @@ const AddClinicPage: React.FC = () => {
           <div className={`w-full bg-white rounded-lg shadow p-6 ${
             currentStep === 'locations' || currentStep === 'services' ? 'max-w-6xl' : 'max-w-3xl'
           }`}>
-            {error && currentStep !== 'visuals' && (
-              <div className="p-4 bg-red-50 border-l-4 border-red-500 mb-4">
+            {error && currentStep !== 'visuals' && 
+             // Extra safeguard: For tax_registration step, only show error after submission attempt
+             (currentStep !== 'tax_registration' || attemptedRegistrationSubmit) && (
+              <div className={`p-4 ${error.includes('Tax identification number') || error.includes('Veterinary license number') ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-red-50 border-l-4 border-red-500'} mb-4`}>
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
+                    {error.includes('Tax identification number') || error.includes('Veterinary license number') ? (
+                      <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className={`text-sm ${error.includes('Tax identification number') || error.includes('Veterinary license number') ? 'text-blue-700' : 'text-red-700'}`}>{error}</p>
                   </div>
                 </div>
               </div>
@@ -1202,8 +1308,9 @@ const AddClinicPage: React.FC = () => {
                   handleSocialMediaChange={handleSocialMediaChange}
                   handleAddEmptySocialMedia={handleAddEmptySocialMedia}
                   handleRemoveSocialMedia={handleRemoveSocialMedia}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1213,8 +1320,9 @@ const AddClinicPage: React.FC = () => {
                   formData={formData}
                   handleInputChange={handleInputChange}
                   updateCoordinates={updateCoordinates}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1229,10 +1337,11 @@ const AddClinicPage: React.FC = () => {
                   handlePhoneNumberChange={handlePhoneNumberChange}
                   handleAddEmptyPhoneNumber={handleAddEmptyPhoneNumber}
                   handleRemovePhoneNumber={handleRemovePhoneNumber}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
                   setError={setError}
                   attemptedSubmit={attemptedCommunicationSubmit}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1243,10 +1352,11 @@ const AddClinicPage: React.FC = () => {
                   photoPreviewUrls={photoPreviewUrls}
                   handlePhotoSelect={handlePhotoSelect}
                   handleRemovePhoto={handleRemovePhoto}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
                   error={error}
                   setError={setError}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1259,9 +1369,10 @@ const AddClinicPage: React.FC = () => {
                     additionalServices: formData.additionalServices || []
                   }}
                   handleServicesChange={handleServicesChange}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
                   setError={setError}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1270,8 +1381,9 @@ const AddClinicPage: React.FC = () => {
                 <RegistrationForm
                   formData={formData}
                   handleInputChange={handleInputChange}
-                  hasExistingClinic={hasExistingClinic}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
                   loading={loading}
+                  isEditMode={isEditMode}
                 />
               )}
 
@@ -1281,6 +1393,9 @@ const AddClinicPage: React.FC = () => {
                   formData={formData}
                   handleInputChange={handleInputChange}
                   loading={loading}
+                  hasExistingClinic={hasExistingClinic && !isEditMode}
+                  isEditMode={isEditMode}
+                  validateOnSubmit={attemptedAppointmentsSubmit}
                 />
               )}
 
@@ -1303,9 +1418,9 @@ const AddClinicPage: React.FC = () => {
                 <button
                   type={currentStep === 'tax_registration' ? 'submit' : 'button'}
                   onClick={currentStep !== 'tax_registration' ? handleNextStep : undefined}
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className={`px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                    hasExistingClinic || loading
+                    (hasExistingClinic && !isEditMode) || loading
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
                   } ${currentStep === 'clinic_details' ? 'ml-auto' : ''}`}

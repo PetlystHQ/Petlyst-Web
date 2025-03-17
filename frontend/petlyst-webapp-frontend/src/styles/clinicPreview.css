@@ -1,0 +1,11 @@
+/* CSS to hide the default navbar when on the clinic preview page */
+.clinic-preview-page + nav,
+.clinic-preview-page ~ nav,
+.clinic-preview-page ~ header {
+  display: none !important;
+}
+
+.clinic-preview-page {
+  position: relative;
+  z-index: 10;
+} 

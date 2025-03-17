@@ -9,6 +9,9 @@ interface PhoneNumberSectionProps {
   hasExistingClinic: boolean;
   loading: boolean;
   invalidLengthPhoneNumbers?: PhoneNumberEntry[]; // 11 haneli olmayan telefon numaralarını tutan prop
+  attemptedSubmit?: boolean;
+  setError?: (error: string) => void;
+  isEditMode?: boolean;
 }
 
 // Maximum number of phone numbers allowed
@@ -35,7 +38,10 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
   handleRemovePhoneNumber,
   hasExistingClinic,
   loading,
-  invalidLengthPhoneNumbers = [] // Varsayılan olarak boş dizi
+  invalidLengthPhoneNumbers = [],
+  attemptedSubmit = false,
+  setError,
+  isEditMode = false
 }) => {
   // Check if maximum number of phone numbers is reached
   const isMaxNumbersReached = phoneNumbers.length >= MAX_PHONE_NUMBERS;
@@ -85,7 +91,7 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
                   <select 
                     value={entry.type}
                     onChange={(e) => handlePhoneNumberChange(index, 'type', e.target.value)}
-                    disabled={hasExistingClinic || loading}
+                    disabled={(hasExistingClinic && !isEditMode) || loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                   >
                     <option value="" disabled>Select Type</option>
@@ -102,7 +108,7 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
                       value={entry.number}
                       onChange={(e) => handlePhoneNumberChange(index, 'number', e.target.value)}
                       placeholder="Enter phone number (11 digits)"
-                      disabled={hasExistingClinic || loading || !entry.type}
+                      disabled={(hasExistingClinic && !isEditMode) || loading || !entry.type}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none disabled:bg-gray-100 disabled:text-gray-500 ${inputBorderClass} ${isValidPhoneNumber ? 'pr-10' : ''}`}
                     />
                     
@@ -119,7 +125,7 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRemovePhoneNumber(index)}
-                    disabled={hasExistingClinic || loading}
+                    disabled={(hasExistingClinic && !isEditMode) || loading}
                     className="ml-2 w-10 h-10 flex items-center justify-center border border-gray-300 rounded-md bg-white text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   >
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +142,7 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
         <button
           type="button"
           onClick={handleAddEmptyPhoneNumber}
-          disabled={hasExistingClinic || loading || isMaxNumbersReached}
+          disabled={(hasExistingClinic && !isEditMode) || loading || isMaxNumbersReached}
           className={`w-full mt-2 py-3 px-3 border border-dashed ${isMaxNumbersReached ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'} rounded-md focus:outline-none transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <svg className={`h-4 w-4 mr-2 ${isMaxNumbersReached ? 'text-gray-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

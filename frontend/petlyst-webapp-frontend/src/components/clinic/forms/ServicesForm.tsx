@@ -11,6 +11,7 @@ interface ServicesFormProps {
   hasExistingClinic: boolean;
   loading: boolean;
   setError?: (error: string) => void;
+  isEditMode?: boolean;
 }
 
 // Accordion props için tip tanımlama
@@ -135,7 +136,8 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
   handleServicesChange,
   hasExistingClinic,
   loading,
-  setError
+  setError,
+  isEditMode = false
 }) => {
   // Track which accordion section is open
   const [openSection, setOpenSection] = useState<string | null>('animalTypes');
@@ -207,7 +209,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   id={`animal-${animal}`}
                   checked={formData.servedAnimalTypes.includes(animal)}
                   onChange={(e) => handleOptionToggle('servedAnimalTypes', animal)}
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor={`animal-${animal}`} className="ml-2 block text-sm text-gray-700">
@@ -216,35 +218,6 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
               </div>
             ))}
           </div>
-          
-          {/* Selected Items */}
-          {formData.servedAnimalTypes.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Animals:</h4>
-              <div className="flex flex-wrap gap-2">
-                {formData.servedAnimalTypes.map((animal) => (
-                  <span
-                    key={animal}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                  >
-                    {animal}
-                    {!hasExistingClinic && !loading && (
-                      <button
-                        type="button"
-                        onClick={() => handleOptionToggle('servedAnimalTypes', animal)}
-                        className="ml-1.5 inline-flex text-blue-400 hover:text-blue-600 focus:outline-none"
-                      >
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span className="sr-only">Remove {animal}</span>
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </AccordionSection>
 
         {/* Medical Services Section */}
@@ -270,7 +243,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   id={`medical-${service}`}
                   checked={formData.medicalServices.includes(service)}
                   onChange={(e) => handleOptionToggle('medicalServices', service)}
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                 />
                 <label htmlFor={`medical-${service}`} className="ml-2 block text-sm text-gray-700">
@@ -279,35 +252,6 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
               </div>
             ))}
           </div>
-          
-          {/* Selected Items */}
-          {formData.medicalServices.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Medical Services:</h4>
-              <div className="flex flex-wrap gap-2">
-                {formData.medicalServices.map((service) => (
-                  <span
-                    key={service}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                  >
-                    {service}
-                    {!hasExistingClinic && !loading && (
-                      <button
-                        type="button"
-                        onClick={() => handleOptionToggle('medicalServices', service)}
-                        className="ml-1.5 inline-flex text-green-400 hover:text-green-600 focus:outline-none"
-                      >
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span className="sr-only">Remove {service}</span>
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </AccordionSection>
 
         {/* Additional Services Section */}
@@ -333,7 +277,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   id={`additional-${service}`}
                   checked={formData.additionalServices.includes(service)}
                   onChange={(e) => handleOptionToggle('additionalServices', service)}
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
                 <label htmlFor={`additional-${service}`} className="ml-2 block text-sm text-gray-700">
@@ -342,35 +286,6 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
               </div>
             ))}
           </div>
-          
-          {/* Selected Items */}
-          {formData.additionalServices.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Additional Services:</h4>
-              <div className="flex flex-wrap gap-2">
-                {formData.additionalServices.map((service) => (
-                  <span
-                    key={service}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
-                  >
-                    {service}
-                    {!hasExistingClinic && !loading && (
-                      <button
-                        type="button"
-                        onClick={() => handleOptionToggle('additionalServices', service)}
-                        className="ml-1.5 inline-flex text-purple-400 hover:text-purple-600 focus:outline-none"
-                      >
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span className="sr-only">Remove {service}</span>
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </AccordionSection>
       </div>
     </div>

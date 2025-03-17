@@ -10,6 +10,7 @@ interface ClinicDetailsFormProps {
   handleRemoveSocialMedia: (index: number) => void;
   hasExistingClinic: boolean;
   loading: boolean;
+  isEditMode?: boolean;
 }
 
 export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
@@ -19,7 +20,8 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
   handleAddEmptySocialMedia,
   handleRemoveSocialMedia,
   hasExistingClinic,
-  loading
+  loading,
+  isEditMode = false
 }) => {
   return (
     <div>
@@ -44,7 +46,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
                 value={formData.clinicType}
                 onChange={handleInputChange}
                 required
-                disabled={hasExistingClinic || loading}
+                disabled={(hasExistingClinic && !isEditMode) || loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
               >
                 <option value="Veterinary Clinic">Veterinary Clinic</option>
@@ -65,7 +67,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500 pr-[130px]"
                   placeholder="Enter clinic name"
                 />
@@ -100,7 +102,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             value={formData.biography}
             onChange={handleInputChange}
             rows={4}
-            disabled={hasExistingClinic || loading}
+            disabled={(hasExistingClinic && !isEditMode) || loading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
             placeholder="Tell us about your clinic"
           ></textarea>
@@ -119,7 +121,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             value={formData.establishment_date}
             onChange={handleInputChange}
             max={new Date().toISOString().slice(0, 7)}
-            disabled={hasExistingClinic || loading}
+            disabled={(hasExistingClinic && !isEditMode) || loading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           />
         </div>

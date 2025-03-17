@@ -10,15 +10,18 @@ import Dashboard from './pages/Dashboard';
 import AddClinicPage from './pages/AddClinicPage';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
+import ClinicPreviewPage from './pages/ClinicPreviewPage';
+import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard' || location.pathname === '/add-clinic';
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isClinicPreview = location.pathname.startsWith('/clinic-preview/');
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isDashboard && !isAdminRoute && <DefaultHeader />}
+      {!isDashboard && !isAdminRoute && !isClinicPreview && <DefaultHeader />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -46,6 +49,11 @@ const AppContent: React.FC = () => {
             </ProtectedRoute>
           } 
         />
+        <Route path="/clinic-preview/:clinicId" element={
+          <ProtectedRoute>
+            <ClinicPreviewPage />
+          </ProtectedRoute>
+        } />
       </Routes>
       <Toaster position="top-right" />
     </div>

@@ -5,10 +5,20 @@ import { ClinicFormData } from '../../../types/clinic';
 type SlotDuration = '60' | '30' | '20';
 
 interface AppointmentsFormProps {
-  formData: ClinicFormData;
+  formData: {
+    available_days: string[];
+    emergency_available_days: string[];
+    has_emergency_service: boolean;
+    is_open_24_7: boolean;
+    slot_duration: number;
+    opening_time: string;
+    closing_time: string;
+    allow_online_meetings: boolean;
+  };
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   loading: boolean;
   hasExistingClinic?: boolean;
+  isEditMode?: boolean;
   validateOnSubmit?: boolean;
 }
 
@@ -23,6 +33,8 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
   formData,
   handleInputChange,
   loading,
+  hasExistingClinic = false,
+  isEditMode = false,
   validateOnSubmit = false
 }) => {
   // State added for emergency service status

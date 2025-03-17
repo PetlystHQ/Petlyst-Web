@@ -8,6 +8,7 @@ interface SocialMediaSectionProps {
   handleRemoveSocialMedia: (index: number) => void;
   hasExistingClinic: boolean;
   loading: boolean;
+  isEditMode?: boolean;
 }
 
 // Maximum number of social media links allowed
@@ -19,7 +20,8 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
   handleAddEmptySocialMedia,
   handleRemoveSocialMedia,
   hasExistingClinic,
-  loading
+  loading,
+  isEditMode = false
 }) => {
   // Check if maximum number of links is reached
   const isMaxLinksReached = socialMediaLinks.length >= MAX_SOCIAL_MEDIA_LINKS;
@@ -44,7 +46,8 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
                 <select 
                   value={link.platform}
                   onChange={(e) => handleSocialMediaChange(index, 'platform', e.target.value)}
-                  disabled={hasExistingClinic || loading}
+                  required={link.url.trim().length > 0}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                 >
                   <option value="" disabled>Choose Platform</option>
@@ -70,16 +73,17 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
                     type="url"
                     value={link.url}
                     onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
-                    placeholder="Enter URL"
-                    disabled={hasExistingClinic || loading || !link.platform}
+                    required={link.platform.trim().length > 0}
+                    disabled={(hasExistingClinic && !isEditMode) || loading || !link.platform}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                    placeholder="Enter your profile URL"
                   />
                 </div>
                 {/* Styled delete button in a square box */}
                 <button
                   type="button"
                   onClick={() => handleRemoveSocialMedia(index)}
-                  disabled={hasExistingClinic || loading}
+                  disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="ml-2 w-10 h-10 flex items-center justify-center border border-gray-300 rounded-md bg-white text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,8 +99,8 @@ export const SocialMediaSection: React.FC<SocialMediaSectionProps> = ({
         <button
           type="button"
           onClick={handleAddEmptySocialMedia}
-          disabled={hasExistingClinic || loading || isMaxLinksReached}
-          className={`w-full mt-2 py-3 px-3 border border-dashed ${isMaxLinksReached ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'} rounded-md focus:outline-none transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+          disabled={(hasExistingClinic && !isEditMode) || loading || isMaxLinksReached}
+          className={`w-full mt-3 py-3 px-3 border border-dashed ${isMaxLinksReached ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'} rounded-md focus:outline-none transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <svg className={`h-4 w-4 mr-2 ${isMaxLinksReached ? 'text-gray-400' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />

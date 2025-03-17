@@ -262,6 +262,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
   try {
     const {
       clinic_name,
+      clinic_type,
       clinic_address,
       clinic_phone,
       clinic_email,
@@ -284,6 +285,9 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       // Yeni alanlar
       slot_duration,
       is_open_24_7,
+      // Koordinat bilgileri
+      latitude,
+      longitude,
       // Servis bilgilerini al
       served_animal_types,
       medical_services,
@@ -316,9 +320,19 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
     // Determine clinic creation status
     const clinic_creation_status = is_partial_submission ? 'incomplete' : 'complete';
 
+    // Map frontend clinic type to database enum format
+    let clinic_type_enum = 'veterinary_clinic'; // default value
+    if (clinic_type) {
+      clinic_type_enum = clinic_type === 'Animal Hospital' ? 'animal_hospital' : 'veterinary_clinic';
+    }
+
+    // Convert is_open_24_7 to correct format based on its value
+    const is_open_24_7_value = is_open_24_7 === true ? 'Yes' : 'No';
+
     // Create a clinic data object with proper defaults for required fields
     const clinicData = {
       clinic_name,
+      clinic_type: clinic_type_enum,
       clinic_email,
       clinic_operator_id,
       clinic_verification_status: clinic_creation_status === 'incomplete' ? 'pending_submission' : 'pending',
@@ -333,11 +347,13 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       opening_time: opening_time || (is_partial_submission ? "09:00" : null),
       closing_time: closing_time || (is_partial_submission ? "18:00" : null),
       slot_duration: slot_duration || 60, // Default değer 60 (1 saat)
-      is_open_24_7: is_open_24_7 ? 'Yes' : 'No', // Boolean değeri string'e çeviriyoruz
+      is_open_24_7: is_open_24_7_value,
       available_days: available_days || (is_partial_submission ? [false, false, false, false, false, false, false] : null),
       emergency_available_days: emergency_available_days || [false, false, false, false, false, false, false],
       tax_identification_number: tax_identification_number || null,
-      veterinary_license_number: veterinary_license_number || null
+      veterinary_license_number: veterinary_license_number || null,
+      latitude: latitude || null,
+      longitude: longitude || null
     };
 
     // Begin a transaction
@@ -350,6 +366,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       const newClinicQuery = `
         INSERT INTO clinics (
           clinic_name, 
+          clinic_type,
           clinic_email, 
           clinic_operator_id, 
           clinic_description, 
@@ -370,12 +387,13 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
           clinic_time_slots,
           is_open_24_7
         ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) 
         RETURNING *
       `;
       
       const clinicResult = await client.query(newClinicQuery, [
         clinicData.clinic_name,
+        clinicData.clinic_type,
         clinicData.clinic_email,
         clinicData.clinic_operator_id,
         clinicData.clinic_description,
@@ -430,12 +448,12 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         }
       }
       
-      // Add location information to clinic_locations table - only for complete submissions
+      // Add location information to clinic_locations table
       if (!is_partial_submission) {
         try {
           const locationQuery = `
-            INSERT INTO clinic_locations (clinic_id, province, district, clinic_address)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO clinic_locations (clinic_id, province, district, clinic_address, latitude, longitude)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
           `;
           
@@ -443,7 +461,9 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
             newClinic.clinic_id,
             province || null,
             district || null,
-            clinic_address || null  // req.body'den doğrudan alıyoruz
+            clinic_address || null,  // req.body'den doğrudan alıyoruz
+            latitude || null,
+            longitude || null
           ]);
           
           console.log(`Location info saved for clinic ${newClinic.clinic_id}`);
@@ -452,7 +472,32 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
           // Continue processing even if location saving fails
         }
       } else {
-        console.log(`Skipping location info for partial submission of clinic ${newClinic.clinic_id}`);
+        // For partial submissions, only save location if we have at least minimal location data
+        if (province || district || clinic_address || latitude || longitude) {
+          try {
+            const locationQuery = `
+              INSERT INTO clinic_locations (clinic_id, province, district, clinic_address, latitude, longitude)
+              VALUES ($1, $2, $3, $4, $5, $6)
+              RETURNING *
+            `;
+            
+            await client.query(locationQuery, [
+              newClinic.clinic_id,
+              province || null,
+              district || null,
+              clinic_address || null,
+              latitude || null,
+              longitude || null
+            ]);
+            
+            console.log(`Location info saved for partial submission of clinic ${newClinic.clinic_id}`);
+          } catch (locationError) {
+            console.error('Error saving clinic location for partial submission:', locationError);
+            // Continue processing even if location saving fails
+          }
+        } else {
+          console.log(`Skipping location info for partial submission of clinic ${newClinic.clinic_id} (no location data provided)`);
+        }
       }
       
       // Add animal types
@@ -558,6 +603,76 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
 
     // Update clinic
     const updatedClinic = await Clinic.updateClinic(clinicId, updateData);
+
+    // Extract location-related fields from the request
+    const { province, district, clinic_address, latitude, longitude } = updateData;
+    
+    // If any location field is updated, also update the clinic_locations table
+    if (province || district || clinic_address || latitude || longitude) {
+      const client = await pool.connect();
+      try {
+        // Check if a location record exists for this clinic
+        const checkLocationQuery = {
+          text: 'SELECT location_id FROM clinic_locations WHERE clinic_id = $1',
+          values: [clinicId]
+        };
+        
+        const locationResult = await client.query(checkLocationQuery);
+        
+        if (locationResult.rows.length > 0) {
+          // Update existing location record
+          const updateLocationQuery = {
+            text: `
+              UPDATE clinic_locations 
+              SET 
+                province = COALESCE($1, province),
+                district = COALESCE($2, district),
+                clinic_address = COALESCE($3, clinic_address),
+                latitude = COALESCE($4, latitude),
+                longitude = COALESCE($5, longitude)
+              WHERE clinic_id = $6
+              RETURNING *
+            `,
+            values: [
+              province || null,
+              district || null,
+              clinic_address || null,
+              latitude || null,
+              longitude || null,
+              clinicId
+            ]
+          };
+          
+          await client.query(updateLocationQuery);
+          console.log(`Location info updated for clinic ${clinicId}`);
+        } else {
+          // Insert new location record
+          const insertLocationQuery = {
+            text: `
+              INSERT INTO clinic_locations (clinic_id, province, district, clinic_address, latitude, longitude)
+              VALUES ($1, $2, $3, $4, $5, $6)
+              RETURNING *
+            `,
+            values: [
+              clinicId,
+              province || null,
+              district || null,
+              clinic_address || null,
+              latitude || null,
+              longitude || null
+            ]
+          };
+          
+          await client.query(insertLocationQuery);
+          console.log(`Location info created for clinic ${clinicId}`);
+        }
+      } catch (locationError) {
+        console.error('Error updating clinic location:', locationError);
+        // Continue processing even if location update fails
+      } finally {
+        client.release();
+      }
+    }
 
     res.status(200).json({
       success: true,
