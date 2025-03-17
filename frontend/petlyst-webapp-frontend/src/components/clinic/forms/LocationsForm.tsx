@@ -10,6 +10,7 @@ interface LocationsFormProps {
   updateCoordinates: (coordinates: LocationCoordinates) => void;
   hasExistingClinic: boolean;
   loading: boolean;
+  isEditMode?: boolean;
 }
 
 export const LocationsForm: React.FC<LocationsFormProps> = ({
@@ -17,7 +18,8 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
   handleInputChange,
   updateCoordinates,
   hasExistingClinic,
-  loading
+  loading,
+  isEditMode = false
 }) => {
   // Get the Provinces list
   const provinces = useMemo(() => {
@@ -58,6 +60,17 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
   // State to track refreshing indicator
   const [refreshing, setRefreshing] = useState(false);
 
+  // This function wraps updateCoordinates to add debugging
+  const handleCoordinatesUpdate = (coordinates: LocationCoordinates) => {
+    console.log("LocationsForm: Updating coordinates:", coordinates);
+    updateCoordinates(coordinates);
+  };
+  
+  const handleRefreshMap = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  };
+
   // Render the address form fields component
   const renderAddressFields = () => {
     return (
@@ -80,7 +93,7 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
                 value={formData.province}
                 onChange={handleInputChange}
                 required
-                disabled={hasExistingClinic || loading}
+                disabled={(hasExistingClinic && !isEditMode) || loading}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
               >
                 <option value="" disabled>Select Province</option>
@@ -102,7 +115,7 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
                 value={formData.district}
                 onChange={handleInputChange}
                 required
-                disabled={hasExistingClinic || loading || !formData.province}
+                disabled={(hasExistingClinic && !isEditMode) || loading || !formData.province}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
               >
                 <option value="" disabled>Select District</option>
@@ -126,7 +139,7 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
               onChange={handleInputChange}
               required
               rows={5}
-              disabled={hasExistingClinic || loading}
+              disabled={(hasExistingClinic && !isEditMode) || loading}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
               placeholder="Enter your detailed address (street, number, etc.)"
             />
@@ -181,7 +194,7 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
                   
                   // If this is updating coordinates, also call updateCoordinates
                   if (name === 'coordinates' && typeof value === 'object') {
-                    updateCoordinates(value);
+                    handleCoordinatesUpdate(value);
                   }
                 }}
                 hasExistingClinic={hasExistingClinic}

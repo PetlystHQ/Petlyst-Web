@@ -42,6 +42,7 @@ interface CommunicationFormProps {
   loading: boolean;
   setError: (error: string) => void; // Ana sayfadan hata göstermek için
   attemptedSubmit?: boolean; // Continue tuşuna basıldığında true olacak prop
+  isEditMode?: boolean;
 }
 
 export const CommunicationForm: React.FC<CommunicationFormProps> = ({
@@ -56,7 +57,8 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
   hasExistingClinic,
   loading,
   setError,
-  attemptedSubmit = false // Varsayılan olarak false
+  attemptedSubmit = false, // Varsayılan olarak false
+  isEditMode = false
 }) => {
   // State for email validation
   const [emailError, setEmailError] = useState<string>('');
@@ -234,9 +236,12 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
             handlePhoneNumberChange={handlePhoneChange}
             handleAddEmptyPhoneNumber={handleAddPhone}
             handleRemovePhoneNumber={handleRemovePhone}
-            hasExistingClinic={hasExistingClinic}
+            hasExistingClinic={hasExistingClinic && !isEditMode}
             loading={loading}
             invalidLengthPhoneNumbers={invalidLengthPhoneNumbers}
+            attemptedSubmit={attemptedSubmit}
+            setError={setError}
+            isEditMode={isEditMode}
           />
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-gray-500">
@@ -280,8 +285,9 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
             handleSocialMediaChange={handleSocialMediaChange}
             handleAddEmptySocialMedia={handleAddEmptySocialMedia}
             handleRemoveSocialMedia={handleRemoveSocialMedia}
-            hasExistingClinic={hasExistingClinic}
+            hasExistingClinic={hasExistingClinic && !isEditMode}
             loading={loading}
+            isEditMode={isEditMode}
           />
         </div>
 
@@ -298,7 +304,7 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
                 value={formData.email || ""}
                 onChange={handleEmailChange}
                 onBlur={handleEmailBlur}
-                disabled={hasExistingClinic || loading}
+                disabled={(hasExistingClinic && !isEditMode) || loading}
                 className={`w-full pl-3 pr-10 py-2 border ${
                   !formData.email 
                     ? 'border-gray-300' 
@@ -342,7 +348,7 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
             <button
               type="button"
               onClick={() => handleToggleChange('showMailAddress')}
-              disabled={hasExistingClinic || loading}
+              disabled={(hasExistingClinic && !isEditMode) || loading}
               className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                 extendedFormData.showMailAddress ? 'bg-blue-600' : 'bg-gray-200'
               } ${hasExistingClinic || loading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -391,7 +397,7 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleChange('showPhoneNumber')}
-                disabled={hasExistingClinic || loading}
+                disabled={(hasExistingClinic && !isEditMode) || loading}
                 className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                   extendedFormData.showPhoneNumber ? 'bg-blue-600' : 'bg-gray-200'
                 } ${hasExistingClinic || loading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -438,7 +444,7 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleChange('allowDirectMessages')}
-                disabled={hasExistingClinic || loading}
+                disabled={(hasExistingClinic && !isEditMode) || loading}
                 className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                   extendedFormData.allowDirectMessages ? 'bg-blue-600' : 'bg-gray-200'
                 } ${hasExistingClinic || loading ? 'opacity-50 cursor-not-allowed' : ''}`}

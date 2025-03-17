@@ -375,6 +375,10 @@ const MapContainer = ({
               if (marker.current) {
                 const pos = marker.current.getPosition();
                 if (pos) {
+                  // Log coordinates for debugging
+                  console.log('[DEBUG] Coordinates from marker dragend:', { lat: pos.lat(), lng: pos.lng() });
+                  
+                  // Update the form coordinates with explicit lat/lng values
                   updateField("coordinates", { 
                     lat: pos.lat(), 
                     lng: pos.lng() 
@@ -387,7 +391,10 @@ const MapContainer = ({
             });
           }
           
-          // Update the form coordinates
+          // Log coordinates for debugging
+          console.log('[DEBUG] Coordinates from map click:', { lat, lng });
+          
+          // Update the form coordinates with explicit lat/lng values
           updateField("coordinates", { lat, lng });
           
           // Always perform reverse geocoding when a location is selected
@@ -506,6 +513,29 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     return null;
   }, [formData.coordinates]);
   
+  // updateField fonksiyonunu konsola log ile saran bir fonksiyon oluştur
+  const wrappedUpdateField = (name: string, value: any) => {
+    console.log(`MapComponent.wrappedUpdateField called: ${name}`, value);
+    
+    // Özellikle coordinates değerini güncellerken detaylı log tut
+    if (name === 'coordinates') {
+      console.log('Updating coordinates with values:', {
+        lat: value?.lat,
+        lng: value?.lng
+      });
+    }
+    
+    // Orjinal updateField fonksiyonunu çağır
+    updateField(name, value);
+    
+    // Koordinat güncellemesi sonrası formData içinde kontrol et
+    setTimeout(() => {
+      if (name === 'coordinates') {
+        console.log('Current formData after coordinates update:', formData);
+      }
+    }, 100);
+  };
+
   // Effect to simulate loading and show the map after a delay
   useEffect(() => {
     console.log('[DEBUG] Starting loading simulation');
@@ -539,8 +569,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   
   // Handle map errors
   const handleMapError = (error: string) => {
-    console.error('[DEBUG] Map error received:', error);
     setMapError(error);
+    console.error('[DEBUG] Map error:', error);
   };
 
   return (
@@ -604,7 +634,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           <div>
             <MapContainer
               formData={formData}
-              updateField={updateField}
+              updateField={wrappedUpdateField}
               hasExistingClinic={hasExistingClinic}
               loading={loading}
               onError={handleMapError}

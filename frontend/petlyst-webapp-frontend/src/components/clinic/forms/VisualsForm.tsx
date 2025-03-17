@@ -10,6 +10,7 @@ interface VisualsFormProps {
   loading: boolean;
   error: string;
   setError: (error: string) => void;
+  isEditMode?: boolean;
 }
 
 export const VisualsForm: React.FC<VisualsFormProps> = ({
@@ -20,7 +21,8 @@ export const VisualsForm: React.FC<VisualsFormProps> = ({
   hasExistingClinic,
   loading,
   error,
-  setError
+  setError,
+  isEditMode = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -198,7 +200,7 @@ export const VisualsForm: React.FC<VisualsFormProps> = ({
         className="hidden"
         accept="image/*"
         multiple
-        disabled={hasExistingClinic || loading || selectedPhotos.length >= MAX_PHOTOS}
+        disabled={(hasExistingClinic && !isEditMode) || loading || selectedPhotos.length >= MAX_PHOTOS}
       />
       
       {/* File upload area - only show if no photos are uploaded yet */}
