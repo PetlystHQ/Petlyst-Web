@@ -240,8 +240,8 @@ async function cleanupExpiredTokens() {
   try {
     const query = `
       DELETE FROM password_reset_tokens 
-      WHERE expires_at < CURRENT_TIMESTAMP 
-      OR is_used = TRUE
+      WHERE reset_token_expires_at < CURRENT_TIMESTAMP 
+      OR reset_token_is_used = TRUE
     `;
     await pool.query(query);
   } catch (error) {
@@ -274,14 +274,14 @@ router.post('/reset-password', async (req, res) => {
 
     // Store the code in database
     const insertQuery = `
-      INSERT INTO password_reset_tokens (user_id, email, reset_code, expires_at)
+      INSERT INTO password_reset_tokens (user_id, user_email, reset_code, reset_token_expires_at)
       VALUES ($1, $2, $3, $4)
     `;
     await pool.query(insertQuery, [userResult.rows[0].id, email, verificationCode, expiresAt]);
 
     // Clean up old tokens for this user
     await pool.query(
-      'DELETE FROM password_reset_tokens WHERE email = $1 AND token_id NOT IN (SELECT token_id FROM password_reset_tokens WHERE email = $1 ORDER BY created_at DESC LIMIT 1)',
+      'DELETE FROM password_reset_tokens WHERE user_email = $1 AND reset_token_id NOT IN (SELECT reset_token_id FROM password_reset_tokens WHERE user_email = $1 ORDER BY reset_token_created_at DESC LIMIT 1)',
       [email]
     );
 
@@ -369,11 +369,11 @@ router.post('/verify-code', async (req, res) => {
     // Check if reset token exists and is valid
     const tokenQuery = `
       SELECT * FROM password_reset_tokens 
-      WHERE email = $1 
+      WHERE user_email = $1 
       AND reset_code = $2 
-      AND expires_at > CURRENT_TIMESTAMP 
-      AND is_used = FALSE 
-      ORDER BY created_at DESC 
+      AND reset_token_expires_at > CURRENT_TIMESTAMP 
+      AND reset_token_is_used = FALSE 
+      ORDER BY reset_token_created_at DESC 
       LIMIT 1
     `;
     const tokenResult = await pool.query(tokenQuery, [email, code]);
@@ -418,11 +418,11 @@ router.post('/verify-reset', async (req, res) => {
     // Check if reset token exists and is valid
     const tokenQuery = `
       SELECT * FROM password_reset_tokens 
-      WHERE email = $1 
+      WHERE user_email = $1 
       AND reset_code = $2 
-      AND expires_at > CURRENT_TIMESTAMP 
-      AND is_used = FALSE 
-      ORDER BY created_at DESC 
+      AND reset_token_expires_at > CURRENT_TIMESTAMP 
+      AND reset_token_is_used = FALSE 
+      ORDER BY reset_token_created_at DESC 
       LIMIT 1
     `;
     const tokenResult = await pool.query(tokenQuery, [email, code]);
@@ -444,8 +444,8 @@ router.post('/verify-reset', async (req, res) => {
 
     // Mark token as used
     await pool.query(
-      'UPDATE password_reset_tokens SET is_used = TRUE WHERE token_id = $1',
-      [tokenResult.rows[0].token_id]
+      'UPDATE password_reset_tokens SET reset_token_is_used = TRUE WHERE reset_token_id = $1',
+      [tokenResult.rows[0].reset_token_id]
     );
 
     res.json({
