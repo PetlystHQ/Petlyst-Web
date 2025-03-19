@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import axios from 'axios';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
@@ -8,12 +10,15 @@ import { Clinics } from '../components/dashboard/views/Clinics';
 import { DashboardView } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
 import { Clinic } from '../types/dashboard';
+import { RootState } from '../store';
 
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const location = useLocation();
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hasSubmittedClinics, setHasSubmittedClinics] = useState(false);
+  const [checkingClinics, setCheckingClinics] = useState(true);
   const { 
     verificationStatus, 
     isLoading, 
@@ -21,7 +26,37 @@ const Dashboard: React.FC = () => {
     updateVerificationStatus,
     refreshStatus 
   } = useVerificationStatus();
+  const token = useSelector((state: RootState) => state.auth.token);
   const navigate = useNavigate();
+
+  // Check if veterinarian has any clinics
+  useEffect(() => {
+    const checkClinicSubmissions = async () => {
+      if (!token) return;
+      
+      setCheckingClinics(true);
+      try {
+        const response = await axios.get('http://localhost:3000/api/clinics/my-clinics', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && Array.isArray(response.data.clinics)) {
+          setHasSubmittedClinics(response.data.clinics.length > 0);
+        }
+      } catch (error) {
+        console.error('Error checking clinic submissions:', error);
+        setHasSubmittedClinics(false);
+      } finally {
+        setCheckingClinics(false);
+      }
+    };
+    
+    if (verificationStatus === 'verified') {
+      checkClinicSubmissions();
+    }
+  }, [token, verificationStatus, refreshKey]);
 
   // Set active view from navigation state
   useEffect(() => {
@@ -58,9 +93,10 @@ const Dashboard: React.FC = () => {
     const commonProps = {
       verificationStatus,
       onVerify: () => setIsVerificationModalOpen(true),
-      isLoading,
+      isLoading: isLoading || checkingClinics,
       onAddClinic: handleAddClinic,
-      onViewChange: setCurrentView
+      onViewChange: setCurrentView,
+      hasSubmittedClinics
     };
 
     // Only allow access to certain views if verified

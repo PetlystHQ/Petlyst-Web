@@ -535,6 +535,21 @@ const AddClinicPage: React.FC = () => {
         return;
       }
       
+      // Validate establishment date - check if it's in the future
+      if (formData.establishment_date) {
+        const currentDate = new Date();
+        const selectedDate = new Date(formData.establishment_date);
+        
+        // Set time to beginning of month for accurate comparison
+        currentDate.setDate(1);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > currentDate) {
+          setError('Establishment date cannot be in the future');
+          return;
+        }
+      }
+      
       // Establishment date is now optional for partial submissions
     }
     // Check if address is provided in the locations step
@@ -759,7 +774,7 @@ const AddClinicPage: React.FC = () => {
     // Set attempted submit flag for registration step if we're on that step
     if (currentStep === 'tax_registration') {
       setAttemptedRegistrationSubmit(true);
-      
+
       // Always validate the tax identification and veterinary license numbers directly here
       // regardless of the attemptedRegistrationSubmit flag
       if (!formData.taxIdentificationNumber || formData.taxIdentificationNumber.length !== 10) {
@@ -774,7 +789,7 @@ const AddClinicPage: React.FC = () => {
         return;
       }
     }
-    
+
     // Clinic details validation
     if (!formData.name || formData.name.trim() === '') {
       setError('Please enter a clinic name');
@@ -785,6 +800,21 @@ const AddClinicPage: React.FC = () => {
     if (!formData.establishment_date) {
       setError('Please enter the establishment date');
       return;
+    }
+    
+    // Validate establishment date - check if it's in the future
+    if (formData.establishment_date) {
+      const currentDate = new Date();
+      const selectedDate = new Date(formData.establishment_date);
+      
+      // Set time to beginning of month for accurate comparison
+      currentDate.setDate(1);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate > currentDate) {
+        setError('Establishment date cannot be in the future');
+        return;
+      }
     }
     
     // Address validation
@@ -884,6 +914,23 @@ const AddClinicPage: React.FC = () => {
     setUploadProgress(0);
 
     try {
+      // Add debug logging for slot_duration
+      console.log('Submitting clinic with slot_duration:', formData.slot_duration, typeof formData.slot_duration);
+      
+      // Create a copy of the form data for submission
+      const submissionData = { ...formData };
+      
+      // Modify clinic name to include the clinic type if it doesn't already end with it
+      if (submissionData.name && submissionData.clinicType) {
+        const baseClinicName = submissionData.name.trim();
+        const clinicTypeSuffix = submissionData.clinicType.trim();
+        
+        // Check if the name already ends with the clinic type
+        if (!baseClinicName.endsWith(clinicTypeSuffix)) {
+          submissionData.name = `${baseClinicName} ${clinicTypeSuffix}`;
+        }
+      }
+      
       if (!token) {
         const storedToken = localStorage.getItem('token');
         if (!storedToken) {
@@ -912,7 +959,7 @@ const AddClinicPage: React.FC = () => {
       const response = await axios.post(
         `${apiUrl}/api/clinics/add`,
         {
-          clinic_name: formData.name,
+          clinic_name: submissionData.name, // Use the modified name with clinic type
           clinic_type: formData.clinicType,
           clinic_address: formData.address || "Adres belirtilmedi",
           clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
@@ -951,6 +998,9 @@ const AddClinicPage: React.FC = () => {
           
           // Make sure is_open_24_7 is sent as a boolean
           is_open_24_7: Boolean(formData.is_open_24_7),
+          
+          // Explicitly send the slot duration to ensure it's passed to the backend
+          slot_duration: formData.slot_duration, 
 
           is_partial_submission: false,
           verification_status: 'pending'
@@ -963,18 +1013,7 @@ const AddClinicPage: React.FC = () => {
       );
 
       if (response.status === 201) {
-        // Then, upload photos if any are selected
-        if (selectedPhotos.length > 0) {
-          // Make sure clinic ID is valid before attempting to upload photos
-          if (!response.data.clinic || !response.data.clinic.id) {
-            console.error('Clinic created but no valid ID received:', response.data);
-            setError('Error: Created clinic but unable to upload photos due to missing clinic ID');
-          } else {
-            await uploadPhotos(response.data.clinic.id, response.data.clinic.name);
-          }
-        }
-
-        setSuccess(true);
+        console.log('Clinic added successfully:', response.data);
         
         // Reset form
         setFormData({
@@ -995,7 +1034,6 @@ const AddClinicPage: React.FC = () => {
           servedAnimalTypes: [],
           medicalServices: [],
           additionalServices: [],
-          // Appointment fields
           available_days: [],
           emergency_available_days: [],
           has_emergency_service: false,
@@ -1004,16 +1042,18 @@ const AddClinicPage: React.FC = () => {
           opening_time: '',
           closing_time: '',
           allow_online_meetings: false,
-          // Registration fields
           taxIdentificationNumber: '',
           veterinaryLicenseNumber: ''
         });
         setSelectedPhotos([]);
         setPhotoPreviewUrls([]);
         setUploadProgress(0);
-
-        // Remove the automatic navigation timeout
-          setFormModified(false);
+        setFormModified(false);
+        setError('');
+        setSuccess(true);
+        setCurrentStep('clinic_details');
+        // Navigate directly without setTimeout
+        navigate('/dashboard');
       }
     } catch (err: any) {
       console.error('Clinic addition error:', err.response || err);

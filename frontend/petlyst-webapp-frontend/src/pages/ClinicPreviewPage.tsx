@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../store';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
+import { MapComponent } from '../components/clinic/forms/MapComponent';
+import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
+
+// Add missing type definitions for window.google
+declare global {
+  interface Window {
+    google: any;
+    initMap?: () => void;
+  }
+}
 
 interface PhoneNumber {
   type: string;
@@ -43,6 +54,16 @@ interface ClinicDetails {
   photos: { url: string }[];
   clinic_email: string;
   clinic_operator_id: string;
+  latitude?: number;
+  longitude?: number;
+  slot_duration?: number;
+  has_emergency_service?: boolean;
+  showPhoneNumber?: boolean;
+  showMailAddress?: boolean;
+  allowDirectMessages?: boolean;
+  show_phone_number?: boolean;
+  show_mail_address?: boolean;
+  allow_direct_messages?: boolean;
 }
 
 const ClinicPreviewPage: React.FC = () => {
@@ -64,18 +85,26 @@ const ClinicPreviewPage: React.FC = () => {
         return;
       }
       
+      console.log('===== FETCHING CLINIC DETAILS =====');
       console.log('User from Redux:', user);
       console.log('Clinic ID from params:', clinicId);
       
       setLoading(true);
       try {
+        console.log('Making API request to:', `http://localhost:3000/api/clinics/${clinicId}`);
         const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}`, {
           headers: {
             'Authorization': `Bearer ${token || localStorage.getItem('token')}`
           }
         });
         
-        console.log('Clinic API response:', response.data);
+        console.log('===== API RESPONSE =====');
+        console.log('Full API response:', response);
+        console.log('Clinic data:', response.data?.clinic);
+        console.log('Additional data:', {
+          clinic_locations: response.data?.clinic_locations || 'Not provided',
+          hasLocations: Boolean(response.data?.clinic_locations)
+        });
         
         if (!response.data.clinic) {
           console.error('No clinic data in API response');
@@ -84,18 +113,102 @@ const ClinicPreviewPage: React.FC = () => {
           return;
         }
         
-        const clinicData = response.data.clinic;
+        const clinicData = { ...response.data.clinic };
         
-        console.log('Clinic verification status:', clinicData.clinic_verification_status);
-        console.log('Clinic operator ID:', clinicData.clinic_operator_id);
-        console.log('Current user ID:', user.id);
+        // Debug services data
+        console.log('===== SERVICES DATA DEBUGGING =====');
+        console.log('Animal types directly from API:', clinicData.animal_types);
+        console.log('Medical services directly from API:', clinicData.medical_services);
+        console.log('Additional services directly from API:', clinicData.additional_services);
+        
+        // Ensure service arrays are initialized
+        if (!clinicData.animal_types || !Array.isArray(clinicData.animal_types)) {
+          console.log('Initializing empty animal_types array');
+          clinicData.animal_types = [];
+        }
+        
+        if (!clinicData.medical_services || !Array.isArray(clinicData.medical_services)) {
+          console.log('Initializing empty medical_services array');
+          clinicData.medical_services = [];
+        }
+        
+        if (!clinicData.additional_services || !Array.isArray(clinicData.additional_services)) {
+          console.log('Initializing empty additional_services array');
+          clinicData.additional_services = [];
+        }
+        
+        // Check for location data with more explicit logging
+        console.log('===== LOCATION DATA IN MAIN CLINIC OBJECT =====');
+        console.log('Address:', clinicData.clinic_address || 'Not found');
+        console.log('Province:', clinicData.province || 'Not found');
+        console.log('District:', clinicData.district || 'Not found');
+        console.log('Latitude:', clinicData.latitude || 'Not found');
+        console.log('Longitude:', clinicData.longitude || 'Not found');
+        
+        // Add a temporary flag to check if we have essential location data
+        let hasLocationData = Boolean(
+          clinicData.clinic_address && 
+          clinicData.province && 
+          clinicData.district
+        );
+        
+        console.log('Has basic location data:', hasLocationData);
 
-        // Check verification status with more logging and string trimming
-        const status = clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '';
-        console.log('Trimmed status:', status);
+        // Check if clinic_locations might be in a nested object
+        if (response.data.clinic_locations) {
+          console.log('===== FOUND CLINIC_LOCATIONS OBJECT =====');
+          console.log('clinic_locations data:', response.data.clinic_locations);
+          
+          // If location data is in a separate object, merge it with clinic data
+          if (response.data.clinic_locations.length > 0) {
+            console.log('Found location data items:', response.data.clinic_locations.length);
+            const locationData = response.data.clinic_locations[0];
+            
+            // Log the location data
+            console.log('First location item:', locationData);
+            
+            // Update clinic data with location data, preserving existing values if they exist
+            if (locationData.clinic_address) clinicData.clinic_address = locationData.clinic_address;
+            if (locationData.province) clinicData.province = locationData.province;
+            if (locationData.district) clinicData.district = locationData.district;
+            
+            // Handle number conversion for coordinates
+            if (locationData.latitude) {
+              // Ensure latitude is a number
+              clinicData.latitude = typeof locationData.latitude === 'string' 
+                ? parseFloat(locationData.latitude) 
+                : locationData.latitude;
+            }
+            
+            if (locationData.longitude) {
+              // Ensure longitude is a number
+              clinicData.longitude = typeof locationData.longitude === 'string'
+                ? parseFloat(locationData.longitude)
+                : locationData.longitude;
+            }
+            
+            console.log('===== MERGED LOCATION DATA =====');
+            console.log('Updated clinic_address:', clinicData.clinic_address || 'Still missing');
+            console.log('Updated province:', clinicData.province || 'Still missing');
+            console.log('Updated district:', clinicData.district || 'Still missing');
+            console.log('Updated latitude:', clinicData.latitude || 'Still missing');
+            console.log('Updated longitude:', clinicData.longitude || 'Still missing');
+            
+            // Update location data flag
+            hasLocationData = Boolean(
+              clinicData.clinic_address && 
+              clinicData.province && 
+              clinicData.district
+            );
+            
+            console.log('Has location data after merge:', hasLocationData);
+          }
+        }
         
-        if (status !== 'pending' && status !== 'pending_submission') {
-          console.error(`Unauthorized: Clinic status "${status}" is not pending or pending_submission`);
+        console.log('Trimmed status:', clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '');
+        
+        if (clinicData.clinic_verification_status !== 'pending' && clinicData.clinic_verification_status !== 'pending_submission') {
+          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending or pending_submission`);
           setUnauthorized(true);
           setLoading(false);
           return;
@@ -117,7 +230,8 @@ const ClinicPreviewPage: React.FC = () => {
         setClinic(clinicData);
         setLoading(false);
       } catch (err: any) {
-        console.error('Error fetching clinic details:', err);
+        console.error('===== ERROR FETCHING CLINIC DETAILS =====');
+        console.error('Error object:', err);
         console.error('Response data:', err.response?.data);
         console.error('Status code:', err.response?.status);
         
@@ -221,6 +335,57 @@ const ClinicPreviewPage: React.FC = () => {
     );
   }
 
+  // Add a dummy updateField function to pass to MapComponent
+  const dummyUpdateField = (name: string, value: any) => {
+    console.log(`Preview page would update ${name} to:`, value);
+    // No actual update in preview mode
+  };
+
+  // Create a mock formData for the MapComponent
+  const createMapFormData = (clinic: ClinicDetails): ClinicFormData => {
+    // Convert phone numbers to the expected format
+    const convertedPhoneNumbers: PhoneNumberEntry[] = (clinic.phone_numbers || []).map(phone => ({
+      type: (phone.type === 'fixed_line' || phone.type === 'mobile_number') 
+        ? phone.type as PhoneTypeEnum 
+        : '' as PhoneTypeEnum,
+      number: phone.number
+    }));
+    
+    return {
+      name: clinic.clinic_name || '',
+      clinicType: clinic.clinic_type || '',
+      biography: '',
+      establishment_date: `${clinic.establishment_year || ''}-${clinic.establishment_month || ''}`,
+      social_media_links: clinic.social_media || [],
+      province: clinic.province || '',
+      district: clinic.district || '',
+      address: clinic.clinic_address || '',
+      coordinates: clinic.latitude && clinic.longitude ? {
+        lat: typeof clinic.latitude === 'string' ? parseFloat(clinic.latitude) : clinic.latitude,
+        lng: typeof clinic.longitude === 'string' ? parseFloat(clinic.longitude) : clinic.longitude
+      } : undefined,
+      phone_numbers: convertedPhoneNumbers,
+      email: clinic.clinic_email || '',
+      description: clinic.clinic_description || '',
+      showPhoneNumber: clinic.showPhoneNumber || false,
+      allowDirectMessages: clinic.allowDirectMessages || false,
+      showMailAddress: clinic.showMailAddress || false,
+      servedAnimalTypes: clinic.animal_types || [],
+      medicalServices: clinic.medical_services || [],
+      additionalServices: clinic.additional_services || [],
+      available_days: clinic.available_days ? clinic.available_days.map((day, index) => day ? String(index) : '').filter(Boolean) : [],
+      emergency_available_days: clinic.emergency_available_days ? clinic.emergency_available_days.map((day, index) => day ? String(index) : '').filter(Boolean) : [],
+      has_emergency_service: clinic.has_emergency_service || false,
+      is_open_24_7: clinic.is_open_24_7 === 'Yes',
+      slot_duration: clinic.slot_duration || 30,
+      opening_time: clinic.opening_time || '',
+      closing_time: clinic.closing_time || '',
+      allow_online_meetings: clinic.allow_online_meetings || false,
+      taxIdentificationNumber: clinic.tax_identification_number || '',
+      veterinaryLicenseNumber: clinic.veterinary_license_number || '',
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10 clinic-preview-page">
       <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center mb-6">
@@ -294,14 +459,51 @@ const ClinicPreviewPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm font-medium text-gray-500">Address</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900">{clinic.clinic_address}</p>
+                <p className="mt-1 text-lg font-semibold text-gray-900">
+                  {clinic.clinic_address || 'No address available'}
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Province / District</p>
                 <p className="mt-1 text-lg font-semibold text-gray-900">
-                  {clinic.province}, {clinic.district}
+                  {clinic.province && clinic.district 
+                    ? `${clinic.province}, ${clinic.district}`
+                    : clinic.province 
+                      ? clinic.province 
+                      : clinic.district 
+                        ? clinic.district 
+                        : 'No province/district information available'}
                 </p>
               </div>
+              {(clinic.latitude !== undefined && clinic.longitude !== undefined) && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Coordinates</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
+                    {typeof clinic.latitude === 'number' && typeof clinic.longitude === 'number'
+                      ? `${clinic.latitude.toFixed(6)}, ${clinic.longitude.toFixed(6)}`
+                      : `${clinic.latitude}, ${clinic.longitude}`}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* Add Map Display */}
+            <div className="mt-6">
+              <p className="text-sm font-medium text-gray-500 mb-2">Map Location</p>
+              <ErrorBoundary>
+                {clinic.latitude && clinic.longitude ? (
+                  <MapComponent 
+                    formData={createMapFormData(clinic)}
+                    updateField={dummyUpdateField}
+                    hasExistingClinic={true}
+                    loading={false}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4 border border-gray-300 rounded-lg bg-gray-50 h-[300px]">
+                    <p className="text-sm text-gray-500">No location coordinates available</p>
+                  </div>
+                )}
+              </ErrorBoundary>
             </div>
           </div>
         </div>
@@ -378,6 +580,62 @@ const ClinicPreviewPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Add Privacy & Communication Preferences section */}
+        <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Privacy & Communication Preferences</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${clinic.show_phone_number ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-500'} mr-3`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Show Phone Number</p>
+                  <p className="text-xs text-gray-500">{clinic.show_phone_number ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${clinic.show_mail_address ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-500'} mr-3`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Show Email Address</p>
+                  <p className="text-xs text-gray-500">{clinic.show_mail_address ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${clinic.allow_direct_messages ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-500'} mr-3`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Allow Direct Messages</p>
+                  <p className="text-xs text-gray-500">{clinic.allow_direct_messages ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${clinic.allow_online_meetings ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-500'} mr-3`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Allow Online Meetings</p>
+                  <p className="text-xs text-gray-500">{clinic.allow_online_meetings ? 'Enabled' : 'Disabled'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Description */}
         {clinic.clinic_description && (
           <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
@@ -447,6 +705,40 @@ const ClinicPreviewPage: React.FC = () => {
         <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
           <div className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Working Hours</h2>
+            
+            {/* Add emergency service status indicator */}
+            {clinic.has_emergency_service && (
+              <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-red-800">This clinic provides emergency services</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Add appointment duration information */}
+            {clinic.slot_duration && (
+              <div className="mb-4 bg-indigo-50 border-l-4 border-indigo-500 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-indigo-800">
+                      Appointment Duration: {clinic.slot_duration} minutes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {clinic.is_open_24_7 === 'Yes' ? (
               <div className="bg-green-50 border-l-4 border-green-500 p-4">
