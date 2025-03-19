@@ -1,18 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate, useBeforeUnload, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
 import axios from 'axios';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
-import { ClinicFormData, FormStep, SocialMediaLink, LocationCoordinates } from '../types/clinic';
+import { ClinicFormData, FormStep, LocationCoordinates } from '../types/clinic';
 import { ClinicDetailsForm } from '../components/clinic/forms/ClinicDetailsForm';
 import { LocationsForm } from '../components/clinic/forms/LocationsForm';
-import { PlaceholderSection } from '../components/clinic/forms/PlaceholderSection';
 import { StepProgressBar } from '../components/clinic/progress/StepProgressBar';
 import { MobileStepIndicator } from '../components/clinic/progress/MobileStepIndicator';
 import { SuccessMessage } from '../components/clinic/SuccessMessage';
 import { CommunicationForm } from '../components/clinic/forms/CommunicationForm';
-import { toast } from 'react-hot-toast';
 import { VisualsForm } from '../components/clinic/forms/VisualsForm';
 import { ServicesForm } from '../components/clinic/forms/ServicesForm';
 import { RegistrationForm } from '../components/clinic/forms/RegistrationForm';
@@ -484,12 +482,42 @@ const AddClinicPage: React.FC = () => {
       return;
     }
 
+    console.log('Starting photo upload process for clinic:', {
+      clinicId,
+      clinicName,
+      photoCount: selectedPhotos.length,
+      photoSizes: selectedPhotos.map(p => p.size)
+    });
+
     const uploadPromises = selectedPhotos.map(async (photo, index) => {
       setCurrentPhotoIndex(index);
       const formData = new FormData();
       formData.append('photo', photo);
       formData.append('clinicId', clinicId.toString());
-      formData.append('clinicName', clinicName);
+      
+      // clinicName'i backend ile aynı şekilde sanitize et
+      let sanitizedClinicName = clinicName;
+      
+      // Eğer gerçek ismi kullanmak istiyorsak, backend ile aynı düzeltmeyi yapalım
+      formData.append('clinicName', sanitizedClinicName);
+      
+      // FormData içeriğini kontrol et
+      console.log(`Photo ${index + 1} FormData:`, {
+        photo: photo.name,
+        photoSize: photo.size,
+        photoType: photo.type,
+        clinicId: clinicId.toString(),
+        clinicName: sanitizedClinicName
+      });
+      
+      // Clinic adını temizle ve formata uygun hale getir
+      const expectedPathName = sanitizedClinicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
+      console.log(`Expected S3 path: clinic-photos/${clinicId.toString()}-${expectedPathName}/`);
 
       try {
         const response = await axios.post(
@@ -504,22 +532,47 @@ const AddClinicPage: React.FC = () => {
               if (progressEvent.total) {
                 const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                 setUploadProgress(progress);
+                console.log(`Upload progress for photo ${index + 1}: ${progress}%`);
               }
             }
           }
         );
+        console.log(`Photo ${index + 1} upload response:`, response.data);
+        
+        // Yanıtı kontrol et
+        if (response.data.success) {
+          if (!response.data.photo || !response.data.photo.url) {
+            console.error(`Photo ${index + 1} upload succeeded but no URL returned`, response.data);
+          } else {
+            console.log(`Photo ${index + 1} successfully uploaded. URL:`, response.data.photo.url);
+            console.log(`Photo ${index + 1} key:`, response.data.photo.key);
+            
+            // URL'ye fetch atarak erişilebilirliği test et
+            try {
+              const testFetch = await fetch(response.data.photo.url, { method: 'HEAD' });
+              console.log(`Photo ${index + 1} accessibility test:`, testFetch.ok ? 'Accessible' : 'Not accessible');
+            } catch (fetchErr) {
+              console.warn(`Could not verify photo ${index + 1} accessibility:`, fetchErr);
+            }
+          }
+        } else {
+          console.error(`Photo ${index + 1} upload reported failure:`, response.data);
+        }
+        
         return response.data;
-      } catch (err) {
-        console.error('Error uploading photo:', err);
-        throw err;
+      } catch (err: any) {
+        const errorDetails = err.response?.data || { message: err.message };
+        console.error(`Error uploading photo ${index + 1}:`, errorDetails);
+        throw new Error(`Failed to upload photo ${index + 1}: ${errorDetails.message || err.message}`);
       }
     });
 
     try {
       await Promise.all(uploadPromises);
       console.log('All photos uploaded successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error uploading photos:', err);
+      setError(`Upload failed: ${err.message}`);
       throw err;
     }
   };
@@ -1014,6 +1067,31 @@ const AddClinicPage: React.FC = () => {
 
       if (response.status === 201) {
         console.log('Clinic added successfully:', response.data);
+        
+        // Fotoğrafları yükle
+        try {
+          console.log('Now uploading photos for new clinic:', {
+            clinicId: response.data.clinic.clinic_id,
+            clinicName: response.data.clinic.clinic_name,
+            photoCount: selectedPhotos.length
+          });
+          
+          await uploadPhotos(
+            response.data.clinic.clinic_id,
+            response.data.clinic.clinic_name
+          );
+          
+          console.log('All photos uploaded successfully for clinic ID:', response.data.clinic.clinic_id);
+        } catch (photoError) {
+          console.error('Failed to upload photos:', photoError);
+          // Fotoğraf yükleme hatası olsa bile klinik kaydedildi, kullanıcıya bildir
+          setError('Your clinic was created, but there was an error uploading photos. You can upload them later from clinic editing page.');
+          // 2 saniye sonra dashboard'a git
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 2000);
+          return;
+        }
         
         // Reset form
         setFormData({

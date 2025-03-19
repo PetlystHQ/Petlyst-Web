@@ -76,6 +76,12 @@ const ClinicPreviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+  
+  // Photo gallery states
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingImages, setLoadingImages] = useState<{[key: number]: boolean}>({});
+  const [modalImageLoading, setModalImageLoading] = useState(false);
 
   useEffect(() => {
     const fetchClinicDetails = async () => {
@@ -280,6 +286,90 @@ const ClinicPreviewPage: React.FC = () => {
     return days[index];
   };
 
+  // Function to open the photo modal
+  const openPhotoModal = (index: number) => {
+    setSelectedPhotoIndex(index);
+    setIsModalOpen(true);
+    setModalImageLoading(true); // Set loading state
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Function to close the photo modal
+  const closePhotoModal = () => {
+    setIsModalOpen(false);
+    setSelectedPhotoIndex(null);
+    // Restore body scroll when modal is closed
+    document.body.style.overflow = 'auto';
+  };
+
+  // Function to navigate to next photo
+  const nextPhoto = () => {
+    if (clinic && clinic.photos && selectedPhotoIndex !== null) {
+      setModalImageLoading(true); // Set loading state
+      setSelectedPhotoIndex((selectedPhotoIndex + 1) % clinic.photos.length);
+    }
+  };
+
+  // Function to navigate to previous photo
+  const prevPhoto = () => {
+    if (clinic && clinic.photos && selectedPhotoIndex !== null) {
+      setModalImageLoading(true); // Set loading state
+      setSelectedPhotoIndex((selectedPhotoIndex - 1 + clinic.photos.length) % clinic.photos.length);
+    }
+  };
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isModalOpen) return;
+      
+      switch (e.key) {
+        case 'ArrowRight':
+          nextPhoto();
+          break;
+        case 'ArrowLeft':
+          prevPhoto();
+          break;
+        case 'Escape':
+          closePhotoModal();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen, selectedPhotoIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track image loading states
+  const handleImageLoad = (index: number) => {
+    setLoadingImages(prev => ({
+      ...prev,
+      [index]: false
+    }));
+  };
+
+  const handleImageError = (index: number) => {
+    setLoadingImages(prev => ({
+      ...prev,
+      [index]: false
+    }));
+    console.error(`Failed to load image at index ${index}`);
+  };
+
+  // Initialize loading state for images when clinic data is loaded
+  useEffect(() => {
+    if (clinic && clinic.photos && clinic.photos.length > 0) {
+      const newLoadingState: {[key: number]: boolean} = {};
+      clinic.photos.forEach((_, index) => {
+        newLoadingState[index] = true;
+      });
+      setLoadingImages(newLoadingState);
+    }
+  }, [clinic?.photos]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -451,6 +541,43 @@ const ClinicPreviewPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Photos Gallery - Add this section */}
+        {clinic && clinic.photos && clinic.photos.length > 0 && (
+          <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Clinic Photos</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {clinic.photos.map((photo, index) => (
+                  <div 
+                    key={index} 
+                    className="relative group cursor-pointer rounded-lg overflow-hidden h-48 bg-gray-100 transition transform hover:scale-105 hover:shadow-lg"
+                    onClick={() => openPhotoModal(index)}
+                  >
+                    {/* Loading indicator */}
+                    {loadingImages[index] && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      </div>
+                    )}
+                    <img 
+                      src={photo.url} 
+                      alt={`Clinic photo ${index + 1}`} 
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${loadingImages[index] ? 'opacity-0' : 'opacity-100'}`}
+                      onLoad={() => handleImageLoad(index)}
+                      onError={() => handleImageError(index)}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Location Information */}
         <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
@@ -834,26 +961,6 @@ const ClinicPreviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Photos */}
-        {clinic.photos && clinic.photos.length > 0 && (
-          <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Clinic Photos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {clinic.photos.map((photo, index) => (
-                  <div key={index} className="rounded-lg overflow-hidden h-48 bg-gray-100">
-                    <img 
-                      src={photo.url} 
-                      alt={`Clinic photo ${index + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Bottom Actions */}
         <div className="flex justify-center">
           <button
@@ -864,6 +971,71 @@ const ClinicPreviewPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Photo Modal */}
+      {isModalOpen && clinic && clinic.photos && selectedPhotoIndex !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={closePhotoModal}>
+          <div className="relative max-w-6xl w-full p-2 md:p-4" onClick={e => e.stopPropagation()}>
+            {/* Close button */}
+            <button 
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-70 transition-colors"
+              onClick={closePhotoModal}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            {/* Previous button */}
+            <button 
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-70 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                prevPhoto();
+              }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            {/* Next button */}
+            <button 
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-70 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                nextPhoto();
+              }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            
+            {/* Photo */}
+            <div className="bg-transparent rounded-lg overflow-hidden max-h-[90vh] flex items-center justify-center">
+              {/* Modal loading indicator */}
+              {modalImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+                </div>
+              )}
+              <img 
+                src={clinic.photos[selectedPhotoIndex].url} 
+                alt={`Clinic photo ${selectedPhotoIndex + 1}`} 
+                className={`max-w-full max-h-[90vh] object-contain transition-opacity duration-300 ${modalImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                onLoad={() => setModalImageLoading(false)}
+                onError={() => setModalImageLoading(false)}
+              />
+            </div>
+            
+            {/* Photo counter */}
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 py-2 px-4 bg-black bg-opacity-50 text-white rounded-full text-sm">
+              {selectedPhotoIndex + 1} / {clinic.photos.length}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,9 +5,135 @@ const { checkVerificationStatus } = require('../middleware/verificationMiddlewar
 const Clinic = require('../models/clinicModel');
 const pool = require('../config/db');
 const multer = require('multer');
+// Import S3Service instance with all methods
 const s3Service = require('../aws/s3Service');
 const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { deleteClinicPhoto } = require('../aws/s3Service');
+// Individual methods are already destructured from the same export
+const { deleteClinicPhoto } = s3Service;
+
+// Test route for S3 uploads - accessible without authentication for testing
+router.get('/test-s3-upload', async (req, res) => {
+  try {
+    console.log('S3 test upload route called');
+    const result = await s3Service.testS3Upload();
+    
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: 'S3 test upload successful',
+        url: result.url,
+        key: result.key
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: 'S3 test upload failed',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error testing S3 upload:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error testing S3 upload',
+      error: error.message || 'Unknown error'
+    });
+  }
+});
+
+// Test route for specifically testing clinic photos folder structure
+router.get('/test-clinic-folder', async (req, res) => {
+  try {
+    console.log('Testing clinic folder upload');
+    
+    // Test data
+    const testClinicId = '123';
+    const testClinicName = 'Test Clinic';
+    const testContent = Buffer.from('Test clinic photo upload ' + new Date().toISOString());
+    
+    // Use the actual clinic photo path function
+    const s3ServiceInstance = require('../aws/s3Service');
+    const folderPath = s3ServiceInstance.getClinicPhotoPath(testClinicId, testClinicName);
+    const fullPath = `${folderPath}/test-${Date.now()}.txt`;
+    
+    console.log('Attempting to upload to path:', fullPath);
+    
+    const params = {
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: fullPath,
+      Body: testContent,
+      ContentType: 'text/plain'
+    };
+    
+    // Import s3 directly to ensure we're using the correct instance
+    const { s3 } = require('../aws/s3Config');
+    const result = await s3.upload(params).promise();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Test file uploaded to clinic folder structure',
+      path: fullPath,
+      url: result.Location,
+      expectedLocation: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fullPath}`
+    });
+  } catch (error) {
+    console.error('Error in test-clinic-folder:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error testing clinic folder upload',
+      error: error.message || 'Unknown error'
+    });
+  }
+});
+
+// Test route for listing S3 bucket contents
+router.get('/list-s3-contents', async (req, res) => {
+  try {
+    console.log('Listing S3 bucket contents');
+    
+    // Import s3 directly to ensure we're using the correct instance
+    const { s3, s3Config } = require('../aws/s3Config');
+    
+    // First, list the bucket contents at the root level
+    const rootResult = await s3.listObjectsV2({
+      Bucket: s3Config.bucket,
+      Delimiter: '/'
+    }).promise();
+    
+    console.log('Root level prefixes:', rootResult.CommonPrefixes?.map(p => p.Prefix) || []);
+    console.log('Root level objects:', rootResult.Contents?.map(c => c.Key) || []);
+    
+    // Then specifically check the clinic-photos directory
+    const clinicPhotosResult = await s3.listObjectsV2({
+      Bucket: s3Config.bucket,
+      Prefix: 'clinic-photos/',
+      Delimiter: '/'
+    }).promise();
+    
+    console.log('Clinic photos prefixes:', clinicPhotosResult.CommonPrefixes?.map(p => p.Prefix) || []);
+    console.log('Clinic photos objects:', clinicPhotosResult.Contents?.map(c => c.Key) || []);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'S3 bucket contents listed',
+      rootLevel: {
+        prefixes: rootResult.CommonPrefixes?.map(p => p.Prefix) || [],
+        objects: rootResult.Contents?.map(c => c.Key) || []
+      },
+      clinicPhotos: {
+        prefixes: clinicPhotosResult.CommonPrefixes?.map(p => p.Prefix) || [],
+        objects: clinicPhotosResult.Contents?.map(c => c.Key) || []
+      }
+    });
+  } catch (error) {
+    console.error('Error listing S3 contents:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error listing S3 contents',
+      error: error.message || 'Unknown error'
+    });
+  }
+});
 
 // Configure multer for memory storage
 const upload = multer({
@@ -769,7 +895,22 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
       });
     }
     
-    // Delete clinic and all related data
+    // Delete all photos from S3 bucket before deleting from database
+    try {
+      console.log('Deleting all clinic photos from S3 for clinic:', {
+        clinicId,
+        clinicName: clinic.clinic_name
+      });
+      
+      const deleteResult = await s3Service.deleteClinicFolder(clinicId, clinic.clinic_name);
+      console.log('S3 deletion result:', deleteResult);
+    } catch (s3Error) {
+      console.error('Error deleting clinic photos from S3:', s3Error);
+      // We'll continue with database deletion even if S3 deletion fails
+      // This ensures the clinic gets deleted even if there's an issue with S3
+    }
+    
+    // Delete clinic and all related data from database
     await Clinic.deleteClinic(clinicId);
     
     res.status(200).json({
@@ -788,12 +929,30 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
 // Upload clinic photo
 router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
+    console.log('===== UPLOAD PHOTO REQUEST RECEIVED =====');
+    console.log('Request body:', {
+      clinicId: req.body.clinicId,
+      clinicName: req.body.clinicName,
+      operatorId: req.user?.userId
+    });
+    console.log('File info:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? `Buffer (${req.file.buffer.length} bytes)` : 'No buffer'
+    } : 'No file');
+    console.log('Headers:', {
+      contentType: req.headers['content-type'],
+      authorization: req.headers['authorization'] ? 'Bearer token exists' : 'No token'
+    });
+    
     const { clinicId, clinicName } = req.body;
     const photo = req.file;
     const operator_id = req.user.userId;
 
     // Validate required fields
     if (!clinicId || !clinicName) {
+      console.error('Missing required fields:', { clinicId, clinicName });
       return res.status(400).json({
         success: false,
         message: 'Clinic ID and name are required'
@@ -803,6 +962,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     // Ensure clinicId is a valid number
     const numericClinicId = parseInt(clinicId, 10);
     if (isNaN(numericClinicId)) {
+      console.error('Invalid clinic ID format:', { clinicId });
       return res.status(400).json({
         success: false,
         message: 'Invalid clinic ID format. Must be a numeric value.'
@@ -810,6 +970,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
     if (!photo) {
+      console.error('No photo provided in the request');
       return res.status(400).json({
         success: false,
         message: 'No photo provided'
@@ -820,6 +981,11 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     const clinic = await Clinic.getClinicById(numericClinicId);
     
     if (!clinic || clinic.clinic_operator_id !== operator_id) {
+      console.error('Clinic not found or permission denied:', { 
+        clinicExists: !!clinic,
+        clinicOperatorId: clinic?.clinic_operator_id,
+        requestOperatorId: operator_id
+      });
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to upload photos'
@@ -836,6 +1002,18 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         clinicName
       });
 
+      // S3Service'in oluşturacağı path'i önceden hesaplayalım
+      const s3ServiceInstance = require('../aws/s3Service');
+      const predictedFolderPath = s3ServiceInstance.getClinicPhotoPath(numericClinicId.toString(), clinicName);
+      
+      console.log('PREDICTED S3 PATH:', predictedFolderPath);
+      console.log('Clinic name provided:', clinicName);
+      console.log('Clinic name after sanitization:', clinicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, ''));
+
       const result = await s3Service.uploadClinicPhoto(
         photo.buffer,
         photo.originalname,
@@ -844,14 +1022,31 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         clinicName
       );
 
+      console.log('S3 upload successful:', result);
+      
+      // Ensure we have a valid URL
+      if (!result.url || !result.url.startsWith('http')) {
+        console.warn('S3 returned invalid URL, constructing fallback URL');
+        result.url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${result.key}`;
+        console.log('Using fallback URL:', result.url);
+      }
+
       // Insert photo URL into clinicalbum table instead of clinic_photos
       const insertPhotoQuery = `
-        INSERT INTO clinicalbum (clinic_id, clinic_album_photo_url)
-        VALUES ($1, $2)
+        INSERT INTO clinicalbum (clinic_id, clinic_album_photo_url, clinic_type)
+        VALUES ($1, $2, $3)
         RETURNING *
       `;
       
-      await pool.query(insertPhotoQuery, [numericClinicId, result.url]);
+      // Önce clinic'in type bilgisini alalım
+      const getClinicTypeQuery = `
+        SELECT clinic_type FROM clinics WHERE clinic_id = $1
+      `;
+      const clinicTypeResult = await pool.query(getClinicTypeQuery, [numericClinicId]);
+      const clinicType = clinicTypeResult.rows[0]?.clinic_type || 'veterinary_clinic'; // Default değer
+      
+      const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, clinicType]);
+      console.log('Database insert successful:', dbResult.rows[0]);
 
       res.status(200).json({
         success: true,
