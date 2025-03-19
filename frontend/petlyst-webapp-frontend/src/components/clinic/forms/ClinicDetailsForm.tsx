@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tooltip } from '../shared/Tooltip';
 import { ClinicFormData } from '../../../types/clinic';
 
@@ -23,6 +23,42 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
   loading,
   isEditMode = false
 }) => {
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  // Check if establishment date is in the future
+  const validateEstablishmentDate = (dateValue: string) => {
+    if (!dateValue) return true;
+    
+    const currentDate = new Date();
+    const selectedDate = new Date(dateValue);
+    
+    // Set time to beginning of month for accurate comparison
+    currentDate.setDate(1);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate > currentDate) {
+      setDateError("Establishment date cannot be in the future");
+      return false;
+    } else {
+      setDateError(null);
+      return true;
+    }
+  };
+
+  // Validate the date when component mounts or when the date changes
+  useEffect(() => {
+    if (formData.establishment_date) {
+      validateEstablishmentDate(formData.establishment_date);
+    }
+  }, [formData.establishment_date]);
+
+  // Custom handler for date input to add validation
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isValid = validateEstablishmentDate(e.target.value);
+    // Still update the form data even if invalid, so we can show the error message
+    handleInputChange(e);
+  };
+
   return (
     <div>
       {/* Clinic Details Section - Yeni başlık */}
@@ -115,15 +151,20 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
             </label>
             <Tooltip text="The month and year when your clinic was officially established" />
           </div>
-          <input
-            type="month"
-            name="establishment_date"
-            value={formData.establishment_date}
-            onChange={handleInputChange}
-            max={new Date().toISOString().slice(0, 7)}
-            disabled={(hasExistingClinic && !isEditMode) || loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
-          />
+          <div className="space-y-1">
+            <input
+              type="month"
+              name="establishment_date"
+              value={formData.establishment_date}
+              onChange={handleDateChange}
+              max={new Date().toISOString().slice(0, 7)}
+              disabled={(hasExistingClinic && !isEditMode) || loading}
+              className={`w-full px-3 py-2 border ${dateError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500`}
+            />
+            {dateError && (
+              <p className="text-sm text-red-600 mt-1">{dateError}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

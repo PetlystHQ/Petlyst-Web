@@ -346,7 +346,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       clinic_creation_status,
       opening_time: opening_time || (is_partial_submission ? "09:00" : null),
       closing_time: closing_time || (is_partial_submission ? "18:00" : null),
-      slot_duration: slot_duration || 60, // Default değer 60 (1 saat)
+      slot_duration: slot_duration ? parseInt(slot_duration, 10) : 60, // Ensure slot_duration is a number
       is_open_24_7: is_open_24_7_value,
       available_days: available_days || (is_partial_submission ? [false, false, false, false, false, false, false] : null),
       emergency_available_days: emergency_available_days || [false, false, false, false, false, false, false],
@@ -554,16 +554,71 @@ router.get('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     
     const operatorResult = await pool.query(operatorQuery, [clinic.clinic_operator_id]);
     
+    // Get clinic location data
+    const locationQuery = `
+      SELECT province, district, clinic_address, latitude, longitude
+      FROM clinic_locations
+      WHERE clinic_id = $1
+    `;
+    
+    const locationResult = await pool.query(locationQuery, [clinicId]);
+    const locationData = locationResult.rows.length > 0 ? locationResult.rows[0] : null;
+    
+    // Get animal types
+    const animalTypesQuery = `
+      SELECT at.animal_type_name 
+      FROM animal_types at
+      JOIN clinic_animal_types cat ON at.animal_type_id = cat.animal_type_id
+      WHERE cat.clinic_id = $1
+    `;
+    const animalTypesResult = await pool.query(animalTypesQuery, [clinicId]);
+    const animalTypes = animalTypesResult.rows.map(row => row.animal_type_name);
+    
+    // Get medical services
+    const medicalServicesQuery = `
+      SELECT ms.service_name
+      FROM medical_services ms
+      JOIN clinic_medical_services cms ON ms.medical_service_id = cms.medical_service_id
+      WHERE cms.clinic_id = $1
+    `;
+    const medicalServicesResult = await pool.query(medicalServicesQuery, [clinicId]);
+    const medicalServices = medicalServicesResult.rows.map(row => row.service_name);
+    
+    // Get additional services
+    const additionalServicesQuery = `
+      SELECT ads.service_name
+      FROM additional_services ads
+      JOIN clinic_additional_services cas ON ads.additional_service_id = cas.additional_service_id
+      WHERE cas.clinic_id = $1
+    `;
+    const additionalServicesResult = await pool.query(additionalServicesQuery, [clinicId]);
+    const additionalServices = additionalServicesResult.rows.map(row => row.service_name);
+    
+    // Merge location data with clinic data
     const clinicWithOperator = {
       ...clinic,
       operator_name: operatorResult.rows[0]?.user_name,
       operator_surname: operatorResult.rows[0]?.user_surname,
-      operator_email: operatorResult.rows[0]?.user_email
+      operator_email: operatorResult.rows[0]?.user_email,
+      // Add location data to the clinic object if available
+      ...(locationData && {
+        province: locationData.province,
+        district: locationData.district,
+        clinic_address: locationData.clinic_address,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude
+      }),
+      // Add services data
+      animal_types: animalTypes,
+      medical_services: medicalServices,
+      additional_services: additionalServices
     };
     
+    // Include separate clinic_locations for reference
     res.status(200).json({
       message: "Clinic details fetched successfully",
-      clinic: clinicWithOperator
+      clinic: clinicWithOperator,
+      clinic_locations: locationResult.rows
     });
   } catch (error) {
     console.error('Error fetching clinic:', error);

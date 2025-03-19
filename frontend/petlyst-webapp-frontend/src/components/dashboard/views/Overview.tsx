@@ -8,9 +8,10 @@ interface OverviewProps {
   isLoading?: boolean;
   onAddClinic?: () => void;
   onViewChange?: (view: DashboardView) => void;
+  hasSubmittedClinics?: boolean;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange }) => {
+export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange, hasSubmittedClinics = false }) => {
 
   if (isLoading) {
     return (
@@ -85,47 +86,47 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h2 className="text-2xl font-semibold text-gray-900">Welcome to Your Dashboard</h2>
-              <p className="mt-2 text-gray-600">Ready to start managing your veterinary practice?</p>
-              <div className="mt-6 flex items-center space-x-4">
-                <button
-                  onClick={() => {
-                    onViewChange?.(DASHBOARD_VIEWS.clinics);
-                    // Biraz gecikme ekleyerek önce view değişiminin tamamlanmasını bekleyelim
-                    setTimeout(() => {
-                      onAddClinic?.();
-                    }, 100);
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Add Your Clinic
-                  <svg className="ml-2 -mr-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-                <span className="text-sm text-gray-500">Get started in just a few minutes</span>
+      {!hasSubmittedClinics && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-8">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h2 className="text-2xl font-semibold text-gray-900">Welcome to Your Dashboard</h2>
+                <p className="mt-2 text-gray-600">Ready to start managing your veterinary practice?</p>
+                <div className="mt-6 flex items-center space-x-4">
+                  <button
+                    onClick={() => {
+                      onViewChange?.(DASHBOARD_VIEWS.clinics);
+                      setTimeout(() => {
+                        onAddClinic?.();
+                      }, 100);
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Add Your Clinic
+                    <svg className="ml-2 -mr-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                  <span className="text-sm text-gray-500">Get started in just a few minutes</span>
+                </div>
+              </div>
+              <div className="hidden md:block">
+                <svg className="w-32 h-32 text-blue-100" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
               </div>
             </div>
-            <div className="hidden md:block">
-              <svg className="w-32 h-32 text-blue-100" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
+          </div>
+          <div className="bg-gray-50 px-8 py-4">
+            <div className="text-sm">
+              <span className="text-gray-500">Need help? </span>
+              <a href="#" className="text-blue-600 hover:text-blue-500">We feel your pain. That's it, though.</a>
             </div>
           </div>
         </div>
-        <div className="bg-gray-50 px-8 py-4">
-          <div className="text-sm">
-            <span className="text-gray-500">Need help? </span>
-            <a href="#" className="text-blue-600 hover:text-blue-500">We feel your pain. That's it, though.</a>
-          </div>
-        </div>
-      </div>
+      )}
       
-      {/* Video Conference Section */}
       <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-100 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">

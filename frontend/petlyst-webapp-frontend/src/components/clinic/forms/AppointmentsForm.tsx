@@ -173,7 +173,11 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
   // Appointment duration change handler
   const handleSlotDurationChange = (duration: SlotDuration) => {
     setSlotDuration(duration);
-    handleInputChange(createSyntheticEvent('slot_duration', parseInt(duration)));
+    // Convert string duration to number explicitly
+    const durationValue = parseInt(duration, 10);
+    console.log('Setting slot duration to:', durationValue, typeof durationValue);
+    // Ensure it's a number when passing it back
+    handleInputChange(createSyntheticEvent('slot_duration', durationValue));
   };
 
   // Function to adjust time according to slot duration

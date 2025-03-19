@@ -157,6 +157,19 @@ class Clinic {
                 number: row.phone_number
             }));
             
+            // Fetch social media links from clinic_social_media table
+            const socialMediaQuery = {
+                text: 'SELECT platform, url FROM clinic_social_media WHERE clinic_id = $1',
+                values: [numericClinicId]
+            };
+            const socialMediaResult = await pool.query(socialMediaQuery);
+            
+            // Add social media links to clinic object
+            clinic.social_media = socialMediaResult.rows.map(row => ({
+                platform: row.platform,
+                url: row.url
+            }));
+            
             return clinic;
         } catch (error) {
             console.error('Error in getClinicById:', error);
@@ -249,6 +262,19 @@ class Clinic {
                 clinic.phone_numbers = phoneResult.rows.map(row => ({
                     type: row.phone_type,
                     number: row.phone_number
+                }));
+                
+                // Fetch social media links for each clinic
+                const socialMediaQuery = {
+                    text: 'SELECT platform, url FROM clinic_social_media WHERE clinic_id = $1',
+                    values: [clinic.clinic_id]
+                };
+                const socialMediaResult = await pool.query(socialMediaQuery);
+                
+                // Add social media links to clinic object
+                clinic.social_media = socialMediaResult.rows.map(row => ({
+                    platform: row.platform,
+                    url: row.url
                 }));
             }
             
