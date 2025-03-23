@@ -1312,4 +1312,183 @@ router.get('/incomplete', authenticateToken, checkVerificationStatus, async (req
   }
 });
 
+// Get clinic services (animal types, medical services, additional services)
+router.get('/:clinicId/services', authenticateToken, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT clinic_id FROM clinics 
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to view services'
+      });
+    }
+
+    // Get animal types
+    const animalTypesQuery = `
+      SELECT at.animal_type_name 
+      FROM animal_types at
+      JOIN clinic_animal_types cat ON at.animal_type_id = cat.animal_type_id
+      WHERE cat.clinic_id = $1
+    `;
+    const animalTypesResult = await pool.query(animalTypesQuery, [clinicId]);
+    const animalTypes = animalTypesResult.rows.map(row => row.animal_type_name);
+
+    // Get medical services
+    const medicalServicesQuery = `
+      SELECT ms.service_name 
+      FROM medical_services ms
+      JOIN clinic_medical_services cms ON ms.medical_service_id = cms.medical_service_id
+      WHERE cms.clinic_id = $1
+    `;
+    const medicalServicesResult = await pool.query(medicalServicesQuery, [clinicId]);
+    const medicalServices = medicalServicesResult.rows.map(row => row.service_name);
+
+    // Get additional services
+    const additionalServicesQuery = `
+      SELECT ads.service_name 
+      FROM additional_services ads
+      JOIN clinic_additional_services cas ON ads.additional_service_id = cas.additional_service_id
+      WHERE cas.clinic_id = $1
+    `;
+    const additionalServicesResult = await pool.query(additionalServicesQuery, [clinicId]);
+    const additionalServices = additionalServicesResult.rows.map(row => row.service_name);
+
+    // Get all available animal types from the database
+    const allAnimalTypesQuery = `SELECT animal_type_name FROM animal_types ORDER BY animal_type_name`;
+    const allAnimalTypesResult = await pool.query(allAnimalTypesQuery);
+    const allAnimalTypes = allAnimalTypesResult.rows.map(row => row.animal_type_name);
+
+    // Get all available medical services from the database
+    const allMedicalServicesQuery = `SELECT service_name FROM medical_services ORDER BY service_name`;
+    const allMedicalServicesResult = await pool.query(allMedicalServicesQuery);
+    const allMedicalServices = allMedicalServicesResult.rows.map(row => row.service_name);
+
+    // Get all available additional services from the database
+    const allAdditionalServicesQuery = `SELECT service_name FROM additional_services ORDER BY service_name`;
+    const allAdditionalServicesResult = await pool.query(allAdditionalServicesQuery);
+    const allAdditionalServices = allAdditionalServicesResult.rows.map(row => row.service_name);
+
+    res.status(200).json({
+      success: true,
+      message: 'Services fetched successfully',
+      services: {
+        animalTypes: animalTypes,
+        medicalServices: medicalServices,
+        additionalServices: additionalServices
+      },
+      availableOptions: {
+        animalTypes: allAnimalTypes,
+        medicalServices: allMedicalServices,
+        additionalServices: allAdditionalServices
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching clinic services:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Update clinic services
+router.put('/:clinicId/services', authenticateToken, checkVerificationStatus, async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { clinicId } = req.params;
+    const { animalTypes, medicalServices, additionalServices } = req.body;
+    const operator_id = req.user.userId;
+
+    // Validate required fields
+    if (!animalTypes || !medicalServices || !additionalServices) {
+      return res.status(400).json({
+        success: false,
+        message: 'Animal types, medical services, and additional services are required'
+      });
+    }
+
+    // Ensure each category has at least one item
+    if (animalTypes.length === 0 || medicalServices.length === 0 || additionalServices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Each service category must have at least one item'
+      });
+    }
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT clinic_id, clinic_verification_status 
+      FROM clinics 
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to update services'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // Delete existing animal types
+    await client.query('DELETE FROM clinic_animal_types WHERE clinic_id = $1', [clinicId]);
+    
+    // Delete existing medical services
+    await client.query('DELETE FROM clinic_medical_services WHERE clinic_id = $1', [clinicId]);
+    
+    // Delete existing additional services
+    await client.query('DELETE FROM clinic_additional_services WHERE clinic_id = $1', [clinicId]);
+
+    // Save new animal types
+    await saveAnimalTypes(client, clinicId, animalTypes);
+    
+    // Save new medical services
+    await saveMedicalServices(client, clinicId, medicalServices);
+    
+    // Save new additional services
+    await saveAdditionalServices(client, clinicId, additionalServices);
+
+    // Update clinic verification status to pending if it was verified or archived
+    const clinic = checkResult.rows[0];
+    if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
+      const updateQuery = `
+        UPDATE clinics 
+        SET clinic_verification_status = 'pending'
+        WHERE clinic_id = $1 AND clinic_operator_id = $2
+      `;
+      await client.query(updateQuery, [clinicId, operator_id]);
+    }
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: 'Clinic services updated successfully'
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating clinic services:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

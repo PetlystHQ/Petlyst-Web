@@ -6,6 +6,7 @@ import { RootState } from '../store';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { EditVisuals } from '../components/clinic/forms/EditVisuals';
+import { EditServices } from '../components/clinic/forms/EditServices';
 
 const EditClinicPage: React.FC = () => {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -708,8 +709,25 @@ const EditClinicPage: React.FC = () => {
               </div>
             )}
             
+            {/* Services Tab */}
+            {activeTab === 'services' && formData && (
+              <div className="space-y-6">
+                <EditServices 
+                  clinicId={clinicId || ''}
+                  token={token || localStorage.getItem('token') || ''}
+                  onServicesChange={() => {
+                    // Refresh data or show success message if needed
+                    setSuccess('Clinic services updated successfully');
+                    setTimeout(() => {
+                      setSuccess(null);
+                    }, 3000);
+                  }}
+                />
+              </div>
+            )}
+            
             {/* Other tabs */}
-            {(activeTab !== 'basic' && activeTab !== 'location' && activeTab !== 'contact' && activeTab !== 'photos') && (
+            {(activeTab !== 'basic' && activeTab !== 'location' && activeTab !== 'contact' && activeTab !== 'photos' && activeTab !== 'services') && (
               <p className="text-gray-500">This tab content will be implemented in the next phase.</p>
             )}
             
