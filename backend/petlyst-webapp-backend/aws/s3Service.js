@@ -5,15 +5,38 @@ class S3Service {
    * Generate a folder path for clinic photos
    * @param {string} clinicId - The ID of the clinic
    * @param {string} clinicName - The name of the clinic
+   * @param {string} clinicType - The type of the clinic (optional)
    * @returns {string} - The folder path
    */
-  getClinicPhotoPath(clinicId, clinicName) {
-    // Sanitize clinic name (remove special characters and spaces)
-    const sanitizedClinicName = clinicName
+  getClinicPhotoPath(clinicId, clinicName, clinicType) {
+    // Check if the clinic name already includes a clinic type suffix
+    const hasVeterinaryClinic = clinicName.toLowerCase().endsWith('veterinary clinic');
+    const hasAnimalHospital = clinicName.toLowerCase().endsWith('animal hospital');
+    
+    // If name already includes type, sanitize as is
+    if (hasVeterinaryClinic || hasAnimalHospital) {
+      // Sanitize clinic name (remove special characters and spaces)
+      const sanitizedClinicName = clinicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      return `clinic-photos/${clinicId}-${sanitizedClinicName}`;
+    }
+    
+    // Otherwise, append the type (if provided)
+    let sanitizedClinicName = clinicName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
+    
+    // Add clinic type suffix if provided
+    if (clinicType) {
+      const typeSuffix = clinicType.toLowerCase() === 'animal hospital' ? 'animal-hospital' : 'veterinary-clinic';
+      sanitizedClinicName = `${sanitizedClinicName}-${typeSuffix}`;
+    }
 
     return `clinic-photos/${clinicId}-${sanitizedClinicName}`;
   }
@@ -25,12 +48,13 @@ class S3Service {
    * @param {string} contentType - The content type of the file
    * @param {string} clinicId - The ID of the clinic
    * @param {string} clinicName - The name of the clinic
+   * @param {string} clinicType - The type of the clinic (optional)
    * @returns {Promise<string>} - The URL of the uploaded file
    */
-  async uploadClinicPhoto(fileBuffer, fileName, contentType, clinicId, clinicName) {
+  async uploadClinicPhoto(fileBuffer, fileName, contentType, clinicId, clinicName, clinicType) {
     try {
       console.log('=========== STARTING S3 UPLOAD PROCESS ===========');
-      console.log('Upload parameters:', { fileName, contentType, clinicId, clinicName });
+      console.log('Upload parameters:', { fileName, contentType, clinicId, clinicName, clinicType });
       console.log('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
       console.log('ENV Check:', {
         accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
@@ -58,14 +82,14 @@ class S3Service {
       console.log('Generated unique filename:', uniqueFileName);
 
       // Generate the full path including the clinic-specific folder
-      const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
+      const folderPath = this.getClinicPhotoPath(clinicId, clinicName, clinicType);
       const fullPath = `${folderPath}/${uniqueFileName}`;
       console.log('IMPORTANT - Full path for S3 object:', fullPath);
       console.log('Clinic folder path:', folderPath);
       console.log('Folder structure will be:', {
         bucket: s3Config.bucket,
         mainFolder: 'clinic-photos',
-        clinicFolder: `${clinicId}-${clinicName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`.replace(/-+/g, '-').replace(/^-|-$/g, ''),
+        clinicFolder: this.getClinicPhotoPath(clinicId, clinicName, clinicType).split('clinic-photos/')[1],
         filename: uniqueFileName
       });
 
@@ -188,10 +212,11 @@ class S3Service {
    * List all photos for a specific clinic
    * @param {string} clinicId - The ID of the clinic
    * @param {string} clinicName - The name of the clinic
+   * @param {string} clinicType - The type of the clinic (optional)
    * @returns {Promise<Array>} - Array of photo objects with urls and keys
    */
-  async listClinicPhotos(clinicId, clinicName) {
-    const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
+  async listClinicPhotos(clinicId, clinicName, clinicType) {
+    const folderPath = this.getClinicPhotoPath(clinicId, clinicName, clinicType);
     const params = {
       Bucket: s3Config.bucket,
       Prefix: folderPath + '/'
@@ -242,11 +267,12 @@ class S3Service {
    * @param {string} clinicName - The name of the clinic
    * @param {string} fileName - The file name
    * @param {number} expiryTime - URL expiry time in seconds (default: 1 hour)
+   * @param {string} clinicType - The type of the clinic (optional)
    * @returns {Promise<string>} - The signed URL
    */
-  async getClinicPhotoSignedUrl(clinicId, clinicName, fileName, expiryTime = 3600) {
+  async getClinicPhotoSignedUrl(clinicId, clinicName, fileName, expiryTime = 3600, clinicType) {
     try {
-      const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
+      const folderPath = this.getClinicPhotoPath(clinicId, clinicName, clinicType);
       const fullPath = `${folderPath}/${fileName}`;
 
       const params = {
