@@ -154,17 +154,11 @@ export const Clinics: React.FC<ClinicsProps> = ({
             Rejected
           </span>
         );
-      case 'pending_submission':
-        return (
-          <span className="px-3 py-1.5 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-full">
-            Pending Submission
-          </span>
-        );
       case 'pending':
       default:
         return (
           <span className="px-3 py-1.5 text-sm font-medium bg-yellow-100 text-yellow-800 rounded-full">
-            Pending
+            Pending Admin Approval
           </span>
         );
     }
@@ -173,7 +167,10 @@ export const Clinics: React.FC<ClinicsProps> = ({
   if (propIsLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="w-12 h-12 relative">
+          <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+        </div>
       </div>
     );
   }
@@ -261,29 +258,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
       </div>
 
               {/* Status Information Banner */}
-              {clinic.clinic_verification_status === 'pending_submission' && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">Clinic Submission Incomplete</h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>You have saved your clinic as a draft. Please note:</p>
-                        <ul className="list-disc list-inside mt-1.5 space-y-1">
-                          <li>Incomplete clinic submissions are saved for 30 days</li>
-                          <li>Click "View Submission" to see your clinic registration details</li>
-                          <li>You can delete this draft and start over if needed</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {clinic.clinic_verification_status === 'pending' && (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
                   <div className="flex">
@@ -368,36 +342,34 @@ export const Clinics: React.FC<ClinicsProps> = ({
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">
+            {/* View Submission Button */}
             <button
               onClick={() => navigate(`/clinic-preview/${clinic.clinic_id}`)}
-              className="flex-1 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-base font-medium flex items-center justify-center"
+              className="flex-1 flex items-center justify-center text-base font-medium px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
             >
-              <svg 
-                className="w-5 h-5 mr-2" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth="2" 
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth="2" 
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
+              <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
               View Submission
             </button>
+            
+            {/* Edit Clinic Button */}
+            <button
+              onClick={() => navigate(`/edit-clinic/${clinic.clinic_id}`)}
+              className="flex-1 flex items-center justify-center text-base font-medium px-4 py-3 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Clinic
+            </button>
+            
               {clinic.clinic_verification_status === 'verified' && (
               <button
                   onClick={() => handleArchiveClinic(clinic.clinic_id)}
                   disabled={actionLoading === clinic.clinic_id}
-                  className={`flex-1 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                  className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
                     actionLoading === clinic.clinic_id
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
@@ -410,7 +382,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
             <button
                   onClick={() => handleRestoreClinic(clinic.clinic_id)}
                   disabled={actionLoading === clinic.clinic_id}
-                  className={`flex-1 px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                  className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
                     actionLoading === clinic.clinic_id
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-green-50 text-green-600 hover:bg-green-100'
@@ -419,44 +391,18 @@ export const Clinics: React.FC<ClinicsProps> = ({
                   {actionLoading === clinic.clinic_id ? 'Restoring...' : 'Restore Clinic'}
                 </button>
               )}
-              {clinic.clinic_verification_status === 'pending_submission' && (
-                <button
-                  onClick={() => showDeleteConfirmation(clinic.clinic_id)}
-                  disabled={actionLoading === clinic.clinic_id}
-                  className={`flex-1 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 flex items-center justify-center space-x-2 border ${
-                    actionLoading === clinic.clinic_id
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                      : 'bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm hover:border-red-200 border-red-100'
-                  }`}
-                >
-                  <svg 
-                    className="w-5 h-5" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.75"
-                  >
-                    <path 
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                    />
-                  </svg>
-                  <span>{actionLoading === clinic.clinic_id ? 'Deleting Submission...' : 'Delete Clinic Submission'}</span>
-                </button>
-              )}
               {clinic.clinic_verification_status === 'pending' && (
                 <button
                   onClick={() => showDeleteConfirmation(clinic.clinic_id)}
                   disabled={actionLoading === clinic.clinic_id}
-                  className={`flex-1 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 flex items-center justify-center space-x-2 border ${
+                  className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
                     actionLoading === clinic.clinic_id
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                      : 'bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm hover:border-red-200 border-red-100'
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-red-50 text-red-600 hover:bg-red-100'
                   }`}
                 >
                   <svg 
-                    className="w-5 h-5" 
+                    className="h-5 w-5 mr-2" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -468,10 +414,10 @@ export const Clinics: React.FC<ClinicsProps> = ({
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
                     />
                   </svg>
-                  <span>{actionLoading === clinic.clinic_id ? 'Deleting Submission...' : 'Delete Clinic Submission'}</span>
-            </button>
-            )}
-          </div>
+                  Delete Submission
+                </button>
+              )}
+            </div>
         </div>
         ))
       )}

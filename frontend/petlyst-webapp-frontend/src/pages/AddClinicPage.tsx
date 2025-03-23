@@ -334,10 +334,10 @@ const AddClinicPage: React.FC = () => {
     navigate(exitDestination);
   };
 
-  // Save as draft and then navigate
+  // Navigate without saving
   const saveAndNavigate = () => {
     setShowExitConfirmation(false);
-    savePartialClinicData();
+    navigate(exitDestination);
   };
 
   // Cancel navigation and stay on the page
@@ -588,6 +588,12 @@ const AddClinicPage: React.FC = () => {
         return;
       }
       
+      // Validate establishment date is required
+      if (!formData.establishment_date || formData.establishment_date.trim() === '') {
+        setError('Please enter clinic establishment date');
+        return;
+      }
+      
       // Validate establishment date - check if it's in the future
       if (formData.establishment_date) {
         const currentDate = new Date();
@@ -602,8 +608,6 @@ const AddClinicPage: React.FC = () => {
           return;
         }
       }
-      
-      // Establishment date is now optional for partial submissions
     }
     // Check if address is provided in the locations step
     else if (currentStep === 'locations') {
@@ -1146,116 +1150,6 @@ const AddClinicPage: React.FC = () => {
     }
   };
 
-  // Save partial clinic data when user wants to leave the page
-  const savePartialClinicData = async () => {
-    try {
-      setLoading(true);
-
-      // Only require clinic name for partial submissions
-      if (!formData.name || formData.name.trim() === '') {
-        setError('Clinic name is required to save as draft');
-        setLoading(false);
-        return;
-      }
-
-      // Parse establishment_date into year and month if available
-      let establishmentYear = null;
-      let establishmentMonth = null;
-      
-      if (formData.establishment_date) {
-        // Format is typically YYYY-MM or YYYY-MM-DD
-        const dateParts = formData.establishment_date.split('-');
-        if (dateParts.length >= 2) {
-          establishmentYear = parseInt(dateParts[0], 10);
-          establishmentMonth = parseInt(dateParts[1], 10);
-        }
-      }
-      
-      const partialClinicData = {
-        clinic_name: formData.name,
-        clinic_type: formData.clinicType, 
-        clinic_address: formData.address || null,
-        clinic_phone: formData.phone_numbers.length > 0 ? formData.phone_numbers : null,
-        clinic_email: formData.email || null,
-        clinic_description: formData.biography || formData.description || null,
-        
-        // Location coordinates
-        latitude: formData.coordinates ? formData.coordinates.lat : null,
-        longitude: formData.coordinates ? formData.coordinates.lng : null,
-        
-        // Partial address data
-        province: formData.province || null,
-        district: formData.district || null,
-        
-        // Optional fields
-        social_media_links: formData.social_media_links || [],
-        
-        // Service fields
-        served_animal_types: formData.servedAnimalTypes || [],
-        medical_services: formData.medicalServices || [],  
-        additional_services: formData.additionalServices || [],
-        
-        // Appointment fields
-        available_days: formData.available_days.length > 0 ? formData.available_days : null,
-        emergency_available_days: formData.emergency_available_days || null,
-        opening_time: formData.opening_time || null,
-        closing_time: formData.closing_time || null,
-        show_phone_number: formData.showPhoneNumber,
-        show_mail_address: formData.showMailAddress,
-        allow_direct_messages: formData.allowDirectMessages,
-        allow_online_meetings: formData.allow_online_meetings || false,
-        
-        // Registration fields - if provided
-        tax_identification_number: formData.taxIdentificationNumber || null,
-        veterinary_license_number: formData.veterinaryLicenseNumber || null,
-        
-        // Make sure is_open_24_7 is sent as a boolean
-        is_open_24_7: Boolean(formData.is_open_24_7),
-        
-        // Partial submission data
-        establishment_date: formData.establishment_date || null,
-        establishment_year: establishmentYear,
-        establishment_month: establishmentMonth,
-        is_partial_submission: true,
-        verification_status: 'pending_submission'
-      };
-      
-      console.log('Saving partial clinic data with is_partial_submission flag:', partialClinicData.is_partial_submission);
-      
-      const storedToken = token || localStorage.getItem('token');
-      if (!storedToken) {
-        setError('Authentication token not found. Please try logging in again.');
-        setLoading(false);
-        return;
-      }
-
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-      
-      const response = await axios.post(
-        `${apiUrl}/api/clinics/add`,
-        partialClinicData,
-        {
-          headers: {
-            'Authorization': `Bearer ${storedToken}`
-          }
-        }
-      );
-
-      if (response.status === 201) {
-        console.log('Partial clinic data saved successfully:', response.data);
-        
-        // Navigate to dashboard with state to set the active tab
-        setFormModified(false);
-        navigate('/dashboard', { state: { activeView: 'clinics' } });
-      }
-    } catch (err: any) {
-      console.error('Partial clinic save error:', err.response || err);
-      setError(err.response?.data?.message || 'Failed to save clinic information. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle services change
   const handleServicesChange = (
     field: 'servedAnimalTypes' | 'medicalServices' | 'additionalServices',
@@ -1580,42 +1474,28 @@ const AddClinicPage: React.FC = () => {
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Unsaved Changes</h3>
                   <p className="text-sm text-gray-500">
-                    {formData.name 
-                      ? "Your clinic information hasn't been saved yet. Would you like to save your progress as a draft before leaving?"
-                      : "You have unsaved changes. Are you sure you want to leave this page? All your changes will be lost."}
+                    You have unsaved changes. Are you sure you want to leave this page? All your changes will be lost.
                   </p>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={cancelNavigation}
-                  className="mt-3 sm:mt-0 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium"
-              >
-                  Stay Here
-              </button>
-              
-                {formData.name && (
                 <button
-                  onClick={saveAndNavigate}
-                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium inline-flex items-center justify-center"
+                  onClick={cancelNavigation}
+                  className="mt-3 sm:mt-0 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors font-medium"
                 >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                  Save as Draft
+                  Stay Here
                 </button>
-              )}
               
-              <button
-                onClick={confirmNavigation}
+                <button
+                  onClick={confirmNavigation}
                   className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors font-medium inline-flex items-center justify-center"
-              >
+                >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Leave without Saving
-              </button>
+                  Leave Page
+                </button>
               </div>
             </div>
           </div>

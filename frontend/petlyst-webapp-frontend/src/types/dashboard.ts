@@ -1,6 +1,6 @@
 export type DashboardView = 'overview' | 'clinics';
 
-export type VerificationStatus = 'pending' | 'verified' | 'not_verified' | 'archived' | 'pending_submission';
+export type VerificationStatus = 'pending' | 'verified' | 'not_verified' | 'archived';
 
 export interface Clinic {
   clinic_id: string;

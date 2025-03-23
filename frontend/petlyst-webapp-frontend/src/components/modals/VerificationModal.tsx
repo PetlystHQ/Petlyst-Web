@@ -283,27 +283,32 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
             </div>
 
             <div className="mt-8">
-              <button
-                type="submit"
-                disabled={loading || success}
-                className={`w-full px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  loading || success
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } transition-colors duration-150 flex items-center justify-center`}
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit for Verification'
-                )}
-              </button>
+              {loading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="w-10 h-10 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-full py-2 mt-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 flex justify-center items-center"
+                  disabled={loading || success}
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 relative -ml-1 mr-3">
+                        <div className="absolute inset-0 rounded-full border-3 border-gray-400"></div>
+                        <div className="absolute inset-0 rounded-full border-3 border-t-white animate-spin"></div>
+                      </div>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
+                </button>
+              )}
               <p className="mt-2 text-xs text-center text-gray-500">
                 Verification process may take up to 24 hours
               </p>

@@ -601,9 +601,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         </div>
         
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-10 border border-gray-300 rounded-lg bg-gray-50">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            <p className="mt-4 text-sm text-gray-500">Harita yükleniyor...</p>
+          <div className="flex justify-center items-center h-72 bg-gray-100 rounded-lg">
+            <div className="w-8 h-8 relative">
+              <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-indigo-600 animate-spin"></div>
+            </div>
           </div>
         ) : mapError ? (
           <div className="flex flex-col gap-4">

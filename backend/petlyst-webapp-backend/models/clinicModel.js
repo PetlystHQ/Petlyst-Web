@@ -340,7 +340,7 @@ class Clinic {
             // Map of field names to database column names
             const fieldMap = {
                 clinic_name: 'clinic_name',
-                clinic_address: 'clinic_address',
+                clinic_type: 'clinic_type',
                 clinic_email: 'clinic_email',
                 clinic_description: 'clinic_description',
                 available_days: 'available_days',
@@ -404,7 +404,7 @@ class Clinic {
     // Update clinic verification status (for admin)
     static async updateVerificationStatus(clinicId, newStatus) {
         try {
-            const validStatuses = ['pending', 'verified', 'not_verified', 'pending_submission'];
+            const validStatuses = ['pending', 'verified', 'not_verified'];
             
             if (!validStatuses.includes(newStatus)) {
                 throw new Error('Invalid verification status');
@@ -439,7 +439,7 @@ class Clinic {
         try {
             await client.query('BEGIN');
 
-            // First check if clinic exists and has a pending/pending_submission status
+            // First check if clinic exists and has a pending status
             const checkQuery = {
                 text: 'SELECT clinic_id, clinic_verification_status FROM "clinics" WHERE clinic_id = $1',
                 values: [clinicId]
@@ -452,8 +452,8 @@ class Clinic {
             }
             
             const clinic = checkResult.rows[0];
-            if (clinic.clinic_verification_status !== 'pending_submission' && clinic.clinic_verification_status !== 'pending') {
-                throw new Error('Only clinics with "pending_submission" or "pending" status can be deleted');
+            if (clinic.clinic_verification_status !== 'pending') {
+                throw new Error('Only clinics with "pending" status can be deleted');
             }
 
             // Delete related records in dependent tables in correct order to avoid foreign key constraints

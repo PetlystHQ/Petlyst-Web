@@ -4,13 +4,13 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 
-interface EditClinicModalProps {
+interface ViewClinicModalProps {
   isOpen: boolean;
   onClose: () => void;
   clinic: Clinic;
 }
 
-const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clinic }) => {
+const ViewClinicModal: React.FC<ViewClinicModalProps> = ({ isOpen, onClose, clinic }) => {
   const token = useSelector((state: RootState) => state.auth.token);
   const [photos, setPhotos] = useState<Array<{ url: string; key: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
     const fetchPhotos = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/clinics/${clinic.id}/photos`,
+          `http://localhost:3000/api/clinics/${clinic.clinic_id}/photos`,
           {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -37,10 +37,10 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
       }
     };
 
-    if (isOpen && clinic.id) {
+    if (isOpen && clinic.clinic_id) {
       fetchPhotos();
     }
-  }, [isOpen, clinic.id, token]);
+  }, [isOpen, clinic.clinic_id, token]);
 
   if (!isOpen) return null;
 
@@ -76,7 +76,7 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
           <div className="p-6 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <h3 className="text-xl font-semibold text-gray-900">{clinic.name}</h3>
+                <h3 className="text-xl font-semibold text-gray-900">{clinic.clinic_name}</h3>
                 <div className="flex items-center px-2 py-1 bg-gray-100 rounded-md">
                   <svg className="w-4 h-4 mr-1 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -99,7 +99,10 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
           <div className="p-6 border-b">
             {loading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="w-12 h-12 relative">
+                  <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+                </div>
               </div>
             ) : error ? (
               <div className="text-sm text-red-600 p-4 bg-red-50 rounded">{error}</div>
@@ -137,15 +140,15 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Address</h4>
-                <p className="mt-1 text-sm text-gray-900">{clinic.address || 'Not specified'}</p>
+                <p className="mt-1 text-sm text-gray-900">{clinic.clinic_address || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Phone Number</h4>
-                <p className="mt-1 text-sm text-gray-900">{clinic.phone_number || 'Not specified'}</p>
+                <p className="mt-1 text-sm text-gray-900">{clinic.clinic_phone_number || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Description</h4>
-                <p className="mt-1 text-sm text-gray-900">{clinic.description || 'No description available'}</p>
+                <p className="mt-1 text-sm text-gray-900">{clinic.clinic_description || 'No description available'}</p>
               </div>
             </div>
           </div>
@@ -166,4 +169,4 @@ const EditClinicModal: React.FC<EditClinicModalProps> = ({ isOpen, onClose, clin
   );
 };
 
-export default EditClinicModal; 
+export default ViewClinicModal; 
