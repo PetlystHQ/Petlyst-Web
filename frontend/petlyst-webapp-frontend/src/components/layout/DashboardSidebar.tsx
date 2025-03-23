@@ -25,10 +25,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const dispatch = useAppDispatch();
   const { user } = useAppSelector(state => state.auth);
   const isActive = (view: DashboardView) => currentView === view;
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = () => {
+    setLoggingOut(true);
     dispatch(logout());
-    navigate('/');
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
   };
 
   const isFeatureAccessible = verificationStatus === 'verified';
@@ -183,6 +187,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <span>Logout</span>
           </button>
         </div>
+
+        {loggingOut && (
+          <div className="flex items-center">
+            <div className="w-4 h-4 relative mr-1">
+              <div className="absolute inset-0 rounded-full border-2 border-gray-200"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin"></div>
+            </div>
+            <span>Logging out...</span>
+          </div>
+        )}
       </div>
     </>
   );

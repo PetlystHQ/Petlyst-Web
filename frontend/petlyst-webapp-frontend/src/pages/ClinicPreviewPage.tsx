@@ -121,6 +121,14 @@ const ClinicPreviewPage: React.FC = () => {
         
         const clinicData = { ...response.data.clinic };
         
+        // Debug working hours data
+        console.log('===== WORKING HOURS DATA DEBUG =====');
+        console.log('Opening Time:', clinicData.opening_time || 'Not Found');
+        console.log('Closing Time:', clinicData.closing_time || 'Not Found');
+        console.log('Is Open 24/7:', clinicData.is_open_24_7 || 'Not Found');
+        console.log('Slot Duration:', clinicData.slot_duration || 'Not Found');
+        console.log('Available Days:', clinicData.available_days || 'Not Found');
+        
         // Debug services data
         console.log('===== SERVICES DATA DEBUGGING =====');
         console.log('Animal types directly from API:', clinicData.animal_types);
@@ -213,8 +221,8 @@ const ClinicPreviewPage: React.FC = () => {
         
         console.log('Trimmed status:', clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '');
         
-        if (clinicData.clinic_verification_status !== 'pending' && clinicData.clinic_verification_status !== 'pending_submission') {
-          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending or pending_submission`);
+        if (clinicData.clinic_verification_status !== 'pending') {
+          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending`);
           setUnauthorized(true);
           setLoading(false);
           return;
@@ -279,6 +287,31 @@ const ClinicPreviewPage: React.FC = () => {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[month - 1] || '';
+  };
+
+  // Format time string to display in a more user-friendly format (e.g., "09:00" to "9:00 AM")
+  const formatTimeString = (timeString: string | null | undefined) => {
+    if (!timeString) return "Not specified";
+    
+    try {
+      // Parse the time string (format: "HH:MM")
+      const [hours, minutes] = timeString.split(':').map(Number);
+      
+      // Create a date object and set the time
+      const date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      
+      // Format the time in 12-hour format with AM/PM
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (err) {
+      console.error('Error formatting time:', err);
+      return timeString; // Return the original string if there's an error
+    }
   };
 
   const getDayName = (index: number) => {
@@ -374,7 +407,10 @@ const ClinicPreviewPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="w-16 h-16 relative mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+          </div>
           <p className="mt-4 text-gray-600">Loading clinic details...</p>
         </div>
       </div>
@@ -506,7 +542,9 @@ const ClinicPreviewPage: React.FC = () => {
                   ? 'bg-green-100 text-green-800'
                   : 'bg-gray-100 text-gray-800'
             }`}>
-              {clinic.clinic_verification_status.charAt(0).toUpperCase() + clinic.clinic_verification_status.slice(1)}
+              {clinic.clinic_verification_status === 'pending_submission' 
+                ? 'Incomplete Submission' 
+                : clinic.clinic_verification_status.charAt(0).toUpperCase() + clinic.clinic_verification_status.slice(1)}
             </span>
           </div>
         </div>
@@ -557,7 +595,10 @@ const ClinicPreviewPage: React.FC = () => {
                     {/* Loading indicator */}
                     {loadingImages[index] && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        <div className="w-8 h-8 relative">
+                          <div className="absolute inset-0 rounded-full border-3 border-gray-200"></div>
+                          <div className="absolute inset-0 rounded-full border-3 border-t-blue-500 animate-spin"></div>
+                        </div>
                       </div>
                     )}
                     <img 
@@ -602,16 +643,6 @@ const ClinicPreviewPage: React.FC = () => {
                         : 'No province/district information available'}
                 </p>
               </div>
-              {(clinic.latitude !== undefined && clinic.longitude !== undefined) && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Coordinates</p>
-                  <p className="mt-1 text-lg font-semibold text-gray-900">
-                    {typeof clinic.latitude === 'number' && typeof clinic.longitude === 'number'
-                      ? `${clinic.latitude.toFixed(6)}, ${clinic.longitude.toFixed(6)}`
-                      : `${clinic.latitude}, ${clinic.longitude}`}
-                  </p>
-                </div>
-              )}
             </div>
             
             {/* Add Map Display */}
@@ -831,116 +862,140 @@ const ClinicPreviewPage: React.FC = () => {
         {/* Working Hours */}
         <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
           <div className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Working Hours</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-5">Working Hours</h2>
             
-            {/* Add emergency service status indicator */}
-            {clinic.has_emergency_service && (
-              <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+            <div className="space-y-6">
+              {/* Status Indicators - Group all indicators in a flex container */}
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* 24/7 Status */}
+                {clinic.is_open_24_7 === 'Yes' && (
+                  <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-md flex-1">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-green-800">This clinic is open 24/7</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">This clinic provides emergency services</p>
+                )}
+
+                {/* Emergency Service Status */}
+                {clinic.has_emergency_service && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex-1">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-red-800">This clinic provides emergency services</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Appointment Duration */}
+                {clinic.slot_duration && (
+                  <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-md flex-1">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-indigo-800">
+                          Appointment Duration: {clinic.slot_duration} minutes
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            
-            {/* Add appointment duration information */}
-            {clinic.slot_duration && (
-              <div className="mb-4 bg-indigo-50 border-l-4 border-indigo-500 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-indigo-800">
-                      Appointment Duration: {clinic.slot_duration} minutes
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {clinic.is_open_24_7 === 'Yes' ? (
-              <div className="bg-green-50 border-l-4 border-green-500 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-green-800">This clinic is open 24/7</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Opening Time</p>
-                    <p className="mt-1 text-lg font-semibold text-gray-900">{clinic.opening_time}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Closing Time</p>
-                    <p className="mt-1 text-lg font-semibold text-gray-900">{clinic.closing_time}</p>
-                  </div>
-                </div>
+
+              {/* Appointment Hours Section */}
+              <div className="bg-gray-50 rounded-lg p-5 mt-6">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Appointment Hours</h3>
                 
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-500 mb-2">Working Days</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Opening Time</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-900">{formatTimeString(clinic.opening_time)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Closing Time</p>
+                      <p className="mt-1 text-lg font-semibold text-gray-900">{formatTimeString(clinic.closing_time)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            
+              {/* Working Days */}
+              <div className="bg-gray-50 rounded-lg p-5">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Working Days</h3>
+                <div className="flex flex-wrap gap-2">
+                  {clinic.available_days && clinic.available_days.map((isAvailable, index) => (
+                    <span key={index} className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                      isAvailable 
+                        ? 'bg-green-100 text-green-800 shadow-sm' 
+                        : 'bg-gray-100 text-gray-500 line-through'
+                    }`}>
+                      {getDayName(index)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Emergency Service Days */}
+              {clinic.emergency_available_days && clinic.emergency_available_days.some(day => day) && (
+                <div className="bg-gray-50 rounded-lg p-5">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">Emergency Service Days</h3>
                   <div className="flex flex-wrap gap-2">
-                    {clinic.available_days && clinic.available_days.map((isAvailable, index) => (
-                      <span key={index} className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        isAvailable 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-500 line-through'
-                      }`}>
-                        {getDayName(index)}
-                      </span>
+                    {clinic.emergency_available_days.map((isAvailable, index) => (
+                      isAvailable && (
+                        <span key={index} className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-800 shadow-sm">
+                          {getDayName(index)}
+                        </span>
+                      )
                     ))}
                   </div>
                 </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-2">Emergency Service Days</p>
-                  {clinic.emergency_available_days && clinic.emergency_available_days.some(day => day) ? (
-                    <div className="flex flex-wrap gap-2">
-                      {clinic.emergency_available_days.map((isAvailable, index) => (
-                        isAvailable && (
-                          <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                            {getDayName(index)}
-                          </span>
-                        )
-                      ))}
+              )}
+              
+              {/* Online Meetings Information */}
+              {clinic.allow_online_meetings && (
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
                     </div>
-                  ) : (
-                    <p className="text-gray-500">No emergency service days</p>
-                  )}
-                </div>
-              </>
-            )}
-            
-            {clinic.allow_online_meetings && (
-              <div className="mt-6 bg-blue-50 border-l-4 border-blue-500 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-blue-800">This clinic offers online appointments</p>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-blue-800">This clinic offers online appointments</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -1017,7 +1072,10 @@ const ClinicPreviewPage: React.FC = () => {
               {/* Modal loading indicator */}
               {modalImageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+                  <div className="w-16 h-16 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-gray-300"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-t-white animate-spin"></div>
+                  </div>
                 </div>
               )}
               <img 

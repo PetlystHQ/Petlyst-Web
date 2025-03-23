@@ -270,23 +270,61 @@ class S3Service {
    */
   async deleteClinicFolder(clinicId, clinicName) {
     try {
+      console.log(`=== S3 FOLDER DELETION STARTED ===`);
       console.log(`Attempting to delete all photos for clinic: ${clinicId}, ${clinicName}`);
       
       // First, list all objects in the clinic's folder
       const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
+      console.log('S3 folder path:', folderPath);
+      
+      // Verify the sanitized clinic name matches what we expect
+      const sanitizedClinicName = clinicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      console.log('Sanitized clinic name check:', {
+        original: clinicName,
+        sanitized: sanitizedClinicName,
+        expected: `clinic-photos/${clinicId}-${sanitizedClinicName}`
+      });
+      
       const listParams = {
         Bucket: s3Config.bucket,
         Prefix: folderPath + '/'
       };
       
+      console.log('S3 ListObjectsV2 params:', {
+        Bucket: listParams.Bucket,
+        Prefix: listParams.Prefix
+      });
+      
+      // Log the AWS configuration being used
+      console.log('S3 Configuration Check:', {
+        region: s3Config.region,
+        bucket: s3Config.bucket,
+        accessKeyExists: !!s3Config.accessKeyId,
+        secretKeyExists: !!s3Config.secretAccessKey
+      });
+      
       console.log('Listing objects with prefix:', folderPath + '/');
       
       const listedObjects = await s3.listObjectsV2(listParams).promise();
+      
+      console.log('S3 ListObjectsV2 response:', {
+        keyCount: listedObjects.KeyCount,
+        contentsLength: listedObjects.Contents ? listedObjects.Contents.length : 0,
+        isTruncated: listedObjects.IsTruncated
+      });
       
       if (!listedObjects.Contents || listedObjects.Contents.length === 0) {
         console.log(`No objects found in clinic folder: ${folderPath}`);
         return { deleted: 0 };
       }
+      
+      // Log the first few objects for verification
+      const previewObjects = listedObjects.Contents.slice(0, Math.min(5, listedObjects.Contents.length));
+      console.log('Preview of objects to delete:', previewObjects.map(obj => ({ Key: obj.Key, Size: obj.Size, LastModified: obj.LastModified })));
       
       console.log(`Found ${listedObjects.Contents.length} objects to delete in clinic folder`);
       
@@ -299,19 +337,36 @@ class S3Service {
         }
       };
       
+      console.log(`Sending DeleteObjects request for ${deleteParams.Delete.Objects.length} objects`);
+      
       // Delete all the objects in a single batch
       const deleteResult = await s3.deleteObjects(deleteParams).promise();
       
-      console.log(`Successfully deleted ${deleteResult.Deleted.length} objects from S3`);
+      console.log('S3 DeleteObjects response:', {
+        deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0,
+        errorsCount: deleteResult.Errors ? deleteResult.Errors.length : 0
+      });
+      
+      // Log any errors
+      if (deleteResult.Errors && deleteResult.Errors.length > 0) {
+        console.error('Errors occurred during batch deletion:', deleteResult.Errors);
+      }
+      
+      console.log(`Successfully deleted ${deleteResult.Deleted ? deleteResult.Deleted.length : 0} objects from S3`);
       
       // Check if we need to continue due to S3 listing limit (1000 objects)
       if (listedObjects.IsTruncated) {
         console.log('Object listing was truncated, continuing deletion');
-        await this.deleteClinicFolder(clinicId, clinicName);
+        const nextBatchResult = await this.deleteClinicFolder(clinicId, clinicName);
+        return { 
+          deleted: (deleteResult.Deleted ? deleteResult.Deleted.length : 0) + nextBatchResult.deleted 
+        };
       }
       
-      return { deleted: deleteResult.Deleted.length };
+      console.log(`=== S3 FOLDER DELETION COMPLETED ===`);
+      return { deleted: deleteResult.Deleted ? deleteResult.Deleted.length : 0 };
     } catch (error) {
+      console.error('=== S3 FOLDER DELETION ERROR ===');
       console.error('Error deleting clinic folder from S3:', {
         error: error.message,
         code: error.code,

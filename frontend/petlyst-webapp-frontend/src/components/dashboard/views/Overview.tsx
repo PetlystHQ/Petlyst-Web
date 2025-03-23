@@ -9,14 +9,18 @@ interface OverviewProps {
   onAddClinic?: () => void;
   onViewChange?: (view: DashboardView) => void;
   hasSubmittedClinics?: boolean;
+  isUpdating?: boolean;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange, hasSubmittedClinics = false }) => {
+export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange, hasSubmittedClinics = false, isUpdating }) => {
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="w-12 h-12 relative">
+          <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+        </div>
       </div>
     );
   }
@@ -151,6 +155,15 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
           </button>
         </div>
       </div>
+
+      {isUpdating && (
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+          <div className="w-6 h-6 relative">
+            <div className="absolute inset-0 rounded-full border-3 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-3 border-t-blue-500 animate-spin"></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

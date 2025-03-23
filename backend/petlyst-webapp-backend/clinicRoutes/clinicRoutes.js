@@ -461,7 +461,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       clinic_type: clinic_type_enum,
       clinic_email,
       clinic_operator_id,
-      clinic_verification_status: clinic_creation_status === 'incomplete' ? 'pending_submission' : 'pending',
+      clinic_verification_status: 'pending',
       clinic_description,
       establishment_year: establishment_date ? parseInt(establishment_date.split('-')[0], 10) : null,
       establishment_month: establishment_date ? parseInt(establishment_date.split('-')[1], 10) : null,
@@ -786,10 +786,10 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     const updatedClinic = await Clinic.updateClinic(clinicId, updateData);
 
     // Extract location-related fields from the request
-    const { province, district, clinic_address, latitude, longitude } = updateData;
+    const { province, district, address, latitude, longitude } = updateData;
     
     // If any location field is updated, also update the clinic_locations table
-    if (province || district || clinic_address || latitude || longitude) {
+    if (province || district || address || latitude || longitude) {
       const client = await pool.connect();
       try {
         // Check if a location record exists for this clinic
@@ -817,7 +817,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
             values: [
               province || null,
               district || null,
-              clinic_address || null,
+              address || null,
               latitude || null,
               longitude || null,
               clinicId
@@ -838,7 +838,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
               clinicId,
               province || null,
               district || null,
-              clinic_address || null,
+              address || null,
               latitude || null,
               longitude || null
             ]
@@ -877,10 +877,31 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
     
+    console.log('=== CLINIC DELETION REQUESTED ===');
+    console.log('Clinic ID:', clinicId);
+    console.log('Operator ID:', operator_id);
+    
     // Check if clinic exists and belongs to the operator
     const clinic = await Clinic.getClinicById(clinicId);
     
-    if (!clinic || clinic.clinic_operator_id !== operator_id) {
+    if (!clinic) {
+      console.log('Clinic not found in database');
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to delete this clinic'
+      });
+    }
+    
+    console.log('Clinic found:', {
+      id: clinic.clinic_id,
+      name: clinic.clinic_name,
+      operatorId: clinic.clinic_operator_id,
+      status: clinic.clinic_verification_status
+    });
+    
+    if (clinic.clinic_operator_id !== operator_id) {
+      console.log('Permission denied - user is not the clinic operator');
+      console.log(`Clinic operator: ${clinic.clinic_operator_id}, Request operator: ${operator_id}`);
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to delete this clinic'
@@ -888,37 +909,54 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     }
     
     // Verify that clinic is in a pending state before deletion
-    if (clinic.clinic_verification_status !== 'pending_submission' && clinic.clinic_verification_status !== 'pending') {
+    if (clinic.clinic_verification_status !== 'pending') {
+      console.log(`Invalid status for deletion: ${clinic.clinic_verification_status}`);
       return res.status(400).json({
         success: false,
-        message: 'Only clinics with pending or pending_submission status can be deleted'
+        message: 'Only clinics with pending status can be deleted'
       });
     }
     
     // Delete all photos from S3 bucket before deleting from database
     try {
+      console.log('=== STARTING S3 DELETION ===');
       console.log('Deleting all clinic photos from S3 for clinic:', {
         clinicId,
         clinicName: clinic.clinic_name
       });
       
+      // Get the folder path for verification
+      const folderPath = s3Service.getClinicPhotoPath(clinicId, clinic.clinic_name);
+      console.log('S3 folder path to delete:', folderPath);
+      
       const deleteResult = await s3Service.deleteClinicFolder(clinicId, clinic.clinic_name);
       console.log('S3 deletion result:', deleteResult);
     } catch (s3Error) {
-      console.error('Error deleting clinic photos from S3:', s3Error);
+      console.error('=== S3 DELETION ERROR ===');
+      console.error('Error details:', {
+        message: s3Error.message,
+        code: s3Error.code,
+        stack: s3Error.stack
+      });
       // We'll continue with database deletion even if S3 deletion fails
       // This ensures the clinic gets deleted even if there's an issue with S3
     }
     
+    console.log('=== STARTING DATABASE DELETION ===');
     // Delete clinic and all related data from database
     await Clinic.deleteClinic(clinicId);
+    console.log('=== DATABASE DELETION COMPLETED ===');
     
     res.status(200).json({
       success: true,
       message: "Clinic and all associated data deleted successfully"
     });
   } catch (error) {
-    console.error('Error deleting clinic:', error);
+    console.error('=== CLINIC DELETION ERROR ===');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack
+    });
     res.status(error.message.includes('Only clinics with') ? 400 : 500).json({ 
       success: false,
       message: error.message || 'Internal server error' 

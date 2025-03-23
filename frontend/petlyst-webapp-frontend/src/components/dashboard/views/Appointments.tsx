@@ -10,7 +10,10 @@ export const Appointments: React.FC<AppointmentsProps> = ({ appointments = [], i
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="w-12 h-12 relative">
+          <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
+        </div>
       </div>
     );
   }
