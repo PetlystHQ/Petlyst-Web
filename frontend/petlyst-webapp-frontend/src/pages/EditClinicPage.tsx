@@ -5,7 +5,7 @@ import axios from 'axios';
 import { RootState } from '../store';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
-import { VisualsForm } from '../components/clinic/forms/VisualsForm';
+import { EditVisuals } from '../components/clinic/forms/EditVisuals';
 
 const EditClinicPage: React.FC = () => {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -21,13 +21,6 @@ const EditClinicPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('basic');
   const [formModified, setFormModified] = useState(false);
   const [contactValid, setContactValid] = useState(true);
-  
-  // Photo states
-  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
-  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
-  const [photoLoading, setPhotoLoading] = useState(false);
-  const [existingPhotos, setExistingPhotos] = useState<any[]>([]);
-  const [photosToDelete, setPhotosToDelete] = useState<string[]>([]);
   
   // Fetch clinic data
   useEffect(() => {
@@ -98,15 +91,6 @@ const EditClinicPage: React.FC = () => {
             } : undefined
           });
           
-          // Load existing photos if available
-          if (clinic.photos && clinic.photos.length > 0) {
-            setExistingPhotos(clinic.photos);
-            
-            // Create preview URLs for existing photos
-            const photoUrls = clinic.photos.map((photo: any) => photo.url);
-            setPhotoPreviewUrls(photoUrls);
-          }
-          
           setFormModified(false);
         } else {
           setError('No clinic data found');
@@ -137,49 +121,6 @@ const EditClinicPage: React.FC = () => {
     } : null);
     
     setFormModified(true);
-  };
-  
-  // Handle photo selection
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFormModified(true);
-      
-      // Convert FileList to array and concat with existing selected photos
-      const newPhotos = Array.from(e.target.files);
-      setSelectedPhotos(prev => [...prev, ...newPhotos]);
-      
-      // Create preview URLs for the new photos
-      const newPreviewUrls = newPhotos.map(file => URL.createObjectURL(file));
-      setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    }
-  };
-  
-  // Handle removing a photo
-  const handleRemovePhoto = (index: number) => {
-    setFormModified(true);
-    
-    // Check if this is an existing photo
-    if (index < existingPhotos.length) {
-      // Mark for deletion on the server
-      const photoToDelete = existingPhotos[index];
-      setPhotosToDelete(prev => [...prev, photoToDelete.id]);
-      
-      // Remove from existing photos array
-      const updatedExistingPhotos = [...existingPhotos];
-      updatedExistingPhotos.splice(index, 1);
-      setExistingPhotos(updatedExistingPhotos);
-    } else {
-      // Remove from selected photos array (new uploads)
-      const newIndex = index - existingPhotos.length;
-      const updatedPhotos = [...selectedPhotos];
-      updatedPhotos.splice(newIndex, 1);
-      setSelectedPhotos(updatedPhotos);
-    }
-    
-    // Remove preview URL
-    const updatedPreviewUrls = [...photoPreviewUrls];
-    updatedPreviewUrls.splice(index, 1);
-    setPhotoPreviewUrls(updatedPreviewUrls);
   };
   
   // Save clinic data
@@ -247,40 +188,16 @@ const EditClinicPage: React.FC = () => {
         // Ensure phone_numbers is in the right format for the API
         clinic_phone: formData.phone_numbers,
         social_media: formData.social_media_links,
-        // Add photos to delete if needed
-        photos_to_delete: photosToDelete
       };
       
       // Log the full request data
       console.log('Request data:', requestData);
       
-      // First update clinic data
       const response = await axios.put(`${apiUrl}/api/clinics/${clinicId}`, requestData, {
         headers: {
           'Authorization': `Bearer ${token || localStorage.getItem('token')}`
         }
       });
-      
-      // If we're in the photos tab and have new photos to upload
-      if (activeTab === 'photos' && selectedPhotos.length > 0) {
-        setPhotoLoading(true);
-        // Upload photos
-        const formDataPhotos = new FormData();
-        selectedPhotos.forEach(photo => {
-          formDataPhotos.append('photos', photo);
-        });
-        
-        await axios.post(`${apiUrl}/api/clinics/${clinicId}/photos`, formDataPhotos, {
-          headers: {
-            'Authorization': `Bearer ${token || localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        // After successful upload, reset selected photos
-        setSelectedPhotos([]);
-        setPhotoLoading(false);
-      }
       
       if (response.status === 200) {
         setSuccess('Clinic updated successfully');
@@ -772,6 +689,30 @@ const EditClinicPage: React.FC = () => {
               </div>
             )}
             
+            {/* Photos Tab */}
+            {activeTab === 'photos' && formData && (
+              <div className="space-y-6">
+                <EditVisuals 
+                  clinicId={clinicId || ''}
+                  clinicName={formData.name || ''}
+                  clinicType={formData.clinicType || 'Veterinary Clinic'}
+                  token={token || localStorage.getItem('token') || ''}
+                  onPhotoChange={() => {
+                    // Refresh data or show success message if needed
+                    setSuccess('Clinic photos updated successfully');
+                    setTimeout(() => {
+                      setSuccess(null);
+                    }, 3000);
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Other tabs */}
+            {(activeTab !== 'basic' && activeTab !== 'location' && activeTab !== 'contact' && activeTab !== 'photos') && (
+              <p className="text-gray-500">This tab content will be implemented in the next phase.</p>
+            )}
+            
             {/* Contact Tab */}
             {activeTab === 'contact' && formData && (
               <div className="space-y-6">
@@ -1005,31 +946,6 @@ const EditClinicPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
-            
-            {/* Photos Tab */}
-            {activeTab === 'photos' && formData && (
-              <div className="space-y-6">
-                <VisualsForm
-                  selectedPhotos={selectedPhotos}
-                  photoPreviewUrls={photoPreviewUrls}
-                  handlePhotoSelect={handlePhotoSelect}
-                  handleRemovePhoto={handleRemovePhoto}
-                  hasExistingClinic={false}
-                  loading={loading || saving || photoLoading}
-                  error={error || ''}
-                  setError={setError}
-                  isEditMode={true}
-                />
-              </div>
-            )}
-            
-            {/* Other tabs */}
-            {(activeTab !== 'basic' && 
-              activeTab !== 'location' && 
-              activeTab !== 'contact' &&
-              activeTab !== 'photos') && (
-              <p className="text-gray-500">This tab content will be implemented in the next phase.</p>
             )}
           </div>
         </div>

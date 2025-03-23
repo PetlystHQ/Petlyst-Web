@@ -971,6 +971,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     console.log('Request body:', {
       clinicId: req.body.clinicId,
       clinicName: req.body.clinicName,
+      clinicType: req.body.clinicType,
       operatorId: req.user?.userId
     });
     console.log('File info:', req.file ? {
@@ -984,7 +985,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
       authorization: req.headers['authorization'] ? 'Bearer token exists' : 'No token'
     });
     
-    const { clinicId, clinicName } = req.body;
+    const { clinicId, clinicName, clinicType } = req.body;
     const photo = req.file;
     const operator_id = req.user.userId;
 
@@ -1037,15 +1038,34 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         fileSize: photo.size,
         mimeType: photo.mimetype,
         clinicId: numericClinicId,
-        clinicName
+        clinicName,
+        clinicType
       });
 
+      // Get the clinic type from database if not provided in request
+      let dbClinicType = clinicType;
+      if (!dbClinicType) {
+        const getClinicTypeQuery = `
+          SELECT clinic_type FROM clinics WHERE clinic_id = $1
+        `;
+        const clinicTypeResult = await pool.query(getClinicTypeQuery, [numericClinicId]);
+        dbClinicType = clinicTypeResult.rows[0]?.clinic_type || 'veterinary_clinic';
+      }
+      
+      // Convert database clinic_type to display format
+      const formattedClinicType = dbClinicType === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
+      
       // S3Service'in oluşturacağı path'i önceden hesaplayalım
       const s3ServiceInstance = require('../aws/s3Service');
-      const predictedFolderPath = s3ServiceInstance.getClinicPhotoPath(numericClinicId.toString(), clinicName);
+      const predictedFolderPath = s3ServiceInstance.getClinicPhotoPath(
+        numericClinicId.toString(), 
+        clinicName,
+        formattedClinicType
+      );
       
       console.log('PREDICTED S3 PATH:', predictedFolderPath);
       console.log('Clinic name provided:', clinicName);
+      console.log('Clinic type provided/fetched:', formattedClinicType);
       console.log('Clinic name after sanitization:', clinicName
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
@@ -1057,7 +1077,8 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         photo.originalname,
         photo.mimetype,
         numericClinicId.toString(),
-        clinicName
+        clinicName,
+        formattedClinicType
       );
 
       console.log('S3 upload successful:', result);
@@ -1076,14 +1097,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         RETURNING *
       `;
       
-      // Önce clinic'in type bilgisini alalım
-      const getClinicTypeQuery = `
-        SELECT clinic_type FROM clinics WHERE clinic_id = $1
-      `;
-      const clinicTypeResult = await pool.query(getClinicTypeQuery, [numericClinicId]);
-      const clinicType = clinicTypeResult.rows[0]?.clinic_type || 'veterinary_clinic'; // Default değer
-      
-      const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, clinicType]);
+      const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, dbClinicType]);
       console.log('Database insert successful:', dbResult.rows[0]);
 
       res.status(200).json({
@@ -1120,7 +1134,7 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
-      SELECT clinic_id, clinic_name 
+      SELECT clinic_id, clinic_name, clinic_type
       FROM clinics 
       WHERE clinic_id = $1 AND clinic_operator_id = $2
     `;
@@ -1133,6 +1147,10 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
       });
     }
 
+    const clinic = checkResult.rows[0];
+    // Convert database clinic_type to display format for S3 folder path
+    const formattedClinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
+    
     // Get photos from clinicalbum table
     const getPhotosQuery = `
       SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
@@ -1142,6 +1160,15 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
     `;
     
     const photosResult = await pool.query(getPhotosQuery, [clinicId]);
+    
+    // Log information about the clinic and photos
+    console.log('Fetching photos for clinic:', {
+      clinicId: clinic.clinic_id,
+      clinicName: clinic.clinic_name,
+      clinicType: clinic.clinic_type,
+      formattedClinicType,
+      photoCount: photosResult.rows.length
+    });
     
     res.status(200).json({
       success: true,
@@ -1167,7 +1194,7 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
-      SELECT clinic_id, clinic_name, clinic_verification_status 
+      SELECT clinic_id, clinic_name, clinic_type, clinic_verification_status 
       FROM clinics 
       WHERE clinic_id = $1 AND clinic_operator_id = $2
     `;
@@ -1181,6 +1208,8 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
     }
 
     const clinic = checkResult.rows[0];
+    // Convert database clinic_type to display format for S3 folder path
+    const formattedClinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
 
     // Find the photo in clinicalbum
     const findPhotoQuery = `
@@ -1202,6 +1231,15 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
 
     // Parse the S3 URL to get the key
     const s3Key = clinic_album_photo_url.split('.amazonaws.com/')[1];
+    
+    console.log('Deleting photo:', {
+      photoId,
+      clinicId,
+      clinicName: clinic.clinic_name,
+      clinicType: clinic.clinic_type,
+      formattedClinicType,
+      s3Key
+    });
 
     // Delete from S3
     try {
