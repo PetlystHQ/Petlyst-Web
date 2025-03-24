@@ -781,6 +781,26 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     if (['verified', 'archived'].includes(clinic.clinic_verification_status)) {
       updateData.clinic_verification_status = 'pending';
     }
+    
+    // Debug log: Randevu süresi değerini kontrol et
+    console.log('Clinic update received. Raw data from frontend:', {
+      clinicId,
+      clinic_time_slots: updateData.clinic_time_slots,
+      is_open_24_7: updateData.is_open_24_7
+    });
+    
+    // clinic_time_slots değerinin sayı olduğundan emin olalım
+    if (updateData.clinic_time_slots !== undefined) {
+      if (typeof updateData.clinic_time_slots === 'string') {
+        updateData.clinic_time_slots = parseInt(updateData.clinic_time_slots, 10);
+      }
+      
+      if (isNaN(updateData.clinic_time_slots)) {
+        updateData.clinic_time_slots = 60; // Varsayılan değer
+      }
+      
+      console.log('Processed clinic_time_slots value:', updateData.clinic_time_slots);
+    }
 
     // Update clinic
     const updatedClinic = await Clinic.updateClinic(clinicId, updateData);
@@ -1097,7 +1117,23 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         RETURNING *
       `;
       
-      const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, dbClinicType]);
+      // Ensure clinic_type is in the correct enum format for the database
+      // The database expects 'veterinary_clinic' or 'animal_hospital', not 'Veterinary Clinic'
+      let correctClinicType = dbClinicType;
+      if (typeof dbClinicType === 'string') {
+        if (dbClinicType === 'Veterinary Clinic') {
+          correctClinicType = 'veterinary_clinic';
+        } else if (dbClinicType === 'Animal Hospital') {
+          correctClinicType = 'animal_hospital';
+        }
+      }
+      
+      console.log('Saving photo with clinic_type:', {
+        original: dbClinicType,
+        corrected: correctClinicType
+      });
+      
+      const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, correctClinicType]);
       console.log('Database insert successful:', dbResult.rows[0]);
 
       res.status(200).json({

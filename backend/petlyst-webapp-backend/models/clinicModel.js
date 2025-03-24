@@ -356,7 +356,9 @@ class Clinic {
                 clinic_creation_status: 'clinic_creation_status',
                 tax_identification_number: 'tax_identification_number',
                 veterinary_license_number: 'veterinary_license_number',
-                allow_online_meetings: 'allow_online_meetings'
+                allow_online_meetings: 'allow_online_meetings',
+                clinic_time_slots: 'clinic_time_slots',
+                is_open_24_7: 'is_open_24_7'
             };
 
             // Build update fields and values arrays
