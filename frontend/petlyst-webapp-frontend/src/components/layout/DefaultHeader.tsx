@@ -57,7 +57,13 @@ const DefaultHeader: React.FC = () => {
               />
                 <span className="text-2xl font-bold text-blue-600">Petlyst</span>
               </Link>
-              {!isPetOwnerPage && <span className="ml-4 text-base font-large text-gray-600">Enterprise</span>}
+              {!isPetOwnerPage && (
+                <div className="ml-4 flex items-center">
+                  <span className="text-base font-semibold text-gray-800 bg-gray-100 px-3 py-1 rounded-md border-l-4 border-blue-600 shadow-sm">
+                    Enterprise
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
