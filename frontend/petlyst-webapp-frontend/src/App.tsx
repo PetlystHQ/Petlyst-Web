@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import store from './store';
 import DefaultHeader from './components/layout/DefaultHeader';
 import HomePage from './pages/HomePage';
+import PetOwnerHomePage from './pages/PetOwnerHomePage';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import AddClinicPage from './pages/AddClinicPage';
@@ -27,6 +28,7 @@ const AppContent: React.FC = () => {
       {!isDashboard && !isAdminRoute && !isClinicPreview && <DefaultHeader />}
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/pet-owner-home" element={<PetOwnerHomePage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
