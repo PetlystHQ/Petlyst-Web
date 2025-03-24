@@ -193,15 +193,25 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     try {
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
       
-      // Create full clinic name with type for folder consistency
-      const fullClinicName = createFullClinicName(clinicName, clinicType);
+      // SADECE klinik ID ve adını gönder, tip ekleme (tip backend'de eklenecek)
+      const sanitizedClinicName = clinicName.toLowerCase().replace(/\s+/g, '-');
+      const folderName = `${clinicId}-${sanitizedClinicName}`;
+      
+      // Convert clinicType to database format
+      const dbFormatClinicType = clinicType === 'Animal Hospital' ? 'animal_hospital' : 'veterinary_clinic';
+      
+      console.log('Uploading photo with clinic type:', {
+        displayFormat: clinicType,
+        dbFormat: dbFormatClinicType,
+        folderPath: folderName
+      });
       
       const uploadPromises = selectedNewPhotos.map(async (photo, index) => {
         const formData = new FormData();
         formData.append('photo', photo);
         formData.append('clinicId', clinicId.toString());
-        formData.append('clinicName', fullClinicName);
-        formData.append('clinicType', clinicType);
+        formData.append('clinicName', folderName);
+        formData.append('clinicType', dbFormatClinicType); // Use database format
         
         return axios.post(`${apiUrl}/api/clinics/upload-photo`, formData, {
           headers: {
@@ -240,11 +250,9 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
   
   // Helper function to create full clinic name with type
   const createFullClinicName = (name: string, type: string): string => {
-    const baseClinicName = name.trim();
-    const clinicTypeSuffix = type === 'Animal Hospital' ? 'animal-hospital' : 'veterinary-clinic';
-    
-    // Create folder name in the same format as the existing folder
-    return `${baseClinicName.toLowerCase().replace(/\s+/g, '-')}-${clinicTypeSuffix}`;
+    // SADECE klinik ID ve adını kullan
+    const sanitizedName = name.trim().toLowerCase().replace(/\s+/g, '-');
+    return `${clinicId}-${sanitizedName}`;
   };
   
   // Remove a newly selected photo (not yet uploaded)

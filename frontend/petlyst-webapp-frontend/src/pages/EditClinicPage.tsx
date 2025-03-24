@@ -7,6 +7,8 @@ import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { EditVisuals } from '../components/clinic/forms/EditVisuals';
 import { EditServices } from '../components/clinic/forms/EditServices';
+import EditHours from '../components/clinic/forms/EditHours';
+import EditRegistration from '../components/clinic/forms/EditRegistration';
 
 const EditClinicPage: React.FC = () => {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -23,91 +25,122 @@ const EditClinicPage: React.FC = () => {
   const [formModified, setFormModified] = useState(false);
   const [contactValid, setContactValid] = useState(true);
   
-  // Fetch clinic data
-  useEffect(() => {
-    const fetchClinicData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-        const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
-          headers: {
-            'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-          }
-        });
-        
-        if (response.data && response.data.clinic) {
-          // Transform API data to match form data structure
-          const clinic = response.data.clinic;
-          
-          // Process clinic name to remove the type at the end
-          let clinicName = clinic.clinic_name || '';
-          const clinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
-          
-          // Remove clinic type from name if it exists at the end
-          if (clinicName.endsWith('Animal Hospital')) {
-            clinicName = clinicName.substring(0, clinicName.length - 'Animal Hospital'.length).trim();
-          } else if (clinicName.endsWith('Veterinary Clinic')) {
-            clinicName = clinicName.substring(0, clinicName.length - 'Veterinary Clinic'.length).trim();
-          }
-          
-          console.log('Extracted clinic name:', clinicName);
-          console.log('Clinic type:', clinicType);
-          
-          setFormData({
-            name: clinicName,
-            clinicType: clinicType,
-            biography: clinic.clinic_description || '',
-            establishment_date: clinic.establishment_year && clinic.establishment_month ? 
-              `${clinic.establishment_year}-${clinic.establishment_month.toString().padStart(2, '0')}` : '',
-            social_media_links: response.data.clinic.social_media || [],
-            province: clinic.province || '',
-            district: clinic.district || '',
-            address: clinic.clinic_address || '',
-            phone_numbers: clinic.phone_numbers || [],
-            email: clinic.clinic_email || '',
-            description: clinic.clinic_description || '',
-            showPhoneNumber: clinic.show_phone_number || false,
-            allowDirectMessages: clinic.allow_direct_messages || false,
-            showMailAddress: clinic.show_mail_address || false,
-            servedAnimalTypes: clinic.animal_types || [],
-            medicalServices: clinic.medical_services || [],
-            additionalServices: clinic.additional_services || [],
-            available_days: clinic.available_days ? 
-              clinic.available_days.map((day: boolean, index: number) => day ? index.toString() : null).filter(Boolean) : [],
-            emergency_available_days: clinic.emergency_available_days ?
-              clinic.emergency_available_days.map((day: boolean, index: number) => day ? index.toString() : null).filter(Boolean) : [],
-            has_emergency_service: clinic.has_emergency_service || false,
-            is_open_24_7: clinic.is_open_24_7 === 'Yes',
-            slot_duration: clinic.slot_duration || 60,
-            opening_time: clinic.opening_time || '',
-            closing_time: clinic.closing_time || '',
-            allow_online_meetings: clinic.allow_online_meetings || false,
-            taxIdentificationNumber: clinic.tax_identification_number || '',
-            veterinaryLicenseNumber: clinic.veterinary_license_number || '',
-            coordinates: clinic.latitude && clinic.longitude ? {
-              lat: typeof clinic.latitude === 'string' ? parseFloat(clinic.latitude) : clinic.latitude,
-              lng: typeof clinic.longitude === 'string' ? parseFloat(clinic.longitude) : clinic.longitude
-            } : undefined
-          });
-          
-          setFormModified(false);
-        } else {
-          setError('No clinic data found');
-        }
-      } catch (err: any) {
-        console.error('Error fetching clinic data:', err);
-        setError(err.response?.data?.message || 'Failed to load clinic data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Define fetchClinicData at component level so it can be reused
+  const fetchClinicData = async () => {
+    if (!clinicId) return;
+    
+    try {
+      setLoading(true);
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
+        headers: {
+          'Authorization': `Bearer ${token || localStorage.getItem('token')}`,
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        },
+        // Add timestamp to prevent browser caching
+        params: { _t: new Date().getTime() }
+      });
 
-    if (clinicId) {
-      fetchClinicData();
+      if (response.data && response.data.clinic) {
+        const clinic = response.data.clinic;
+        
+        // Clean data processing - Extract proper name and type
+        let clinicName = clinic.clinic_name || '';
+        let clinicType = 'Veterinary Clinic'; // Default
+        
+        // Check if clinic name contains the type and extract it
+        if (clinicName.includes('Animal Hospital')) {
+          clinicType = 'Animal Hospital';
+          clinicName = clinicName.replace('Animal Hospital', '').trim();
+        } else if (clinicName.includes('Veterinary Clinic')) {
+          clinicType = 'Veterinary Clinic';
+          clinicName = clinicName.replace('Veterinary Clinic', '').trim();
+        }
+        
+        console.log('Extracted clinic name:', clinicName);
+        console.log('Clinic type:', clinicType);
+        
+        // ÖNEMLİ: 24/7 durumu ve çalışma günleri için iyileştirme
+        // Veritabanından gelen değerleri doğrudan kullan, 24/7 değeri Yes olsa bile override etme
+        const available_days = processDaysFromBackend(clinic.available_days);
+        const emergency_available_days = processDaysFromBackend(clinic.emergency_available_days);
+        
+        // Randevu süresi değerini doğru şekilde işle ve konsola yazdır
+        let slotDuration = 60; // Varsayılan değer
+        
+        // Veritabanından gelen değerin detaylı kontrolü
+        if (clinic.clinic_time_slots !== null && clinic.clinic_time_slots !== undefined) {
+          if (typeof clinic.clinic_time_slots === 'string') {
+            slotDuration = parseInt(clinic.clinic_time_slots, 10);
+          } else if (typeof clinic.clinic_time_slots === 'number') {
+            slotDuration = clinic.clinic_time_slots;
+          }
+          
+          // NaN kontrolü
+          if (isNaN(slotDuration)) {
+            slotDuration = 60;
+          }
+        }
+        
+        console.log('Database randevu süresi:', clinic.clinic_time_slots, 'İşlenmiş değer:', slotDuration);
+        
+        setFormData({
+          name: clinicName,
+          clinicType: clinicType,
+          biography: clinic.clinic_description || '',
+          establishment_date: clinic.establishment_year && clinic.establishment_month ? 
+            `${clinic.establishment_year}-${clinic.establishment_month.toString().padStart(2, '0')}` : '',
+          social_media_links: response.data.clinic.social_media || [],
+          province: clinic.province || '',
+          district: clinic.district || '',
+          address: clinic.clinic_address || '',
+          phone_numbers: clinic.phone_numbers || [],
+          email: clinic.clinic_email || '',
+          description: clinic.clinic_description || '',
+          showPhoneNumber: clinic.show_phone_number || false,
+          allowDirectMessages: clinic.allow_direct_messages || false,
+          showMailAddress: clinic.show_mail_address || false,
+          servedAnimalTypes: clinic.animal_types || [],
+          medicalServices: clinic.medical_services || [],
+          additionalServices: clinic.additional_services || [],
+          available_days: available_days,
+          emergency_available_days: emergency_available_days,
+          has_emergency_service: emergency_available_days.length > 0,
+          is_open_24_7: clinic.is_open_24_7 === 'Yes',
+          // 'clinic_time_slots' veritabanı alanının doğru işlenmiş değerini kullan
+          slot_duration: slotDuration,
+          opening_time: clinic.opening_time || '',
+          closing_time: clinic.closing_time || '',
+          allow_online_meetings: clinic.allow_online_meetings || false,
+          taxIdentificationNumber: clinic.tax_identification_number || '',
+          veterinaryLicenseNumber: clinic.veterinary_license_number || '',
+          coordinates: clinic.latitude && clinic.longitude ? {
+            lat: parseFloat(clinic.latitude),
+            lng: parseFloat(clinic.longitude)
+          } : undefined
+        });
+      }
+    } catch (err: any) {
+      console.error('Error fetching clinic data:', err);
+      setError(err.response?.data?.message || 'Failed to load clinic information');
+    } finally {
+      setLoading(false);
     }
-  }, [clinicId, token]);
+  };
+  
+  // Helper function to get day name by index
+  const getDayNameByIndex = (index: number): string => {
+    // Backend indeks: 0=Sunday, 1=Monday, 2=Tuesday, ...
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[index] || '';
+  };
+
+  // Fetch clinic data on component mount and when activeTab changes
+  useEffect(() => {
+    fetchClinicData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinicId, token, activeTab]); // Add activeTab dependency to refetch when tab changes
   
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -131,6 +164,60 @@ const EditClinicPage: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
+      
+      // Only validate fields based on the current tab
+      // This prevents "Clinic Name Required" errors when editing hours or registration
+      if (activeTab === 'basic') {
+        // Validate basic info when on basic tab
+        if (!formData.name || formData.name.trim() === '') {
+          setError('Please enter a clinic name');
+          setSaving(false);
+          return;
+        }
+        
+        // Validate establishment date if provided
+        if (formData.establishment_date) {
+          const isValid = validateEstablishmentDate(formData.establishment_date);
+          if (!isValid) {
+            setSaving(false);
+            return;
+          }
+        }
+      } else if (activeTab === 'location') {
+        // Validate location when on location tab
+        if (!formData.address || formData.address.trim() === '') {
+          setError('Please enter your clinic address');
+          setSaving(false);
+          return;
+        }
+      } else if (activeTab === 'contact') {
+        // Validate contact info
+        validateContactFields();
+        if (!contactValid) {
+          setSaving(false);
+          return;
+        }
+      } else if (activeTab === 'hours') {
+        // Only validate hours fields if needed
+        if (formData.opening_time && formData.closing_time && formData.opening_time >= formData.closing_time) {
+          setError('Opening time must be earlier than closing time');
+          setSaving(false);
+          return;
+        }
+      } else if (activeTab === 'registration') {
+        // Validate registration fields
+        if (formData.taxIdentificationNumber && formData.taxIdentificationNumber.length !== 10) {
+          setError('Tax identification number (VKN) must be exactly 10 characters');
+          setSaving(false);
+          return;
+        }
+        
+        if (formData.veterinaryLicenseNumber && formData.veterinaryLicenseNumber.length !== 10) {
+          setError('Veterinary license number must be exactly 10 characters');
+          setSaving(false);
+          return;
+        }
+      }
       
       // Parse establishment_date to year and month
       let establishment_year = null;
@@ -164,6 +251,35 @@ const EditClinicPage: React.FC = () => {
       console.log('Sending clinic_type:', clinic_type);
       console.log('Current clinicType in formData:', formData.clinicType);
       
+      // Mevcut available_days ve emergency_available_days verilerini kullan
+      // is_open_24_7 Yes olsa bile bu değerleri otomatik olarak değiştirme
+      const available_days = formData.available_days;
+      const emergency_available_days = formData.emergency_available_days;
+      
+      // Randevu süresini alıp doğru bir şekilde hazırla
+      // Number olduğundan emin ol ve string olma durumunda number'a çevir
+      // İlk önce tür kontrolü yapalım
+      let slotDuration = 60; // varsayılan değer
+      
+      if (formData.slot_duration) {
+        if (typeof formData.slot_duration === 'string') {
+          slotDuration = parseInt(formData.slot_duration, 10);
+        } else if (typeof formData.slot_duration === 'number') {
+          slotDuration = formData.slot_duration;
+        }
+      }
+      
+      // NaN kontrolü yapalım
+      if (isNaN(slotDuration)) {
+        slotDuration = 60; // Geçersiz değer durumunda varsayılan
+      }
+      
+      console.log('Randevu süresi gönderiliyor (düzeltilmiş):', {
+        rawValue: formData.slot_duration,
+        formattedValue: slotDuration,
+        type: typeof slotDuration
+      });
+      
       // Create request data
       const requestData = {
         clinic_name,
@@ -180,19 +296,32 @@ const EditClinicPage: React.FC = () => {
         opening_time: formData.opening_time,
         closing_time: formData.closing_time,
         is_open_24_7: formData.is_open_24_7 ? 'Yes' : 'No',
-        slot_duration: formData.slot_duration,
+        // Veritabanında 'clinic_time_slots' alanına slot_duration değerini gönder
+        clinic_time_slots: slotDuration,
         latitude: formData.coordinates?.lat,
         longitude: formData.coordinates?.lng,
         // Include establishment year and month instead of date
         establishment_year,
         establishment_month,
-        // Ensure phone_numbers is in the right format for the API
-        clinic_phone: formData.phone_numbers,
-        social_media: formData.social_media_links,
+        phone_numbers: formData.phone_numbers,
+        social_media_links: formData.social_media_links,
+        tax_identification_number: formData.taxIdentificationNumber,
+        veterinary_license_number: formData.veterinaryLicenseNumber,
+        // Format days correctly for backend
+        available_days: convertDaysToBoolean(available_days),
+        emergency_available_days: convertDaysToBoolean(emergency_available_days)
       };
       
       // Log the full request data
       console.log('Request data:', requestData);
+      
+      // Özel olarak slot_duration değerini konsola yazdıralım
+      console.log('Randevu süresi gönderilirken son durum:', {
+        formDataValue: formData.slot_duration,
+        processedValue: slotDuration,
+        requestDataValue: requestData.clinic_time_slots,
+        valueType: typeof requestData.clinic_time_slots
+      });
       
       const response = await axios.put(`${apiUrl}/api/clinics/${clinicId}`, requestData, {
         headers: {
@@ -201,8 +330,19 @@ const EditClinicPage: React.FC = () => {
       });
       
       if (response.status === 200) {
+        // Yanıtı detaylı olarak inceleyelim
+        console.log('Clinic update response:', {
+          status: response.status,
+          data: response.data,
+          updatedClinic: response.data.clinic,
+          receivedTimeSlots: response.data.clinic?.clinic_time_slots
+        });
+        
         setSuccess('Clinic updated successfully');
         setFormModified(false);
+        
+        // Reload the data to ensure we display the latest information
+        fetchClinicData();
         
         // Reset success message after 3 seconds
         setTimeout(() => {
@@ -326,7 +466,6 @@ const EditClinicPage: React.FC = () => {
     // Check if selected date is in the future
     if (selectedDate > currentDate) {
       setError("Establishment date cannot be in the future");
-      setFormModified(false);
       return false;
     }
     return true;
@@ -354,6 +493,47 @@ const EditClinicPage: React.FC = () => {
     
     // Ensure formModified is set to true
     setFormModified(true);
+  };
+  
+  // Convert days from string array ["monday", "tuesday", ...] to boolean array [true, true, false, ...]
+  const convertDaysToBoolean = (days: string[]): boolean[] => {
+    // Backend beklentisi: [Sunday, Monday, Tuesday, ...] sıralamasında boolean dizisi
+    // EditHours bileşeni Monday ile başlıyor, o yüzden burada doğru şekilde dönüştürüyoruz
+    const result = [false, false, false, false, false, false, false]; // 7 günlük boş dizi
+
+    // Her gün için doğru indeksi ayarla
+    days.forEach(day => {
+      switch(day) {
+        case 'sunday': result[0] = true; break;
+        case 'monday': result[1] = true; break;
+        case 'tuesday': result[2] = true; break;
+        case 'wednesday': result[3] = true; break;
+        case 'thursday': result[4] = true; break;
+        case 'friday': result[5] = true; break;
+        case 'saturday': result[6] = true; break;
+      }
+    });
+
+    return result;
+  };
+  
+  // Backend'den gelen boolean array'i EditHours bileşeninin beklediği string array'e dönüştürür
+  const processDaysFromBackend = (daysArray: boolean[] | undefined): string[] => {
+    if (!daysArray || !Array.isArray(daysArray)) return [];
+
+    const result: string[] = [];
+    
+    // Backend'den gelen array: [Sunday, Monday, Tuesday, ...] şeklinde
+    // Biz Monday, Tuesday, ... Sunday şeklinde string array'e çeviriyoruz
+    if (daysArray[0]) result.push('sunday');
+    if (daysArray[1]) result.push('monday');
+    if (daysArray[2]) result.push('tuesday');
+    if (daysArray[3]) result.push('wednesday');
+    if (daysArray[4]) result.push('thursday');
+    if (daysArray[5]) result.push('friday');
+    if (daysArray[6]) result.push('saturday');
+    
+    return result;
   };
   
   if (loading) {
@@ -726,8 +906,47 @@ const EditClinicPage: React.FC = () => {
               </div>
             )}
             
+            {/* Hours Tab */}
+            {activeTab === 'hours' && formData && (
+              <div className="space-y-6">
+                <EditHours 
+                  formData={{
+                    available_days: formData.available_days || [],
+                    emergency_available_days: formData.emergency_available_days || [],
+                    has_emergency_service: formData.has_emergency_service || false,
+                    is_open_24_7: formData.is_open_24_7 || false,
+                    slot_duration: formData.slot_duration || 60,
+                    opening_time: formData.opening_time || '09:00',
+                    closing_time: formData.closing_time || '17:00',
+                    allow_online_meetings: formData.allow_online_meetings || false
+                  }}
+                  updateField={updateField}
+                  loading={loading}
+                  isEditMode={true}
+                  setFormModified={setFormModified}
+                />
+              </div>
+            )}
+            
+            {/* Registration Tab */}
+            {activeTab === 'registration' && formData && (
+              <div className="space-y-6">
+                <EditRegistration 
+                  formData={{
+                    taxIdentificationNumber: formData.taxIdentificationNumber || '',
+                    veterinaryLicenseNumber: formData.veterinaryLicenseNumber || ''
+                  }}
+                  updateField={updateField}
+                  loading={loading}
+                  isEditMode={true}
+                />
+              </div>
+            )}
+            
             {/* Other tabs */}
-            {(activeTab !== 'basic' && activeTab !== 'location' && activeTab !== 'contact' && activeTab !== 'photos' && activeTab !== 'services') && (
+            {(activeTab !== 'basic' && activeTab !== 'location' && activeTab !== 'contact' && 
+              activeTab !== 'photos' && activeTab !== 'services' && activeTab !== 'hours' && 
+              activeTab !== 'registration') && (
               <p className="text-gray-500">This tab content will be implemented in the next phase.</p>
             )}
             

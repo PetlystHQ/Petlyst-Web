@@ -9,36 +9,45 @@ class S3Service {
    * @returns {string} - The folder path
    */
   getClinicPhotoPath(clinicId, clinicName, clinicType) {
-    // Check if the clinic name already includes a clinic type suffix
-    const hasVeterinaryClinic = clinicName.toLowerCase().endsWith('veterinary clinic');
-    const hasAnimalHospital = clinicName.toLowerCase().endsWith('animal hospital');
+    // ÖNEMLİ: Frontend'den gelen clinicName değeri zaten ID içeriyor olabilir
+    // Örnek: "74-sara-hane" şeklinde bir isim gelmiş olabilir
     
-    // If name already includes type, sanitize as is
-    if (hasVeterinaryClinic || hasAnimalHospital) {
-      // Sanitize clinic name (remove special characters and spaces)
+    // Frontend'den gelen isim zaten ID içeriyor mu kontrol et
+    const hasIdPrefix = clinicName.startsWith(`${clinicId}-`);
+    
+    // Eğer isim zaten ID ile başlıyorsa, olduğu gibi kullan
+    let folderName;
+    if (hasIdPrefix) {
+      console.log('Clinic name already contains ID prefix, using as is');
+      // Gelen isim zaten ID içeriyor, sanitize et ve kullan
+      folderName = clinicName
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    } else {
+      // Gelen isim ID içermiyor, ekle
+      console.log('Adding ID prefix to clinic name');
       const sanitizedClinicName = clinicName
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
-
-      return `clinic-photos/${clinicId}-${sanitizedClinicName}`;
+      
+      folderName = `${clinicId}-${sanitizedClinicName}`;
     }
     
-    // Otherwise, append the type (if provided)
-    let sanitizedClinicName = clinicName
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    
-    // Add clinic type suffix if provided
-    if (clinicType) {
+    // Klinik tipini ekle (sadece hiç yoksa)
+    if (clinicType && !folderName.includes('veterinary-clinic') && !folderName.includes('animal-hospital')) {
+      console.log('Adding clinic type suffix to folder name');
       const typeSuffix = clinicType.toLowerCase() === 'animal hospital' ? 'animal-hospital' : 'veterinary-clinic';
-      sanitizedClinicName = `${sanitizedClinicName}-${typeSuffix}`;
+      folderName = `${folderName}-${typeSuffix}`;
+    } else {
+      console.log('Folder name already contains clinic type or no type provided');
     }
-
-    return `clinic-photos/${clinicId}-${sanitizedClinicName}`;
+    
+    console.log('Final folder path:', `clinic-photos/${folderName}`);
+    return `clinic-photos/${folderName}`;
   }
 
   /**

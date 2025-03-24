@@ -453,22 +453,6 @@ export const EditServices: React.FC<EditServicesProps> = ({
           )}
         </div>
       )}
-      
-      {/* Tips Card */}
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-8">
-        <h4 className="text-sm font-medium text-blue-800 flex items-center">
-          <svg className="w-4 h-4 mr-1.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
-          </svg>
-          Tips for Managing Services
-        </h4>
-        <ul className="mt-2 text-sm text-blue-700 space-y-1 ml-5 list-disc">
-          <li>Select all animal types that your clinic is equipped to treat</li>
-          <li>Add more medical services to make your clinic more discoverable</li>
-          <li>Additional services can help distinguish your clinic from others</li>
-          <li>Keep your services up to date as your clinic's capabilities change</li>
-        </ul>
-      </div>
     </div>
   );
 };
