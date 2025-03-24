@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../../store';
 import axios from 'axios';
 import { Clinic } from '../../../types/dashboard';
+import './Clinics.css';
 
 interface ClinicsProps {
   isLoading?: boolean;
@@ -259,22 +260,36 @@ export const Clinics: React.FC<ClinicsProps> = ({
 
               {/* Status Information Banner */}
               {clinic.clinic_verification_status === 'pending' && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                      </svg>
+                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-yellow-200 rounded-lg p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                          <svg className="h-5 w-5 text-yellow-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.371 2.371 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976l2.61-3.045zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0zM1.5 8.5A.5.5 0 0 1 2 9v6h12V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5z" />
+                          </svg>
+                        </div>
+                        <div className="absolute -top-1 -right-1">
+                          <div className="h-4 w-4 bg-yellow-400 rounded-full flex items-center justify-center relative overflow-hidden">
+                            <div className="h-4 w-1.5 bg-white/50 absolute animate-spin-slow"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900">Clinic Approval in Progress</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Your clinic registration is being reviewed by administrators
+                        </p>
+                      </div>
                     </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">Clinic Registration Pending</h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>Your clinic registration is pending verification. Please note:</p>
-                        <ul className="list-disc list-inside mt-1.5 space-y-1">
-                          <li>Unverified clinics will be automatically removed after 72 hours</li>
-                          <li>Make sure all required information is complete and accurate</li>
-                          <li>You can edit your clinic details while waiting for verification</li>
-                        </ul>
+                    <div className="hidden md:block">
+                      <div className="inline-flex rounded-md bg-yellow-100 p-2">
+                        <div className="flex items-center space-x-2">
+                          <svg className="h-5 w-5 text-yellow-600 animate-pulse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs font-medium text-yellow-700">Pending Review</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -362,7 +377,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
               <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit Clinic
+              {clinic.clinic_verification_status === 'verified' ? 'Edit Clinic' : 'Edit Submission'}
             </button>
             
               {clinic.clinic_verification_status === 'verified' && (
@@ -375,6 +390,9 @@ export const Clinics: React.FC<ClinicsProps> = ({
                     : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                 }`}
               >
+                  <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
                   {actionLoading === clinic.clinic_id ? 'Archiving...' : 'Archive Clinic'}
               </button>
             )}
@@ -388,6 +406,9 @@ export const Clinics: React.FC<ClinicsProps> = ({
                     : 'bg-green-50 text-green-600 hover:bg-green-100'
                 }`}
               >
+                  <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
                   {actionLoading === clinic.clinic_id ? 'Restoring...' : 'Restore Clinic'}
                 </button>
               )}

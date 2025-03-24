@@ -309,7 +309,9 @@ const EditClinicPage: React.FC = () => {
         veterinary_license_number: formData.veterinaryLicenseNumber,
         // Format days correctly for backend
         available_days: convertDaysToBoolean(available_days),
-        emergency_available_days: convertDaysToBoolean(emergency_available_days)
+        emergency_available_days: convertDaysToBoolean(emergency_available_days),
+        // Her değişiklikte clinic_verification_status değerini 'pending' olarak ayarla
+        clinic_verification_status: 'pending'
       };
       
       // Log the full request data

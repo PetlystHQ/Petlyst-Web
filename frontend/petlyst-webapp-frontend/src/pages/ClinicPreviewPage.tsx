@@ -222,8 +222,8 @@ const ClinicPreviewPage: React.FC = () => {
         
         console.log('Trimmed status:', clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '');
         
-        if (clinicData.clinic_verification_status !== 'pending') {
-          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending`);
+        if (clinicData.clinic_verification_status !== 'pending' && clinicData.clinic_verification_status !== 'not_verified') {
+          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending or not_verified`);
           setUnauthorized(true);
           setLoading(false);
           return;
@@ -574,11 +574,15 @@ const ClinicPreviewPage: React.FC = () => {
                 ? 'bg-yellow-100 text-yellow-800' 
                 : clinic.clinic_verification_status === 'verified'
                   ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
+                  : clinic.clinic_verification_status === 'not_verified'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
             }`}>
               {clinic.clinic_verification_status === 'pending_submission' 
                 ? 'Incomplete Submission' 
-                : clinic.clinic_verification_status.charAt(0).toUpperCase() + clinic.clinic_verification_status.slice(1)}
+                : clinic.clinic_verification_status === 'not_verified'
+                  ? 'Rejected Submission'
+                  : clinic.clinic_verification_status.charAt(0).toUpperCase() + clinic.clinic_verification_status.slice(1)}
             </span>
           </div>
         </div>
