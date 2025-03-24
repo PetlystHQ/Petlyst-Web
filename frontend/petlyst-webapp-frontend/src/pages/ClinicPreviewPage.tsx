@@ -82,6 +82,7 @@ const ClinicPreviewPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingImages, setLoadingImages] = useState<{[key: number]: boolean}>({});
   const [modalImageLoading, setModalImageLoading] = useState(false);
+  const [clinicPhotos, setClinicPhotos] = useState<{url: string}[]>([]);
 
   useEffect(() => {
     const fetchClinicDetails = async () => {
@@ -242,6 +243,39 @@ const ClinicPreviewPage: React.FC = () => {
 
         console.log('Authorization checks passed, setting clinic data');
         setClinic(clinicData);
+        
+        // Klinik fotoğraflarını al
+        try {
+          console.log('Fetching clinic photos from clinicalbum');
+          const photosResponse = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/photos`, {
+            headers: {
+              'Authorization': `Bearer ${token || localStorage.getItem('token')}`
+            }
+          });
+          
+          console.log('Photos API response:', photosResponse.data);
+          
+          if (photosResponse.data.success && photosResponse.data.photos && photosResponse.data.photos.length > 0) {
+            // clinicalbum tablosundan gelen fotoğrafları URL'ye dönüştür
+            const photos = photosResponse.data.photos.map((photo: any) => ({
+              url: photo.clinic_album_photo_url
+            }));
+            
+            console.log('Processed photos:', photos);
+            setClinicPhotos(photos);
+            
+            // Yükleme durumlarını ayarla
+            const newLoadingState: {[key: number]: boolean} = {};
+            photos.forEach((_: any, index: number) => {
+              newLoadingState[index] = true;
+            });
+            setLoadingImages(newLoadingState);
+          }
+        } catch (photoErr: any) {
+          console.error('Error fetching clinic photos:', photoErr);
+          // Fotoğraflar yoksa devam et, sadece boş array kalır
+        }
+        
         setLoading(false);
       } catch (err: any) {
         console.error('===== ERROR FETCHING CLINIC DETAILS =====');
@@ -338,17 +372,17 @@ const ClinicPreviewPage: React.FC = () => {
 
   // Function to navigate to next photo
   const nextPhoto = () => {
-    if (clinic && clinic.photos && selectedPhotoIndex !== null) {
+    if (clinicPhotos.length > 0 && selectedPhotoIndex !== null) {
       setModalImageLoading(true); // Set loading state
-      setSelectedPhotoIndex((selectedPhotoIndex + 1) % clinic.photos.length);
+      setSelectedPhotoIndex((selectedPhotoIndex + 1) % clinicPhotos.length);
     }
   };
 
   // Function to navigate to previous photo
   const prevPhoto = () => {
-    if (clinic && clinic.photos && selectedPhotoIndex !== null) {
+    if (clinicPhotos.length > 0 && selectedPhotoIndex !== null) {
       setModalImageLoading(true); // Set loading state
-      setSelectedPhotoIndex((selectedPhotoIndex - 1 + clinic.photos.length) % clinic.photos.length);
+      setSelectedPhotoIndex((selectedPhotoIndex - 1 + clinicPhotos.length) % clinicPhotos.length);
     }
   };
 
@@ -392,16 +426,16 @@ const ClinicPreviewPage: React.FC = () => {
     console.error(`Failed to load image at index ${index}`);
   };
 
-  // Initialize loading state for images when clinic data is loaded
+  // Initialize loading state for images when photos is loaded
   useEffect(() => {
-    if (clinic && clinic.photos && clinic.photos.length > 0) {
+    if (clinicPhotos.length > 0) {
       const newLoadingState: {[key: number]: boolean} = {};
-      clinic.photos.forEach((_, index) => {
+      clinicPhotos.forEach((_, index) => {
         newLoadingState[index] = true;
       });
       setLoadingImages(newLoadingState);
     }
-  }, [clinic?.photos]);
+  }, [clinicPhotos]);
 
   if (loading) {
     return (
@@ -580,13 +614,13 @@ const ClinicPreviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Photos Gallery - Add this section */}
-        {clinic && clinic.photos && clinic.photos.length > 0 && (
+        {/* Photos Gallery */}
+        {clinicPhotos.length > 0 && (
           <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
             <div className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Clinic Photos</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {clinic.photos.map((photo, index) => (
+                {clinicPhotos.map((photo, index) => (
                   <div 
                     key={index} 
                     className="relative group cursor-pointer rounded-lg overflow-hidden h-48 bg-gray-100 transition transform hover:scale-105 hover:shadow-lg"
@@ -1028,7 +1062,7 @@ const ClinicPreviewPage: React.FC = () => {
       </div>
 
       {/* Photo Modal */}
-      {isModalOpen && clinic && clinic.photos && selectedPhotoIndex !== null && (
+      {isModalOpen && clinicPhotos.length > 0 && selectedPhotoIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={closePhotoModal}>
           <div className="relative max-w-6xl w-full p-2 md:p-4" onClick={e => e.stopPropagation()}>
             {/* Close button */}
@@ -1079,7 +1113,7 @@ const ClinicPreviewPage: React.FC = () => {
                 </div>
               )}
               <img 
-                src={clinic.photos[selectedPhotoIndex].url} 
+                src={clinicPhotos[selectedPhotoIndex].url} 
                 alt={`Clinic photo ${selectedPhotoIndex + 1}`} 
                 className={`max-w-full max-h-[90vh] object-contain transition-opacity duration-300 ${modalImageLoading ? 'opacity-0' : 'opacity-100'}`}
                 onLoad={() => setModalImageLoading(false)}
@@ -1089,7 +1123,7 @@ const ClinicPreviewPage: React.FC = () => {
             
             {/* Photo counter */}
             <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 py-2 px-4 bg-black bg-opacity-50 text-white rounded-full text-sm">
-              {selectedPhotoIndex + 1} / {clinic.photos.length}
+              {selectedPhotoIndex + 1} / {clinicPhotos.length}
             </div>
           </div>
         </div>
