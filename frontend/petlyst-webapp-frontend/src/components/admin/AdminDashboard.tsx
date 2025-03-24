@@ -20,6 +20,8 @@ interface PendingClinic {
     verification_status: string;
     operator_name: string;  // This comes from user_name
     operator_surname: string;  // This comes from user_surname
+    tax_identification_number: string;  // Added field
+    veterinary_license_number: string;  // Added field
 }
 
 const AdminDashboard: React.FC = () => {
@@ -78,7 +80,9 @@ const AdminDashboard: React.FC = () => {
                 description: clinic.clinic_description,
                 verification_status: clinic.clinic_verification_status,
                 operator_name: clinic.operator_name,
-                operator_surname: clinic.operator_surname
+                operator_surname: clinic.operator_surname,
+                tax_identification_number: clinic.tax_identification_number || clinic.clinic_tax_id,
+                veterinary_license_number: clinic.veterinary_license_number || clinic.clinic_license_number
             }));
             
             setPendingClinics(mappedClinics);
@@ -244,7 +248,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 pt-20">
+            <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 pt-32">
                 <div className="px-2 py-4 sm:px-0">
                     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Pending Verification Requests</h2>
@@ -450,8 +454,8 @@ const AdminDashboard: React.FC = () => {
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clinic Name</th>
-                                                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                                                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                                                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax ID Number</th>
+                                                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veterinary License Number</th>
                                                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
@@ -464,10 +468,10 @@ const AdminDashboard: React.FC = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900">{clinic.address || 'Not specified'}</div>
+                                                        <div className="text-sm text-gray-900">{clinic.tax_identification_number || 'Not specified'}</div>
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900">{clinic.phone_number || 'Not specified'}</div>
+                                                        <div className="text-sm text-gray-900">{clinic.veterinary_license_number || 'Not specified'}</div>
                                                     </td>
                                                     <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                         <div className="flex items-center gap-2">
@@ -531,12 +535,12 @@ const AdminDashboard: React.FC = () => {
                                             </div>
                                             <div className="grid grid-cols-1 gap-2 text-sm mb-3">
                                                 <div>
-                                                    <span className="font-medium text-gray-500">Address:</span>
-                                                    <p className="text-gray-900">{clinic.address || 'Not specified'}</p>
+                                                    <span className="font-medium text-gray-500">Tax ID Number:</span>
+                                                    <p className="text-gray-900">{clinic.tax_identification_number || 'Not specified'}</p>
                                                 </div>
                                                 <div>
-                                                    <span className="font-medium text-gray-500">Phone:</span>
-                                                    <p className="text-gray-900">{clinic.phone_number || 'Not specified'}</p>
+                                                    <span className="font-medium text-gray-500">Veterinary License Number:</span>
+                                                    <p className="text-gray-900">{clinic.veterinary_license_number || 'Not specified'}</p>
                                                 </div>
                                                 {clinic.description && (
                                                     <div>
