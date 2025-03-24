@@ -175,7 +175,7 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            <nav className="bg-white shadow-lg fixed top-0 left-0 right-0 z-30">
+            <nav className="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex items-center">
@@ -248,9 +248,9 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 pt-32">
+            <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 pt-48">
                 <div className="px-2 py-4 sm:px-0">
-                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8 sm:mb-10 mt-10 sm:mt-12">
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Pending Verification Requests</h2>
                         
                         {loading ? (
@@ -416,7 +416,7 @@ const AdminDashboard: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mt-12 sm:mt-16">
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Pending Clinic Approvals</h2>
                         
                         {loading && (
