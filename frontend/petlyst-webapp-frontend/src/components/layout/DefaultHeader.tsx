@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
@@ -14,6 +14,21 @@ const DefaultHeader: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const isPetOwnerPage = location.pathname === '/pet-owner-home';
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Debug log to check user data
   useEffect(() => {
@@ -50,39 +65,40 @@ const DefaultHeader: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2">
-              <img 
-                src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
-                alt="Petlyst Logo" 
-                className="h-8 w-auto"
-              />
-                <span className="text-2xl font-bold text-blue-600">Petlyst</span>
+                <img 
+                  src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
+                  alt="Petlyst Logo" 
+                  className="h-8 w-auto"
+                />
+                <span className="text-2xl font-bold text-blue-600">
+                  {isPetOwnerPage ? "Petlyst" : "Enterprise"}
+                </span>
               </Link>
-              {!isPetOwnerPage && (
-                <div className="ml-4 flex items-center">
-                  <span className="text-base font-semibold text-gray-800 bg-gray-100 px-3 py-1 rounded-md border-l-4 border-blue-600 shadow-sm">
-                    Enterprise
-                  </span>
-                </div>
-              )}
             </div>
             <div className="flex items-center space-x-4">
+              {/* Enterprise/Community toggle - visible to all users */}
+              <div className="mr-2">
+                {isPetOwnerPage ? (
+                  <Link to="/" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7"></path>
+                    </svg>
+                    <span className="hidden md:inline">Petlyst Enterprise</span>
+                    <span className="md:hidden">Enterprise</span>
+                  </Link>
+                ) : (
+                  <Link to="/pet-owner-home" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Pet Owner Page">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7"></path>
+                    </svg>
+                    <span className="hidden md:inline">Petlyst Community</span>
+                    <span className="md:hidden">Community</span>
+                  </Link>
+                )}
+              </div>
+              
               {user ? (
-                <div className="relative flex items-center">
-                  {isPetOwnerPage ? (
-                    <Link to="/" className="mr-6 px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7"></path>
-                      </svg>
-                      Petlyst Enterprise
-                    </Link>
-                  ) : (
-                    <Link to="/pet-owner-home" className="mr-6 px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Pet Owner Page">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7"></path>
-                      </svg>
-                      Petlyst Community
-                    </Link>
-                  )}
+                <div className="relative flex items-center" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center space-x-3 focus:outline-none group"
@@ -95,7 +111,7 @@ const DefaultHeader: React.FC = () => {
 
                   {/* Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border">
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border">
                       {user.user_type === 'veterinarian' && (
                         <Link
                           to="/dashboard"

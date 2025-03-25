@@ -13,13 +13,15 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ClinicPreviewPage from './pages/ClinicPreviewPage';
 import EditClinicPage from './pages/EditClinicPage';
+import ManagementDashboard from './pages/ManagementDashboard';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard' || 
                       location.pathname === '/add-clinic' || 
-                      location.pathname.startsWith('/edit-clinic/');
+                      location.pathname.startsWith('/edit-clinic/') ||
+                      location.pathname.startsWith('/management-dashboard');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isClinicPreview = location.pathname.startsWith('/clinic-preview/');
 
@@ -62,6 +64,11 @@ const AppContent: React.FC = () => {
         <Route path="/edit-clinic/:clinicId" element={
           <ProtectedRoute allowedUserType="veterinarian">
             <EditClinicPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/management-dashboard/:clinicId" element={
+          <ProtectedRoute allowedUserType="veterinarian">
+            <ManagementDashboard />
           </ProtectedRoute>
         } />
       </Routes>
