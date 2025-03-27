@@ -46,7 +46,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   }, [isMobileMenuOpen]);
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-100">
+    <div className="flex flex-col lg:flex-row min-h-screen h-screen bg-gray-100 overflow-hidden">
       <DashboardSidebar 
         currentView={currentView}
         onViewChange={onViewChange}
@@ -56,7 +56,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       />
       
       <main 
-        className={`flex-1 p-4 pt-20 lg:pt-4 transition-all duration-300 ${
+        className={`flex-1 p-4 pt-20 lg:pt-4 transition-all duration-300 overflow-y-auto ${
           isMobileMenuOpen ? 'opacity-50 lg:opacity-100' : ''
         } lg:ml-0`}
         onClick={() => {
