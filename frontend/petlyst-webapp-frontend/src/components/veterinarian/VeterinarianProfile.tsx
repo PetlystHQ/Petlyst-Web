@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { API_ENDPOINTS } from '../../constants/dashboard';
+import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES, getExpertiseNameById } from '../../constants/VeterinaryExpertise';
 
 interface Education {
   education_id: number;
@@ -21,6 +22,12 @@ interface Certification {
   created_at: string;
 }
 
+interface Expertise {
+  expertise_id: number;
+  expertise_area: string;
+  created_at: string;
+}
+
 interface FormData {
   school_name: string;
   field_of_study: string;
@@ -36,6 +43,10 @@ interface CertificationFormData {
   certification_number: string;
 }
 
+interface ExpertiseFormData {
+  expertise_area: string;
+}
+
 const VeterinarianProfile: React.FC = () => {
   const { token } = useAppSelector(state => state.auth);
   const [activeTab, setActiveTab] = useState<string>('education');
@@ -49,6 +60,11 @@ const VeterinarianProfile: React.FC = () => {
   const [certificationList, setCertificationList] = useState<Certification[]>([]);
   const [certificationLoading, setCertificationLoading] = useState<boolean>(true);
   const [certificationError, setCertificationError] = useState<string | null>(null);
+  
+  // Expertise state
+  const [expertiseList, setExpertiseList] = useState<Expertise[]>([]);
+  const [expertiseLoading, setExpertiseLoading] = useState<boolean>(true);
+  const [expertiseError, setExpertiseError] = useState<string | null>(null);
   
   // Education form state
   const [showEducationForm, setShowEducationForm] = useState<boolean>(false);
@@ -70,18 +86,31 @@ const VeterinarianProfile: React.FC = () => {
     issue_date: '',
     certification_number: ''
   });
+  
+  // Expertise form state
+  const [showExpertiseForm, setShowExpertiseForm] = useState<boolean>(false);
+  const [editingExpertiseId, setEditingExpertiseId] = useState<number | null>(null);
+  const [expertiseFormData, setExpertiseFormData] = useState<ExpertiseFormData>({
+    expertise_area: ''
+  });
+  const [selectedExpertiseAreas, setSelectedExpertiseAreas] = useState<string[]>([]);
+  const [expertiseSearch, setExpertiseSearch] = useState<string>('');
+  const [isSubmittingExpertise, setIsSubmittingExpertise] = useState<boolean>(false);
 
   // Confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteEducationId, setDeleteEducationId] = useState<number | null>(null);
   const [deleteCertificationId, setDeleteCertificationId] = useState<number | null>(null);
-  const [deleteType, setDeleteType] = useState<'education' | 'certification'>('education');
+  const [deleteExpertiseId, setDeleteExpertiseId] = useState<number | null>(null);
+  const [deleteType, setDeleteType] = useState<'education' | 'certification' | 'expertise'>('education');
 
   useEffect(() => {
     if (activeTab === 'education') {
       fetchEducation();
     } else if (activeTab === 'certifications') {
       fetchCertifications();
+    } else if (activeTab === 'expertise') {
+      fetchExpertise();
     }
   }, [activeTab, token]);
 
@@ -121,6 +150,24 @@ const VeterinarianProfile: React.FC = () => {
     }
   };
 
+  const fetchExpertise = async () => {
+    try {
+      setExpertiseLoading(true);
+      const response = await axios.get(API_ENDPOINTS.EXPERTISE, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setExpertiseList(response.data);
+      setExpertiseError(null);
+    } catch (error) {
+      console.error('Error fetching expertise data:', error);
+      setExpertiseError('Failed to load expertise data. Please try again later.');
+    } finally {
+      setExpertiseLoading(false);
+    }
+  };
+
   const handleAddEducation = () => {
     setEducationFormData({
       school_name: '',
@@ -142,6 +189,16 @@ const VeterinarianProfile: React.FC = () => {
     });
     setEditingCertificationId(null);
     setShowCertificationForm(true);
+  };
+
+  const handleAddExpertise = () => {
+    setExpertiseFormData({
+      expertise_area: ''
+    });
+    setSelectedExpertiseAreas([]);
+    setEditingExpertiseId(null);
+    setExpertiseSearch('');
+    setShowExpertiseForm(true);
   };
 
   const handleEditEducation = (education: Education) => {
@@ -167,6 +224,16 @@ const VeterinarianProfile: React.FC = () => {
     setShowCertificationForm(true);
   };
 
+  const handleEditExpertise = (expertise: Expertise) => {
+    setExpertiseFormData({
+      expertise_area: expertise.expertise_area
+    });
+    setSelectedExpertiseAreas([expertise.expertise_area]);
+    setEditingExpertiseId(expertise.expertise_id);
+    setExpertiseSearch('');
+    setShowExpertiseForm(true);
+  };
+
   const handleEducationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
@@ -184,6 +251,11 @@ const VeterinarianProfile: React.FC = () => {
   const handleCertificationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCertificationFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleExpertiseFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setExpertiseFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmitEducation = async (e: React.FormEvent) => {
@@ -265,6 +337,62 @@ const VeterinarianProfile: React.FC = () => {
     }
   };
 
+  const handleSubmitExpertise = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setIsSubmittingExpertise(true);
+      
+      if (editingExpertiseId) {
+        // For edit mode, we still only edit one expertise at a time
+        const payload = {
+          expertise_area: expertiseFormData.expertise_area
+        };
+        
+        // Update existing expertise
+        await axios.put(`${API_ENDPOINTS.EXPERTISE}/${editingExpertiseId}`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        // Add multiple new expertise areas
+        if (selectedExpertiseAreas.length === 0) {
+          setExpertiseError('Please select at least one expertise area.');
+          setIsSubmittingExpertise(false);
+          return;
+        }
+        
+        // Make sequential API calls for each selected expertise
+        for (const expertiseArea of selectedExpertiseAreas) {
+          const payload = {
+            expertise_area: expertiseArea
+          };
+          
+          await axios.post(API_ENDPOINTS.EXPERTISE, payload, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      }
+      
+      // Reset form and fetch updated data
+      setShowExpertiseForm(false);
+      setEditingExpertiseId(null);
+      setSelectedExpertiseAreas([]);
+      setExpertiseFormData({ expertise_area: '' });
+      fetchExpertise();
+    } catch (error) {
+      console.error('Error saving expertise:', error);
+      setExpertiseError('Failed to save expertise data. Please try again.');
+    } finally {
+      setIsSubmittingExpertise(false);
+    }
+  };
+
   const handleDeleteEducation = async (educationId: number) => {
     setDeleteEducationId(educationId);
     setDeleteType('education');
@@ -274,6 +402,12 @@ const VeterinarianProfile: React.FC = () => {
   const handleDeleteCertification = async (certificationId: number) => {
     setDeleteCertificationId(certificationId);
     setDeleteType('certification');
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteExpertise = async (expertiseId: number) => {
+    setDeleteExpertiseId(expertiseId);
+    setDeleteType('expertise');
     setShowDeleteModal(true);
   };
 
@@ -293,26 +427,37 @@ const VeterinarianProfile: React.FC = () => {
           }
         });
         fetchCertifications();
+      } else if (deleteType === 'expertise' && deleteExpertiseId) {
+        await axios.delete(`${API_ENDPOINTS.EXPERTISE}/${deleteExpertiseId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        fetchExpertise();
       }
       
       setShowDeleteModal(false);
       setDeleteEducationId(null);
       setDeleteCertificationId(null);
+      setDeleteExpertiseId(null);
     } catch (error) {
       console.error(`Error deleting ${deleteType}:`, error);
       if (deleteType === 'education') {
         setEducationError(`Failed to delete ${deleteType} record. Please try again.`);
-      } else {
+      } else if (deleteType === 'certification') {
         setCertificationError(`Failed to delete ${deleteType} record. Please try again.`);
+      } else {
+        setExpertiseError(`Failed to delete ${deleteType} record. Please try again.`);
       }
       setShowDeleteModal(false);
     }
   };
 
-  const cancelDeleteEducation = () => {
+  const cancelDelete = () => {
     setShowDeleteModal(false);
     setDeleteEducationId(null);
     setDeleteCertificationId(null);
+    setDeleteExpertiseId(null);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -773,6 +918,393 @@ const VeterinarianProfile: React.FC = () => {
     );
   };
 
+  const renderExpertiseSection = () => {
+    if (expertiseLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (expertiseError) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 rounded-r-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{expertiseError}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        {/* Expertise Form */}
+        {showExpertiseForm && (
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-md border border-gray-100">
+            <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-3">
+              {editingExpertiseId ? 'Edit Expertise' : 'Add Multiple Expertise Areas'}
+            </h3>
+            <form onSubmit={handleSubmitExpertise}>
+              <div className="mb-6">
+                <div className="mb-4">
+                  <label htmlFor="expertise-search" className="block text-sm font-medium text-gray-700 mb-1">
+                    Search Expertise Areas
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      id="expertise-search"
+                      className="pl-10 block w-full p-2.5 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      placeholder="Search for expertise areas..."
+                      value={expertiseSearch}
+                      onChange={(e) => setExpertiseSearch(e.target.value)}
+                    />
+                    {expertiseSearch && (
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => setExpertiseSearch('')}
+                      >
+                        <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {editingExpertiseId ? 'Select an expertise area' : 'Select expertise areas'} <span className="text-red-500">*</span>
+                  </label>
+                  {!editingExpertiseId && selectedExpertiseAreas.length > 0 && (
+                    <span className="text-sm text-blue-600 font-medium">
+                      {selectedExpertiseAreas.length} {selectedExpertiseAreas.length === 1 ? 'area' : 'areas'} selected
+                    </span>
+                  )}
+                </div>
+                
+                <div className="space-y-6">
+                  {EXPERTISE_CATEGORIES.map(category => {
+                    // Get expertise areas for this category
+                    const categoryExpertise = VETERINARY_EXPERTISE_AREAS.filter(
+                      expertise => expertise.category === category && 
+                        (!expertiseSearch || 
+                         expertise.name.toLowerCase().includes(expertiseSearch.toLowerCase()))
+                    );
+                    
+                    // Only render category if it has items matching the search
+                    if (categoryExpertise.length === 0) return null;
+                    
+                    return (
+                      <div key={category} className="space-y-3">
+                        <h4 className="text-md font-medium text-gray-700 border-b pb-2">{category}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {categoryExpertise.map(expertise => {
+                            // Check if this expertise is already added (and not the one being edited)
+                            const isAlreadyAdded = 
+                              isExpertiseAlreadyAdded(expertise.id) && 
+                              (!editingExpertiseId || 
+                               expertiseList.find(e => e.expertise_id === editingExpertiseId)?.expertise_area !== expertise.id);
+                            
+                            // Check if currently selected
+                            const isSelected = selectedExpertiseAreas.includes(expertise.id);
+                            
+                            // Highlight search term if present
+                            let displayName: React.ReactNode = expertise.name;
+                            if (expertiseSearch) {
+                              const index = expertise.name.toLowerCase().indexOf(expertiseSearch.toLowerCase());
+                              if (index >= 0) {
+                                const beforeMatch = expertise.name.substring(0, index);
+                                const match = expertise.name.substring(index, index + expertiseSearch.length);
+                                const afterMatch = expertise.name.substring(index + expertiseSearch.length);
+                                displayName = (
+                                  <>
+                                    {beforeMatch}
+                                    <span className="bg-yellow-100">{match}</span>
+                                    {afterMatch}
+                                  </>
+                                );
+                              }
+                            }
+                            
+                            return (
+                              <div
+                                key={expertise.id}
+                                onClick={() => {
+                                  if (!isAlreadyAdded) {
+                                    if (editingExpertiseId) {
+                                      // In edit mode, only allow one selection
+                                      setExpertiseFormData({ expertise_area: expertise.id });
+                                      setSelectedExpertiseAreas([expertise.id]);
+                                    } else {
+                                      // In add mode, allow multiple selections
+                                      toggleExpertiseSelection(expertise.id);
+                                    }
+                                  }
+                                }}
+                                className={`border rounded-md p-3 transition-colors ${
+                                  isAlreadyAdded
+                                    ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                                    : isSelected
+                                      ? 'bg-blue-50 border-blue-300 shadow-sm cursor-pointer'
+                                      : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    {!isAlreadyAdded && (
+                                      <div className="flex-shrink-0 h-4 w-4 mr-2">
+                                        {isSelected ? (
+                                          <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                          </svg>
+                                        ) : (
+                                          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                    )}
+                                    {isAlreadyAdded && (
+                                      <div className="flex-shrink-0 h-4 w-4 mr-2">
+                                        <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                    <span className={`text-sm ${
+                                      isAlreadyAdded 
+                                        ? 'text-gray-500' 
+                                        : isSelected
+                                          ? 'font-medium text-blue-700' 
+                                          : 'text-gray-700'
+                                    }`}>
+                                      {displayName}
+                                    </span>
+                                  </div>
+                                  {isAlreadyAdded && (
+                                    <span className="text-xs bg-green-100 text-green-800 py-1 px-2 rounded">Added</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {expertiseSearch && VETERINARY_EXPERTISE_AREAS.filter(
+                expertise => expertise.name.toLowerCase().includes(expertiseSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg mt-4">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-gray-500">No expertise areas found matching "{expertiseSearch}"</p>
+                  <button 
+                    type="button" 
+                    onClick={() => setExpertiseSearch('')}
+                    className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
+
+              {!editingExpertiseId && selectedExpertiseAreas.length === 0 && !expertiseSearch && (
+                <p className="text-sm text-red-500 mt-2">Please select at least one expertise area</p>
+              )}
+              
+              {editingExpertiseId && !expertiseFormData.expertise_area && !expertiseSearch && (
+                <p className="text-sm text-red-500 mt-2">Please select an expertise area</p>
+              )}
+            
+              <div className="flex justify-end space-x-3 border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExpertiseForm(false);
+                    setExpertiseSearch('');
+                    setSelectedExpertiseAreas([]);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    (editingExpertiseId && !expertiseFormData.expertise_area) || 
+                    (!editingExpertiseId && selectedExpertiseAreas.length === 0) ||
+                    isSubmittingExpertise
+                  }
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-colors shadow-sm flex items-center ${
+                    ((editingExpertiseId && expertiseFormData.expertise_area) || 
+                     (!editingExpertiseId && selectedExpertiseAreas.length > 0)) && !isSubmittingExpertise
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-blue-300 text-white cursor-not-allowed'
+                  }`}
+                >
+                  {isSubmittingExpertise ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : editingExpertiseId ? (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add {selectedExpertiseAreas.length > 0 ? `${selectedExpertiseAreas.length} Areas` : 'Expertise'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        
+        {/* Expertise List */}
+        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">Areas of Expertise</h3>
+              <p className="text-sm text-gray-500 mt-1">Add your specialized areas of veterinary expertise</p>
+            </div>
+            {!showExpertiseForm && (
+              <button
+                onClick={handleAddExpertise}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Expertise
+              </button>
+            )}
+          </div>
+          
+          {/* No expertise records message */}
+          {expertiseList.length === 0 && !showExpertiseForm && (
+            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <p className="text-gray-500 mb-2">No expertise records found</p>
+              <p className="text-sm text-gray-400">Add your specialized areas of veterinary expertise to enhance your profile</p>
+            </div>
+          )}
+          
+          {/* Expertise list */}
+          {expertiseList.length > 0 && (
+            <div className="space-y-6">
+              {/* Group expertise by category */}
+              {EXPERTISE_CATEGORIES.map(category => {
+                // Get expertise items in this category
+                const categoryExpertise = expertiseList.filter(exp => {
+                  const expertise = VETERINARY_EXPERTISE_AREAS.find(e => e.id === exp.expertise_area);
+                  return expertise && expertise.category === category;
+                });
+                
+                // Only render category if it has items
+                if (categoryExpertise.length === 0) return null;
+                
+                return (
+                  <div key={category} className="space-y-3">
+                    <h4 className="text-md font-medium text-gray-700 border-b pb-2">{category}</h4>
+                    <div className="space-y-3">
+                      {categoryExpertise
+                        .map((expertise) => {
+                          const expertiseDetails = VETERINARY_EXPERTISE_AREAS.find(e => e.id === expertise.expertise_area);
+                          return (
+                            <div key={expertise.expertise_id} className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <svg className="w-5 h-5 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                  </svg>
+                                  <div>
+                                    <h4 className="font-semibold text-lg text-gray-800">{expertiseDetails?.name || expertise.expertise_area}</h4>
+                                  </div>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleEditExpertise(expertise)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                    title="Edit"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteExpertise(expertise.expertise_id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                    title="Delete"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Function to check if an expertise area is already added
+  const isExpertiseAlreadyAdded = (expertiseId: string): boolean => {
+    return expertiseList.some(item => item.expertise_area === expertiseId);
+  };
+
+  // Function to toggle expertise selection
+  const toggleExpertiseSelection = (expertiseId: string) => {
+    setSelectedExpertiseAreas(prev => {
+      if (prev.includes(expertiseId)) {
+        return prev.filter(id => id !== expertiseId);
+      } else {
+        return [...prev, expertiseId];
+      }
+    });
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       {/* Profile Tabs */}
@@ -846,17 +1378,7 @@ const VeterinarianProfile: React.FC = () => {
       <div className="p-6">
         {activeTab === 'education' && renderEducationSection()}
         {activeTab === 'certifications' && renderCertificationsSection()}
-        {activeTab === 'expertise' && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">Areas of Expertise Coming Soon</h3>
-            <p className="text-gray-500 max-w-md">
-              You will soon be able to highlight your specialized areas of expertise to show your unique veterinary skills.
-            </p>
-          </div>
-        )}
+        {activeTab === 'expertise' && renderExpertiseSection()}
         {activeTab === 'biography' && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
             <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -880,14 +1402,14 @@ const VeterinarianProfile: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
-              Delete {deleteType === 'education' ? 'Education' : 'Certification'} Record
+              Delete {deleteType === 'education' ? 'Education' : deleteType === 'certification' ? 'Certification' : 'Expertise'} Record
             </h3>
             <p className="text-gray-600 text-center mb-6">
               Are you sure you want to delete this {deleteType} record? This action cannot be undone.
             </p>
             <div className="flex justify-center space-x-3">
               <button
-                onClick={cancelDeleteEducation}
+                onClick={cancelDelete}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Cancel
