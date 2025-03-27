@@ -423,4 +423,158 @@ router.delete('/certifications/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// GET all expertise areas for authenticated veterinarian
+router.get('/expertise', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        
+        const query = `
+            SELECT * FROM veterinarian_expertise 
+            WHERE veterinarian_id = $1
+            ORDER BY expertise_area ASC
+        `;
+        
+        const result = await pool.query(query, [veterinarianId]);
+        
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching expertise records:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// POST add new expertise area
+router.post('/expertise', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const { expertise_area } = req.body;
+
+        // Validate required fields
+        if (!expertise_area) {
+            return res.status(400).json({ message: 'Expertise area is required.' });
+        }
+        
+        // Validate that expertise_area is a valid ID from our predefined list
+        // This validation is enforced in the frontend with the dropdown, but we do basic validation here as well
+        if (!expertise_area.match(/^[a-z_]+$/)) {
+            return res.status(400).json({ message: 'Invalid expertise area format.' });
+        }
+
+        const query = `
+            INSERT INTO veterinarian_expertise 
+            (veterinarian_id, expertise_area, created_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
+            RETURNING *
+        `;
+
+        const values = [veterinarianId, expertise_area];
+        const result = await pool.query(query, values);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error adding expertise record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// PUT update expertise area
+router.put('/expertise/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const expertiseId = req.params.id;
+        const { expertise_area } = req.body;
+
+        // Validate required fields
+        if (!expertise_area) {
+            return res.status(400).json({ message: 'Expertise area is required.' });
+        }
+        
+        // Validate that expertise_area is a valid ID from our predefined list
+        // This validation is enforced in the frontend with the dropdown, but we do basic validation here as well
+        if (!expertise_area.match(/^[a-z_]+$/)) {
+            return res.status(400).json({ message: 'Invalid expertise area format.' });
+        }
+
+        // First verify the expertise record belongs to this veterinarian
+        const checkQuery = `
+            SELECT expertise_id FROM veterinarian_expertise
+            WHERE expertise_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [expertiseId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Expertise record not found or you do not have permission to edit it.' });
+        }
+
+        const updateQuery = `
+            UPDATE veterinarian_expertise
+            SET expertise_area = $1
+            WHERE expertise_id = $2 AND veterinarian_id = $3
+            RETURNING *
+        `;
+
+        const values = [expertise_area, expertiseId, veterinarianId];
+        const result = await pool.query(updateQuery, values);
+        
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating expertise record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// DELETE expertise area
+router.delete('/expertise/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const expertiseId = req.params.id;
+
+        // First verify the expertise record belongs to this veterinarian
+        const checkQuery = `
+            SELECT expertise_id FROM veterinarian_expertise
+            WHERE expertise_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [expertiseId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Expertise record not found or you do not have permission to delete it.' });
+        }
+
+        const deleteQuery = `
+            DELETE FROM veterinarian_expertise
+            WHERE expertise_id = $1 AND veterinarian_id = $2
+            RETURNING *
+        `;
+        
+        const result = await pool.query(deleteQuery, [expertiseId, veterinarianId]);
+        
+        res.status(200).json({ message: 'Expertise record deleted successfully', deletedRecord: result.rows[0] });
+    } catch (error) {
+        console.error('Error deleting expertise record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router; 
