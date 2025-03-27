@@ -7,6 +7,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
+import VeterinarianProfile from '../components/veterinarian/VeterinarianProfile';
 import { DashboardView } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
 import { Clinic } from '../types/dashboard';
@@ -16,7 +17,7 @@ const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const location = useLocation();
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey] = useState(0);
   const [hasSubmittedClinics, setHasSubmittedClinics] = useState(false);
   const [checkingClinics, setCheckingClinics] = useState(true);
   const { 
@@ -98,6 +99,11 @@ const Dashboard: React.FC = () => {
       onViewChange: setCurrentView,
       hasSubmittedClinics
     };
+
+    // Profile view is always accessible regardless of verification status
+    if (currentView === DASHBOARD_VIEWS.profile) {
+      return <VeterinarianProfile />;
+    }
 
     // Only allow access to certain views if verified
     if (verificationStatus !== 'verified' && currentView !== DASHBOARD_VIEWS.overview) {

@@ -102,4 +102,179 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
     }
 });
 
+// GET all education records for authenticated veterinarian
+router.get('/education', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        
+        const query = `
+            SELECT * FROM veterinarian_education 
+            WHERE veterinarian_id = $1
+            ORDER BY start_date DESC
+        `;
+        
+        const result = await pool.query(query, [veterinarianId]);
+        
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching education records:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// POST add new education record
+router.post('/education', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const { school_name, field_of_study, start_date, end_date, is_current } = req.body;
+
+        // Validate required fields
+        if (!school_name || !field_of_study || !start_date) {
+            return res.status(400).json({ message: 'School name, field of study, and start date are required.' });
+        }
+
+        // Validate logical date consistency
+        if (end_date && new Date(end_date) < new Date(start_date)) {
+            return res.status(400).json({ message: 'End date cannot be earlier than start date.' });
+        }
+
+        // Validate is_current and end_date logic
+        if (is_current && end_date) {
+            return res.status(400).json({ message: 'Current education cannot have an end date.' });
+        }
+
+        if (!is_current && !end_date) {
+            return res.status(400).json({ message: 'Completed education must have an end date.' });
+        }
+
+        const query = `
+            INSERT INTO veterinarian_education 
+            (veterinarian_id, school_name, field_of_study, start_date, end_date, is_current)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `;
+
+        const values = [veterinarianId, school_name, field_of_study, start_date, end_date, is_current];
+        const result = await pool.query(query, values);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error adding education record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// PUT update education record
+router.put('/education/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const educationId = req.params.id;
+        const { school_name, field_of_study, start_date, end_date, is_current } = req.body;
+
+        // Validate required fields
+        if (!school_name || !field_of_study || !start_date) {
+            return res.status(400).json({ message: 'School name, field of study, and start date are required.' });
+        }
+
+        // Validate logical date consistency
+        if (end_date && new Date(end_date) < new Date(start_date)) {
+            return res.status(400).json({ message: 'End date cannot be earlier than start date.' });
+        }
+
+        // Validate is_current and end_date logic
+        if (is_current && end_date) {
+            return res.status(400).json({ message: 'Current education cannot have an end date.' });
+        }
+
+        if (!is_current && !end_date) {
+            return res.status(400).json({ message: 'Completed education must have an end date.' });
+        }
+
+        // First verify the education record belongs to this veterinarian
+        const checkQuery = `
+            SELECT education_id FROM veterinarian_education
+            WHERE education_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [educationId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Education record not found or you do not have permission to edit it.' });
+        }
+
+        const updateQuery = `
+            UPDATE veterinarian_education
+            SET 
+                school_name = $1,
+                field_of_study = $2,
+                start_date = $3,
+                end_date = $4,
+                is_current = $5
+            WHERE education_id = $6 AND veterinarian_id = $7
+            RETURNING *
+        `;
+
+        const values = [school_name, field_of_study, start_date, end_date, is_current, educationId, veterinarianId];
+        const result = await pool.query(updateQuery, values);
+        
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating education record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// DELETE education record
+router.delete('/education/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const educationId = req.params.id;
+
+        // First verify the education record belongs to this veterinarian
+        const checkQuery = `
+            SELECT education_id FROM veterinarian_education
+            WHERE education_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [educationId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Education record not found or you do not have permission to delete it.' });
+        }
+
+        const deleteQuery = `
+            DELETE FROM veterinarian_education
+            WHERE education_id = $1 AND veterinarian_id = $2
+            RETURNING *
+        `;
+        
+        const result = await pool.query(deleteQuery, [educationId, veterinarianId]);
+        
+        res.status(200).json({ message: 'Education record deleted successfully', deletedRecord: result.rows[0] });
+    } catch (error) {
+        console.error('Error deleting education record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router; 

@@ -1,4 +1,4 @@
-export type DashboardView = 'overview' | 'clinics';
+export type DashboardView = 'overview' | 'clinics' | 'profile';
 
 export type VerificationStatus = 'pending' | 'verified' | 'not_verified' | 'archived';
 

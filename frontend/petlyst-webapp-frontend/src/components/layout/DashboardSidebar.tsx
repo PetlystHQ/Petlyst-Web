@@ -70,7 +70,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   };
 
   // Apply classes based on mobile state - adding !important to force the position in mobile view
-  const sidebarClasses = `bg-white shadow-md flex flex-col h-screen fixed lg:static z-20 transition-all duration-300 ${
+  const sidebarClasses = `bg-white shadow-md flex flex-col h-full min-h-screen fixed lg:sticky lg:top-0 z-20 transition-all duration-300 ${
     isMobileOpen ? 'left-0 !w-64' : '-left-64 lg:left-0 w-64'
   }`;
 
@@ -140,8 +140,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 px-3 py-4 overflow-y-auto">
-          <ul className="space-y-2 font-medium">
+        <div className="flex-1 px-3 py-4 overflow-y-auto flex flex-col">
+          <ul className="space-y-2 font-medium flex-grow">
             <li>
               <button
                 onClick={() => {
@@ -156,7 +156,23 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               </button>
             </li>
 
-            {/* Conditional Navigation Items */}
+            {/* My Profile - Always accessible */}
+            <li>
+              <button
+                onClick={() => {
+                  console.log('Profile button clicked, changing view to:', DASHBOARD_VIEWS.profile);
+                  onViewChange(DASHBOARD_VIEWS.profile);
+                  if (isMobileOpen && onMobileToggle) onMobileToggle();
+                }}
+                className={`flex items-center w-full p-2 text-gray-900 rounded-lg hover:bg-gray-100 ${
+                  isActive(DASHBOARD_VIEWS.profile) ? 'bg-gray-100' : ''
+                }`}
+              >
+                <span className="ml-3">My Profile</span>
+              </button>
+            </li>
+
+            {/* Conditional Navigation Items - Only for verified users */}
             {isFeatureAccessible && (
               <li>
                 <button
@@ -176,7 +192,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         </div>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="mt-auto p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
             className="flex items-center w-full p-2 text-red-600 rounded-lg hover:bg-red-50"
