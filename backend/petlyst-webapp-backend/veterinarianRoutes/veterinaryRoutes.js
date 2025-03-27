@@ -277,4 +277,150 @@ router.delete('/education/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// GET all certifications for authenticated veterinarian
+router.get('/certifications', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        
+        const query = `
+            SELECT * FROM veterinarian_certifications 
+            WHERE veterinarian_id = $1
+            ORDER BY issue_date DESC
+        `;
+        
+        const result = await pool.query(query, [veterinarianId]);
+        
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching certification records:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// POST add new certification record
+router.post('/certifications', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const { certification_name, issuing_organization, issue_date, certification_number } = req.body;
+
+        // Validate required fields
+        if (!certification_name || !issuing_organization || !issue_date) {
+            return res.status(400).json({ message: 'Certification name, issuing organization, and issue date are required.' });
+        }
+
+        const query = `
+            INSERT INTO veterinarian_certifications 
+            (veterinarian_id, certification_name, issuing_organization, issue_date, certification_number, created_at)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+            RETURNING *
+        `;
+
+        const values = [veterinarianId, certification_name, issuing_organization, issue_date, certification_number];
+        const result = await pool.query(query, values);
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error adding certification record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// PUT update certification record
+router.put('/certifications/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const certificationId = req.params.id;
+        const { certification_name, issuing_organization, issue_date, certification_number } = req.body;
+
+        // Validate required fields
+        if (!certification_name || !issuing_organization || !issue_date) {
+            return res.status(400).json({ message: 'Certification name, issuing organization, and issue date are required.' });
+        }
+
+        // First verify the certification record belongs to this veterinarian
+        const checkQuery = `
+            SELECT certification_id FROM veterinarian_certifications
+            WHERE certification_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [certificationId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Certification record not found or you do not have permission to edit it.' });
+        }
+
+        const updateQuery = `
+            UPDATE veterinarian_certifications
+            SET 
+                certification_name = $1,
+                issuing_organization = $2,
+                issue_date = $3,
+                certification_number = $4
+            WHERE certification_id = $5 AND veterinarian_id = $6
+            RETURNING *
+        `;
+
+        const values = [certification_name, issuing_organization, issue_date, certification_number, certificationId, veterinarianId];
+        const result = await pool.query(updateQuery, values);
+        
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating certification record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// DELETE certification record
+router.delete('/certifications/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const certificationId = req.params.id;
+
+        // First verify the certification record belongs to this veterinarian
+        const checkQuery = `
+            SELECT certification_id FROM veterinarian_certifications
+            WHERE certification_id = $1 AND veterinarian_id = $2
+        `;
+        
+        const checkResult = await pool.query(checkQuery, [certificationId, veterinarianId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Certification record not found or you do not have permission to delete it.' });
+        }
+
+        const deleteQuery = `
+            DELETE FROM veterinarian_certifications
+            WHERE certification_id = $1 AND veterinarian_id = $2
+            RETURNING *
+        `;
+        
+        const result = await pool.query(deleteQuery, [certificationId, veterinarianId]);
+        
+        res.status(200).json({ message: 'Certification record deleted successfully', deletedRecord: result.rows[0] });
+    } catch (error) {
+        console.error('Error deleting certification record:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router; 
