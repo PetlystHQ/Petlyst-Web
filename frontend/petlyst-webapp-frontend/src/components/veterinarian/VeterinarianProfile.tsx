@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { API_ENDPOINTS } from '../../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES, getExpertiseNameById } from '../../constants/VeterinaryExpertise';
+import { VETERINARY_LANGUAGES, LANGUAGE_CATEGORIES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
 
 interface Education {
   education_id: number;
@@ -45,6 +46,17 @@ interface CertificationFormData {
 
 interface ExpertiseFormData {
   expertise_area: string;
+}
+
+// Add new profile interface
+interface ProfileData {
+  biography: string | null;
+  preferred_languages: string[] | null;
+  user_name: string;
+  user_surname: string;
+  user_email: string;
+  user_phone: string | null;
+  user_profile_photo: string | null;
 }
 
 const VeterinarianProfile: React.FC = () => {
@@ -104,6 +116,18 @@ const VeterinarianProfile: React.FC = () => {
   const [deleteExpertiseId, setDeleteExpertiseId] = useState<number | null>(null);
   const [deleteType, setDeleteType] = useState<'education' | 'certification' | 'expertise'>('education');
 
+  // Add new profile state
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [profileLoading, setProfileLoading] = useState<boolean>(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
+  
+  // Biography form state
+  const [biographyText, setBiographyText] = useState<string>('');
+  const [showBiographyForm, setShowBiographyForm] = useState<boolean>(false);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  
   useEffect(() => {
     if (activeTab === 'education') {
       fetchEducation();
@@ -111,6 +135,8 @@ const VeterinarianProfile: React.FC = () => {
       fetchCertifications();
     } else if (activeTab === 'expertise') {
       fetchExpertise();
+    } else if (activeTab === 'biography') {
+      fetchProfile();
     }
   }, [activeTab, token]);
 
@@ -165,6 +191,30 @@ const VeterinarianProfile: React.FC = () => {
       setExpertiseError('Failed to load expertise data. Please try again later.');
     } finally {
       setExpertiseLoading(false);
+    }
+  };
+
+  const fetchProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const response = await axios.get(API_ENDPOINTS.PROFILE, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      setProfileData(response.data);
+      
+      // Initialize form state with profile data
+      setBiographyText(response.data.biography || '');
+      setLanguages(response.data.preferred_languages || []);
+      
+      setProfileError(null);
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+      setProfileError('Failed to load profile data. Please try again later.');
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -1305,6 +1355,305 @@ const VeterinarianProfile: React.FC = () => {
     });
   };
 
+  const handleEditBiography = () => {
+    if (profileData) {
+      setBiographyText(profileData.biography || '');
+      setLanguages(profileData.preferred_languages || []);
+      setSelectedLanguages(profileData.preferred_languages || []);
+      setShowBiographyForm(true);
+    }
+  };
+  
+  const handleBiographyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setBiographyText(e.target.value);
+  };
+  
+  // Replace handleAddLanguage and handleRemoveLanguage with toggleLanguageSelection
+  const toggleLanguageSelection = (languageId: string) => {
+    setSelectedLanguages(prev => {
+      if (prev.includes(languageId)) {
+        return prev.filter(id => id !== languageId);
+      } else {
+        return [...prev, languageId];
+      }
+    });
+  };
+  
+  // Check if a language is already added
+  const isLanguageAlreadyAdded = (languageId: string): boolean => {
+    return languages.includes(languageId);
+  };
+  
+  const handleSubmitBiography = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setIsSavingProfile(true);
+      
+      const payload = {
+        biography: biographyText.trim() || null,
+        preferred_languages: selectedLanguages.length > 0 ? selectedLanguages : null
+      };
+      
+      await axios.put(API_ENDPOINTS.PROFILE, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Update profile data and hide form
+      setShowBiographyForm(false);
+      fetchProfile();
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setProfileError('Failed to save profile data. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const renderBiographySection = () => {
+    if (profileLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (profileError) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 rounded-r-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{profileError}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        {/* Biography Form */}
+        {showBiographyForm && (
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-md border border-gray-100">
+            <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-3">
+              Edit Professional Biography
+            </h3>
+            <form onSubmit={handleSubmitBiography}>
+              <div className="mb-6">
+                <label htmlFor="biography" className="block text-sm font-medium text-gray-700 mb-1">
+                  Professional Biography
+                </label>
+                <textarea
+                  id="biography"
+                  name="biography"
+                  rows={8}
+                  value={biographyText}
+                  onChange={handleBiographyChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  placeholder="Write your professional biography here..."
+                  maxLength={2000}
+                ></textarea>
+                <p className="text-xs text-gray-500 mt-1">
+                  {2000 - biographyText.length} characters remaining
+                </p>
+              </div>
+              
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Select languages you speak <span className="text-red-500">*</span>
+                  </label>
+                  {selectedLanguages.length > 0 && (
+                    <span className="text-sm text-blue-600 font-medium">
+                      {selectedLanguages.length} {selectedLanguages.length === 1 ? 'language' : 'languages'} selected
+                    </span>
+                  )}
+                </div>
+                
+                {/* Flat list of languages without categories */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {VETERINARY_LANGUAGES.map(language => {
+                    // Check if this language is already in profile languages (and not being edited)
+                    const alreadyAdded = isLanguageAlreadyAdded(language.id) && 
+                                        !selectedLanguages.includes(language.id);
+                    
+                    // Check if currently selected
+                    const isSelected = selectedLanguages.includes(language.id);
+                    
+                    return (
+                      <div
+                        key={language.id}
+                        onClick={() => {
+                          if (!alreadyAdded) {
+                            toggleLanguageSelection(language.id);
+                          }
+                        }}
+                        className={`border rounded-md p-3 transition-colors ${
+                          alreadyAdded
+                            ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-blue-50 border-blue-300 shadow-sm cursor-pointer'
+                              : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            {!alreadyAdded && (
+                              <div className="flex-shrink-0 h-4 w-4 mr-2">
+                                {isSelected ? (
+                                  <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                ) : (
+                                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                                  </svg>
+                                )}
+                              </div>
+                            )}
+                            {alreadyAdded && (
+                              <div className="flex-shrink-0 h-4 w-4 mr-2">
+                                <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                            <span className={`text-sm ${
+                              alreadyAdded 
+                                ? 'text-gray-500' 
+                                : isSelected
+                                  ? 'font-medium text-blue-700' 
+                                  : 'text-gray-700'
+                            }`}>
+                              {language.name}
+                            </span>
+                          </div>
+                          {alreadyAdded && (
+                            <span className="text-xs bg-green-100 text-green-800 py-1 px-2 rounded">Added</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBiographyForm(false);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        
+        {/* Biography Display */}
+        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">Professional Biography</h3>
+              <p className="text-sm text-gray-500 mt-1">Share your professional story and expertise with pet owners</p>
+            </div>
+            {!showBiographyForm && (
+              <button
+                onClick={handleEditBiography}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                {profileData?.biography ? 'Edit Biography' : 'Add Biography'}
+              </button>
+            )}
+          </div>
+          
+          {/* Display biography if available */}
+          {profileData?.biography ? (
+            <div className="space-y-6">
+              <div className="prose max-w-none">
+                {profileData.biography.split('\n').map((paragraph, index) => (
+                  paragraph ? <p key={index} className="text-gray-800">{paragraph}</p> : <br key={index} />
+                ))}
+              </div>
+              
+              {/* Languages Section - Updated to display without categories */}
+              {profileData.preferred_languages && profileData.preferred_languages.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Languages Spoken</h4>
+                  
+                  {/* Flat list of languages without categories */}
+                  <div className="flex flex-wrap gap-2">
+                    {profileData.preferred_languages.map(langId => {
+                      const langObj = VETERINARY_LANGUAGES.find(l => l.id === langId);
+                      const langName = langObj ? langObj.name : getLanguageNameById(langId);
+                      
+                      return (
+                        <span 
+                          key={langId} 
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                        >
+                          {langName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <p className="text-gray-500 mb-2">No biography added yet</p>
+              <p className="text-sm text-gray-400 max-w-md mx-auto">
+                Add your professional biography to share your experience, specialties, and approach with pet owners.
+                This helps build trust and showcases your expertise.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       {/* Profile Tabs */}
@@ -1379,17 +1728,7 @@ const VeterinarianProfile: React.FC = () => {
         {activeTab === 'education' && renderEducationSection()}
         {activeTab === 'certifications' && renderCertificationsSection()}
         {activeTab === 'expertise' && renderExpertiseSection()}
-        {activeTab === 'biography' && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">Biography Coming Soon</h3>
-            <p className="text-gray-500 max-w-md">
-              You will soon be able to write your professional biography to tell clients about your background and veterinary philosophy.
-            </p>
-          </div>
-        )}
+        {activeTab === 'biography' && renderBiographySection()}
       </div>
 
       {/* Delete Confirmation Modal */}
