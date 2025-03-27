@@ -577,4 +577,92 @@ router.delete('/expertise/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// GET veterinarian profile details including biography and preferred languages
+router.get('/profile', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        
+        const query = `
+            SELECT v.biography, v.preferred_languages, 
+                   u.user_name, u.user_surname, u.user_email, u.user_phone, u.user_profile_photo
+            FROM veterinarians v
+            JOIN users u ON v.veterinarian_id = u.user_id
+            WHERE v.veterinarian_id = $1
+        `;
+        
+        const result = await pool.query(query, [veterinarianId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Veterinarian profile not found.' });
+        }
+        
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching veterinarian profile:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// UPDATE veterinarian biography and preferred languages
+router.put('/profile', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is a veterinarian
+        if (req.user.userType !== 'veterinarian') {
+            return res.status(403).json({ message: 'Access denied. User is not a veterinarian.' });
+        }
+
+        const veterinarianId = req.user.userId;
+        const { biography, preferred_languages } = req.body;
+        
+        // Validation
+        if (biography && biography.length > 2000) {
+            return res.status(400).json({ message: 'Biography must be 2000 characters or less.' });
+        }
+        
+        // Check if languages array is valid
+        if (preferred_languages && !Array.isArray(preferred_languages)) {
+            return res.status(400).json({ message: 'Preferred languages must be an array.' });
+        }
+        
+        // Check if all languages are strings with reasonable length
+        if (preferred_languages && Array.isArray(preferred_languages)) {
+            for (const lang of preferred_languages) {
+                if (typeof lang !== 'string' || lang.length > 50) {
+                    return res.status(400).json({ message: 'Each language must be a string with 50 characters or less.' });
+                }
+            }
+        }
+        
+        const updateQuery = `
+            UPDATE veterinarians
+            SET 
+                biography = $1,
+                preferred_languages = $2,
+                veterinarian_updated_at = CURRENT_TIMESTAMP
+            WHERE veterinarian_id = $3
+            RETURNING biography, preferred_languages
+        `;
+        
+        const values = [biography || null, preferred_languages || null, veterinarianId];
+        const result = await pool.query(updateQuery, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Veterinarian profile not found.' });
+        }
+        
+        res.status(200).json({
+            message: 'Profile updated successfully',
+            profile: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating veterinarian profile:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router; 
