@@ -12,12 +12,28 @@ interface Education {
   is_current: boolean;
 }
 
+interface Certification {
+  certification_id: number;
+  certification_name: string;
+  issuing_organization: string;
+  issue_date: string;
+  certification_number: string | null;
+  created_at: string;
+}
+
 interface FormData {
   school_name: string;
   field_of_study: string;
   start_date: string;
   end_date: string;
   is_current: boolean;
+}
+
+interface CertificationFormData {
+  certification_name: string;
+  issuing_organization: string;
+  issue_date: string;
+  certification_number: string;
 }
 
 const VeterinarianProfile: React.FC = () => {
@@ -29,6 +45,11 @@ const VeterinarianProfile: React.FC = () => {
   const [educationLoading, setEducationLoading] = useState<boolean>(true);
   const [educationError, setEducationError] = useState<string | null>(null);
   
+  // Certification state
+  const [certificationList, setCertificationList] = useState<Certification[]>([]);
+  const [certificationLoading, setCertificationLoading] = useState<boolean>(true);
+  const [certificationError, setCertificationError] = useState<string | null>(null);
+  
   // Education form state
   const [showEducationForm, setShowEducationForm] = useState<boolean>(false);
   const [editingEducationId, setEditingEducationId] = useState<number | null>(null);
@@ -39,14 +60,30 @@ const VeterinarianProfile: React.FC = () => {
     end_date: '',
     is_current: false
   });
+  
+  // Certification form state
+  const [showCertificationForm, setShowCertificationForm] = useState<boolean>(false);
+  const [editingCertificationId, setEditingCertificationId] = useState<number | null>(null);
+  const [certificationFormData, setCertificationFormData] = useState<CertificationFormData>({
+    certification_name: '',
+    issuing_organization: '',
+    issue_date: '',
+    certification_number: ''
+  });
 
   // Confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteEducationId, setDeleteEducationId] = useState<number | null>(null);
+  const [deleteCertificationId, setDeleteCertificationId] = useState<number | null>(null);
+  const [deleteType, setDeleteType] = useState<'education' | 'certification'>('education');
 
   useEffect(() => {
-    fetchEducation();
-  }, [token]);
+    if (activeTab === 'education') {
+      fetchEducation();
+    } else if (activeTab === 'certifications') {
+      fetchCertifications();
+    }
+  }, [activeTab, token]);
 
   const fetchEducation = async () => {
     try {
@@ -66,6 +103,24 @@ const VeterinarianProfile: React.FC = () => {
     }
   };
 
+  const fetchCertifications = async () => {
+    try {
+      setCertificationLoading(true);
+      const response = await axios.get(API_ENDPOINTS.CERTIFICATIONS, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setCertificationList(response.data);
+      setCertificationError(null);
+    } catch (error) {
+      console.error('Error fetching certification data:', error);
+      setCertificationError('Failed to load certification data. Please try again later.');
+    } finally {
+      setCertificationLoading(false);
+    }
+  };
+
   const handleAddEducation = () => {
     setEducationFormData({
       school_name: '',
@@ -76,6 +131,17 @@ const VeterinarianProfile: React.FC = () => {
     });
     setEditingEducationId(null);
     setShowEducationForm(true);
+  };
+
+  const handleAddCertification = () => {
+    setCertificationFormData({
+      certification_name: '',
+      issuing_organization: '',
+      issue_date: '',
+      certification_number: ''
+    });
+    setEditingCertificationId(null);
+    setShowCertificationForm(true);
   };
 
   const handleEditEducation = (education: Education) => {
@@ -90,6 +156,17 @@ const VeterinarianProfile: React.FC = () => {
     setShowEducationForm(true);
   };
 
+  const handleEditCertification = (certification: Certification) => {
+    setCertificationFormData({
+      certification_name: certification.certification_name,
+      issuing_organization: certification.issuing_organization,
+      issue_date: certification.issue_date.split('T')[0], // Format date to YYYY-MM-DD
+      certification_number: certification.certification_number || ''
+    });
+    setEditingCertificationId(certification.certification_id);
+    setShowCertificationForm(true);
+  };
+
   const handleEducationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
@@ -102,6 +179,11 @@ const VeterinarianProfile: React.FC = () => {
     } else {
       setEducationFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleCertificationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCertificationFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmitEducation = async (e: React.FormEvent) => {
@@ -144,26 +226,85 @@ const VeterinarianProfile: React.FC = () => {
     }
   };
 
+  const handleSubmitCertification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const payload = {
+        certification_name: certificationFormData.certification_name,
+        issuing_organization: certificationFormData.issuing_organization,
+        issue_date: certificationFormData.issue_date,
+        certification_number: certificationFormData.certification_number || null
+      };
+
+      if (editingCertificationId) {
+        // Update existing certification
+        await axios.put(`${API_ENDPOINTS.CERTIFICATIONS}/${editingCertificationId}`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        // Add new certification
+        await axios.post(API_ENDPOINTS.CERTIFICATIONS, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      
+      // Reset form and fetch updated data
+      setShowCertificationForm(false);
+      setEditingCertificationId(null);
+      fetchCertifications();
+    } catch (error) {
+      console.error('Error saving certification:', error);
+      setCertificationError('Failed to save certification data. Please try again.');
+    }
+  };
+
   const handleDeleteEducation = async (educationId: number) => {
     setDeleteEducationId(educationId);
+    setDeleteType('education');
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteEducation = async () => {
+  const handleDeleteCertification = async (certificationId: number) => {
+    setDeleteCertificationId(certificationId);
+    setDeleteType('certification');
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
     try {
-      if (deleteEducationId) {
+      if (deleteType === 'education' && deleteEducationId) {
         await axios.delete(`${API_ENDPOINTS.EDUCATION}/${deleteEducationId}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
         fetchEducation();
-        setShowDeleteModal(false);
-        setDeleteEducationId(null);
+      } else if (deleteType === 'certification' && deleteCertificationId) {
+        await axios.delete(`${API_ENDPOINTS.CERTIFICATIONS}/${deleteCertificationId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        fetchCertifications();
       }
+      
+      setShowDeleteModal(false);
+      setDeleteEducationId(null);
+      setDeleteCertificationId(null);
     } catch (error) {
-      console.error('Error deleting education:', error);
-      setEducationError('Failed to delete education record. Please try again.');
+      console.error(`Error deleting ${deleteType}:`, error);
+      if (deleteType === 'education') {
+        setEducationError(`Failed to delete ${deleteType} record. Please try again.`);
+      } else {
+        setCertificationError(`Failed to delete ${deleteType} record. Please try again.`);
+      }
       setShowDeleteModal(false);
     }
   };
@@ -171,6 +312,7 @@ const VeterinarianProfile: React.FC = () => {
   const cancelDeleteEducation = () => {
     setShowDeleteModal(false);
     setDeleteEducationId(null);
+    setDeleteCertificationId(null);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -417,6 +559,220 @@ const VeterinarianProfile: React.FC = () => {
     );
   };
 
+  const renderCertificationsSection = () => {
+    if (certificationLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (certificationError) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 rounded-r-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{certificationError}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        {/* Certification Form */}
+        {showCertificationForm && (
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-md border border-gray-100">
+            <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-3">
+              {editingCertificationId ? 'Edit Certification' : 'Add Certification'}
+            </h3>
+            <form onSubmit={handleSubmitCertification}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label htmlFor="certification_name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Certification Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="certification_name"
+                    name="certification_name"
+                    value={certificationFormData.certification_name}
+                    onChange={handleCertificationFormChange}
+                    required
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                    placeholder="e.g. Veterinary Surgery Specialist"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="issuing_organization" className="block text-sm font-medium text-gray-700 mb-1">
+                    Issuing Organization <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="issuing_organization"
+                    name="issuing_organization"
+                    value={certificationFormData.issuing_organization}
+                    onChange={handleCertificationFormChange}
+                    required
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                    placeholder="e.g. American Board of Veterinary Practitioners"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="issue_date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Issue Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="issue_date"
+                    name="issue_date"
+                    value={certificationFormData.issue_date}
+                    onChange={handleCertificationFormChange}
+                    required
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="certification_number" className="block text-sm font-medium text-gray-700 mb-1">
+                    Certification Number
+                  </label>
+                  <input
+                    type="text"
+                    id="certification_number"
+                    name="certification_number"
+                    value={certificationFormData.certification_number}
+                    onChange={handleCertificationFormChange}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                    placeholder="e.g. ABVP-0123456"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCertificationForm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center"
+                >
+                  {editingCertificationId ? (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add Certification
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        
+        {/* Certification List */}
+        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">Professional Certifications</h3>
+              <p className="text-sm text-gray-500 mt-1">Add your professional certifications and licenses</p>
+            </div>
+            {!showCertificationForm && (
+              <button
+                onClick={handleAddCertification}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Certification
+              </button>
+            )}
+          </div>
+          
+          {/* No certification records message */}
+          {certificationList.length === 0 && !showCertificationForm && (
+            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <p className="text-gray-500 mb-2">No certification records found</p>
+              <p className="text-sm text-gray-400">Add your professional certifications to enhance your profile</p>
+            </div>
+          )}
+          
+          {/* Certification list */}
+          {certificationList.length > 0 && (
+            <div className="space-y-4">
+              {certificationList.map((certification) => (
+                <div key={certification.certification_id} className="bg-white rounded-lg border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between">
+                    <div>
+                      <h4 className="font-semibold text-lg text-gray-800">{certification.certification_name}</h4>
+                      <p className="text-gray-600 mt-1">{certification.issuing_organization}</p>
+                      <div className="flex items-center mt-2 text-sm text-gray-500">
+                        <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>Issued: {formatDate(certification.issue_date)}</span>
+                      </div>
+                      {certification.certification_number && (
+                        <div className="mt-2 text-sm text-gray-500">
+                          <span className="font-medium">Certification No:</span> {certification.certification_number}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditCertification(certification)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                        title="Edit"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCertification(certification.certification_id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        title="Delete"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       {/* Profile Tabs */}
@@ -489,17 +845,7 @@ const VeterinarianProfile: React.FC = () => {
       {/* Tab Content */}
       <div className="p-6">
         {activeTab === 'education' && renderEducationSection()}
-        {activeTab === 'certifications' && (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">Certifications Coming Soon</h3>
-            <p className="text-gray-500 max-w-md">
-              You will soon be able to add your professional certifications and licenses to enhance your veterinary profile.
-            </p>
-          </div>
-        )}
+        {activeTab === 'certifications' && renderCertificationsSection()}
         {activeTab === 'expertise' && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
             <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -533,9 +879,11 @@ const VeterinarianProfile: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">Delete Education Record</h3>
+            <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+              Delete {deleteType === 'education' ? 'Education' : 'Certification'} Record
+            </h3>
             <p className="text-gray-600 text-center mb-6">
-              Are you sure you want to delete this education record? This action cannot be undone.
+              Are you sure you want to delete this {deleteType} record? This action cannot be undone.
             </p>
             <div className="flex justify-center space-x-3">
               <button
@@ -545,7 +893,7 @@ const VeterinarianProfile: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={confirmDeleteEducation}
+                onClick={confirmDelete}
                 className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete
