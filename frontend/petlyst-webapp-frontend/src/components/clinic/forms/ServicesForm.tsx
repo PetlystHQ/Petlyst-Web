@@ -30,19 +30,19 @@ interface AccordionSectionProps {
 // Varsayılan seçenekler
 const animalTypeOptions = [
   'Dogs', 'Cats', 'Birds', 'Rabbits', 'Rodents', 'Ferrets', 'Reptiles', 
-  'Amphibians', 'Fish', 'Exotic Pets', 'Farm Animals', 'Horses', 'Other'
+  'Amphibians', 'Fish', 'Exotic Pets', 'Farm Animals', 'Horses'
 ];
 
 const medicalServicesOptions = [
-  'Vaccination', 'Preventive Care', 'Dental Care', 'Surgery', 'Emergency Care', 'X-Ray',
+  'Vaccination', 'Preventive Care', 'Dental Care', 'Surgery', 'X-Ray',
   'Ultrasound', 'Laboratory Tests', 'Pharmacy', 'Internal Medicine', 'Orthopedics',
   'Cardiology', 'Dermatology', 'Ophthalmology', 'Neurology', 'Reproduction',
   'Behavior Consultation', 'Nutrition Consultation', 'Euthanasia'
 ];
 
 const additionalServicesOptions = [
-  'Grooming', 'Boarding', 'Pet Hotel', 'Pet Daycare', 'Pet Training',
-  'Pet Transportation', 'Pet Adoption', 'Pet Insurance', 'Online Consultation',
+  'Grooming', 'Boarding', 'Pet Daycare', 'Pet Training',
+  'Pet Transportation', 'Pet Adoption',
   'Home Visits', 'Microchipping', 'Pet Food & Supplies'
 ];
 
