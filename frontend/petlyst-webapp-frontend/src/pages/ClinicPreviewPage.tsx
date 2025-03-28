@@ -222,23 +222,32 @@ const ClinicPreviewPage: React.FC = () => {
         
         console.log('Trimmed status:', clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '');
         
-        if (clinicData.clinic_verification_status !== 'pending' && clinicData.clinic_verification_status !== 'not_verified') {
-          console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending or not_verified`);
-          setUnauthorized(true);
-          setLoading(false);
-          return;
-        }
-
-        // Convert both IDs to strings and trim for comparison
-        const clinicOperatorId = String(clinicData.clinic_operator_id).trim();
-        const userId = String(user.id).trim();
-        console.log('Comparing IDs - Clinic operator:', clinicOperatorId, 'Current user:', userId);
+        // Check if user is admin (from localStorage or from Redux)
+        const isAdmin = user.user_type === 'admin' || localStorage.getItem('adminToken');
+        console.log('User type check - Is admin:', isAdmin);
         
-        if (clinicOperatorId !== userId) {
-          console.error('Unauthorized: User is not the clinic operator');
-          setUnauthorized(true);
-          setLoading(false);
-          return;
+        if (!isAdmin) {
+          // For non-admin users, enforce status restrictions
+          if (clinicData.clinic_verification_status !== 'pending' && clinicData.clinic_verification_status !== 'not_verified') {
+            console.error(`Unauthorized: Clinic status "${clinicData.clinic_verification_status}" is not pending or not_verified`);
+            setUnauthorized(true);
+            setLoading(false);
+            return;
+          }
+
+          // For non-admin users, check if they are the clinic operator
+          const clinicOperatorId = String(clinicData.clinic_operator_id).trim();
+          const userId = String(user.id).trim();
+          console.log('Comparing IDs - Clinic operator:', clinicOperatorId, 'Current user:', userId);
+          
+          if (clinicOperatorId !== userId) {
+            console.error('Unauthorized: User is not the clinic operator');
+            setUnauthorized(true);
+            setLoading(false);
+            return;
+          }
+        } else {
+          console.log('Admin user detected - granting access to clinic details');
         }
 
         console.log('Authorization checks passed, setting clinic data');
@@ -299,9 +308,10 @@ const ClinicPreviewPage: React.FC = () => {
 
   useEffect(() => {
     if (unauthorized) {
-      navigate('/dashboard');
+      const isAdmin = user?.user_type === 'admin' || localStorage.getItem('adminToken');
+      navigate(isAdmin ? '/admin/dashboard' : '/dashboard');
     }
-  }, [unauthorized, navigate]);
+  }, [unauthorized, navigate, user]);
 
   const formatDateTime = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -456,6 +466,7 @@ const ClinicPreviewPage: React.FC = () => {
   }
 
   if (error) {
+    const isAdmin = user?.user_type === 'admin' || localStorage.getItem('adminToken');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
@@ -468,7 +479,7 @@ const ClinicPreviewPage: React.FC = () => {
           <p className="text-gray-600 text-center mb-6">{error}</p>
           <div className="flex justify-center">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate(isAdmin ? '/admin/dashboard' : '/dashboard')}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Back to Dashboard
@@ -480,12 +491,13 @@ const ClinicPreviewPage: React.FC = () => {
   }
 
   if (!clinic) {
+    const isAdmin = user?.user_type === 'admin' || localStorage.getItem('adminToken');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
           <p className="text-gray-600">No clinic data found</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(isAdmin ? '/admin/dashboard' : '/dashboard')}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Back to Dashboard
@@ -558,7 +570,10 @@ const ClinicPreviewPage: React.FC = () => {
           <span className="ml-3 text-xl font-semibold text-gray-800">Petlyst</span>
         </div>
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => {
+            const isAdmin = user?.user_type === 'admin' || localStorage.getItem('adminToken');
+            navigate(isAdmin ? '/admin/dashboard' : '/dashboard');
+          }}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Back to Dashboard
