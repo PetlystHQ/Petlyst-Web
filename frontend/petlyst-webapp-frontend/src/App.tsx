@@ -14,6 +14,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ClinicPreviewPage from './pages/ClinicPreviewPage';
 import EditClinicPage from './pages/EditClinicPage';
 import ManagementDashboard from './pages/ManagementDashboard';
+import SearchResult from './pages/SearchResult';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
@@ -31,6 +32,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/pet-owner-home" element={<PetOwnerHomePage />} />
+        <Route path="/search" element={<SearchResult />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
