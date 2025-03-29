@@ -13,7 +13,7 @@ const DefaultHeader: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const isPetOwnerPage = location.pathname === '/pet-owner-home';
+  const isPetOwnerPage = location.pathname === '/pet-owner-home' || location.pathname.startsWith('/search');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -64,7 +64,7 @@ const DefaultHeader: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2">
+              <Link to={isPetOwnerPage ? "/pet-owner-home" : "/"} className="flex items-center space-x-2">
                 <img 
                   src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
                   alt="Petlyst Logo" 
@@ -77,13 +77,28 @@ const DefaultHeader: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               {/* Enterprise/Community toggle - visible to all users */}
-              <div className="mr-2">
+              <div className="mr-2 flex items-center space-x-2">
+                {/* Download App button */}
+                <a 
+                  href="https://play.google.com/store" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center"
+                  title="Download our mobile app"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4l0 10M12 14l4-4M12 14l-4-4M12 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                  <span className="hidden md:inline">Download App</span>
+                  <span className="md:hidden">App</span>
+                </a>
+
                 {isPetOwnerPage ? (
                   <Link to="/" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7"></path>
                     </svg>
-                    <span className="hidden md:inline">Petlyst Enterprise</span>
+                    <span className="hidden md:inline">Enterprise</span>
                     <span className="md:hidden">Enterprise</span>
                   </Link>
                 ) : (
@@ -91,7 +106,7 @@ const DefaultHeader: React.FC = () => {
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7"></path>
                     </svg>
-                    <span className="hidden md:inline">Petlyst Community</span>
+                    <span className="hidden md:inline">Community</span>
                     <span className="md:hidden">Community</span>
                   </Link>
                 )}
