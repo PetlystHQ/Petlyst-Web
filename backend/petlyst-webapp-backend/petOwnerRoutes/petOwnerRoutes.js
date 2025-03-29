@@ -171,9 +171,12 @@ router.get('/search-clinics', async (req, res) => {
     
     console.log('Executing count SQL query:', countQueryText);
     
-    // Create a separate array of parameters for the count query
-    // We need all the same parameters EXCEPT the last two (limit and offset)
-    const countParams = paramCount > 2 ? queryParams.slice(0, paramCount - 2) : [];
+    // Ensure we're including the query parameter(s) but excluding limit/offset
+    let countParams = [];
+    if (conditions.length > 0) {
+      // Copy all parameters except the last two (limit and offset)
+      countParams = queryParams.slice(0, queryParams.length - 2);
+    }
     console.log('With count parameters:', countParams);
     
     // Only pass parameters if we actually have conditions that need them
@@ -182,15 +185,20 @@ router.get('/search-clinics', async (req, res) => {
     // Process clinic photos for each clinic
     const clinics = result.rows;
     for (const clinic of clinics) {
-      // Fetch photos for this clinic
-      const photosQuery = `
-        SELECT clinic_album_photo_url
-        FROM clinicalbum
-        WHERE clinic_id = $1
-        LIMIT 1
-      `;
-      const photosResult = await pool.query(photosQuery, [clinic.clinic_id]);
-      clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
+      try {
+        // Fetch photos for this clinic
+        const photosQuery = `
+          SELECT clinic_album_photo_url
+          FROM "clinic_albums"
+          WHERE clinic_id = $1
+          LIMIT 1
+        `;
+        const photosResult = await pool.query(photosQuery, [clinic.clinic_id]);
+        clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
+      } catch (error) {
+        console.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
+        clinic.photos = []; // Set empty photos array so the app doesn't crash
+      }
       
       // Parse available_days if it's in PostgreSQL array format
       if (clinic.available_days && typeof clinic.available_days === 'string' && 
@@ -380,13 +388,18 @@ router.get('/clinic/:clinicId', async (req, res) => {
     clinic.operator_surname = operatorResult.rows[0]?.user_surname;
     
     // Get clinic photos
-    const photosQuery = `
-      SELECT clinic_album_photo_url
-      FROM clinicalbum
-      WHERE clinic_id = $1
-    `;
-    const photosResult = await pool.query(photosQuery, [clinicId]);
-    clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
+    try {
+      const photosQuery = `
+        SELECT clinic_album_photo_url
+        FROM "clinic_albums"
+        WHERE clinic_id = $1
+      `;
+      const photosResult = await pool.query(photosQuery, [clinicId]);
+      clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
+    } catch (error) {
+      console.warn(`Could not fetch photos for clinic ${clinicId}:`, error.message);
+      clinic.photos = []; // Set empty photos array so the app doesn't crash
+    }
     
     // Get animal types
     const animalTypesQuery = `

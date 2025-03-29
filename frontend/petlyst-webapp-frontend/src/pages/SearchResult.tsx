@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import ClinicCard from '../components/search/ClinicCard';
 
 // Types for our data
 interface Clinic {
@@ -147,13 +148,36 @@ const SearchResult: React.FC = () => {
     setSearchParams(updatedParams);
   };
 
+  // Handle pagination
+  const handlePageChange = (newPage: number) => {
+    updateFilters({ page: newPage });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">
         {query ? `Search Results for "${query}"` : 'All Clinics'}
       </h1>
       
-      {/* Filter components will go here */}
+      {/* Filter section */}
+      <div className="mb-8 p-4 bg-gray-50 rounded-lg shadow-sm">
+        <div className="flex flex-wrap gap-3">
+          {/* Filter tags/pills would go here */}
+          {query && (
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              Search: {query}
+              <button className="ml-2 text-blue-500 hover:text-blue-700" onClick={() => updateFilters({ query: '' })}>×</button>
+            </span>
+          )}
+          {province && (
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              Province: {province}
+              <button className="ml-2 text-blue-500 hover:text-blue-700" onClick={() => updateFilters({ province: '' })}>×</button>
+            </span>
+          )}
+          {/* More filter pills would go here */}
+        </div>
+      </div>
       
       {/* Loading state */}
       {loading && (
@@ -176,9 +200,72 @@ const SearchResult: React.FC = () => {
         </div>
       )}
       
-      {/* Clinic list will go here */}
+      {/* Clinic Grid */}
+      {!loading && !error && clinics.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {clinics.map(clinic => (
+            <ClinicCard key={clinic.clinic_id} clinic={clinic} />
+          ))}
+        </div>
+      )}
       
-      {/* Pagination controls will go here */}
+      {/* Pagination controls */}
+      {!loading && !error && pagination.totalPages > 1 && (
+        <div className="flex justify-center mt-10">
+          <nav className="flex items-center space-x-2">
+            <button 
+              onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+              disabled={pagination.page === 1}
+              className={`px-3 py-1 rounded ${pagination.page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers */}
+            {Array.from({ length: pagination.totalPages }).map((_, index) => {
+              // Display current page, first, last, and pages around current
+              const pageNum = index + 1;
+              const isCurrentPage = pageNum === pagination.page;
+              const isFirstPage = pageNum === 1;
+              const isLastPage = pageNum === pagination.totalPages;
+              const isNearCurrentPage = Math.abs(pageNum - pagination.page) <= 1;
+              
+              // Only render if it's the current page, first/last page, or near current
+              if (isCurrentPage || isFirstPage || isLastPage || isNearCurrentPage) {
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-8 h-8 flex items-center justify-center rounded ${
+                      isCurrentPage 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              }
+              
+              // Add ellipsis if needed
+              if ((pageNum === 2 && pagination.page > 3) || 
+                  (pageNum === pagination.totalPages - 1 && pagination.page < pagination.totalPages - 2)) {
+                return <span key={pageNum} className="px-2">...</span>;
+              }
+              
+              return null;
+            })}
+            
+            <button 
+              onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.page + 1))}
+              disabled={pagination.page === pagination.totalPages}
+              className={`px-3 py-1 rounded ${pagination.page === pagination.totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              Next
+            </button>
+          </nav>
+        </div>
+      )}
       
     </div>
   );

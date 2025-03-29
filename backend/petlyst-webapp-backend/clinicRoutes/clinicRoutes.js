@@ -1188,14 +1188,20 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
     const formattedClinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
     
     // Get photos from clinicalbum table
-    const getPhotosQuery = `
-      SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
-      FROM clinicalbum
-      WHERE clinic_id = $1
-      ORDER BY clinic_album_photo_url_created_at DESC
-    `;
-    
-    const photosResult = await pool.query(getPhotosQuery, [clinicId]);
+    let photosResult = { rows: [] };
+    try {
+      const getPhotosQuery = `
+        SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
+        FROM "clinic_albums"
+        WHERE clinic_id = $1
+        ORDER BY clinic_album_photo_url_created_at DESC
+      `;
+      
+      photosResult = await pool.query(getPhotosQuery, [clinicId]);
+    } catch (photoError) {
+      console.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
+      // Continue with empty photos array
+    }
     
     // Log information about the clinic and photos
     console.log('Fetching photos for clinic:', {
@@ -1247,10 +1253,10 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
     // Convert database clinic_type to display format for S3 folder path
     const formattedClinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
 
-    // Find the photo in clinicalbum
+    // Find the photo in clinic_albums
     const findPhotoQuery = `
       SELECT clinic_album_photo_id, clinic_album_photo_url 
-      FROM clinicalbum
+      FROM "clinic_albums"
       WHERE clinic_album_photo_id = $1 AND clinic_id = $2
     `;
     
@@ -1283,7 +1289,7 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
 
       // Delete the record from the database
       const deletePhotoQuery = `
-        DELETE FROM clinicalbum 
+        DELETE FROM clinic_albums 
         WHERE clinic_album_photo_id = $1
       `;
       await pool.query(deletePhotoQuery, [photoId]);
