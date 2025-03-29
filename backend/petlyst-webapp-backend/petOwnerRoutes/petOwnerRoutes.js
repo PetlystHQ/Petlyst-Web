@@ -508,16 +508,20 @@ router.get('/search-suggestions', async (req, res) => {
     
     // Get service suggestions
     const serviceQuery = `
+    SELECT * FROM (
       SELECT service_name AS text, 'medical_service' AS type
       FROM medical_services
       WHERE service_name ILIKE $1
       LIMIT 3
-      UNION
+    ) AS medical_services
+    UNION
+    SELECT * FROM (
       SELECT service_name AS text, 'additional_service' AS type
       FROM additional_services
       WHERE service_name ILIKE $1
       LIMIT 3
-    `;
+    ) AS additional_services
+`;
     
     const likePattern = `%${query}%`;
     

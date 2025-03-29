@@ -28,6 +28,14 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: true,
       },
+      // Add proxy configuration for API requests
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+          secure: false
+        }
+      }
     }
   };
 });
