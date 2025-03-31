@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { DASHBOARD_VIEWS } from '../../../constants/dashboard';
 import { DashboardView } from '../../../types/dashboard';
 import ViewProfileButton from '../../veterinarian/ViewProfileButton';
+import ProfileCompletionCard from '../../veterinarian/ProfileCompletionCard';
 import { useAppSelector } from '../../../hooks/useAppSelector';
 
 interface OverviewProps {
@@ -138,6 +139,9 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
           </div>
         </div>
       )}
+      
+      {/* Profile Completion Card - shows missing profile sections */}
+      <ProfileCompletionCard className="mb-4" onViewChange={onViewChange} />
       
       <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-100 overflow-hidden">
         <div className="p-6">
