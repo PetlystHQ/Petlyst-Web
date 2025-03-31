@@ -80,7 +80,7 @@ const SingleVeterinarianPage: React.FC = () => {
       try {
         setLoading(true);
         
-        // Get the profile by slug instead of id
+        // Auth token'ı her zaman gönderiyoruz (eğer varsa), böylece profil sahibi olabilir
         const response = await axios.get(`${API_ENDPOINTS.PUBLIC_PROFILE_BY_SLUG}/${slug}`, { 
           headers: token ? { Authorization: `Bearer ${token}` } : {} 
         });
@@ -89,10 +89,27 @@ const SingleVeterinarianPage: React.FC = () => {
           setProfile(response.data.profile);
           setIsPrivateProfile(response.data.is_private || false);
           
-          // Determine if the current user is the profile owner
-          if (user && response.data.profile) {
-            const isOwner = user.id === response.data.profile.user_id || 
-                           (user as any)?.user_id === response.data.profile.user_id;
+          // Backend'in gönderdiği is_owner bilgisini öncelikle kullan
+          if (response.data.hasOwnProperty('is_owner')) {
+            setIsProfileOwner(response.data.is_owner);
+            console.log("Using backend is_owner info:", response.data.is_owner);
+          } 
+          // Eğer backend is_owner bilgisi yoksa, client tarafında hesapla
+          else if (user && response.data.profile) {
+            // Farklı ID formatlarını destekle
+            const userId = user.id || (user as any)?.user_id || (user as any)?.userId;
+            const profileUserId = response.data.profile.user_id;
+            
+            // ID'leri string formatına çevirip karşılaştır
+            const isOwner = userId && profileUserId && 
+                           String(userId) === String(profileUserId);
+                           
+            console.log("Calculated is_owner client-side:", {
+              userId,
+              profileUserId,
+              isOwner
+            });
+            
             setIsProfileOwner(isOwner);
           }
         } else {

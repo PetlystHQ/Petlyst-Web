@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
-import { logout } from '../../store/slices/authSlice';
+import { logout, setProfileVisibility } from '../../store/slices/authSlice';
 import { DashboardView, VerificationStatus } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
 import axios from 'axios';
@@ -37,15 +37,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     const fetchProfileVisibility = async () => {
       try {
         console.log('Fetching profile visibility status...');
-        // Hardcoded URL, kesin çalışacak şekilde
-        const response = await axios.get('http://localhost:3000/api/veterinarian/profile-visibility', {
+        // Use API_ENDPOINTS instead of hardcoded URL
+        const response = await axios.get(API_ENDPOINTS.PROFILE_VISIBILITY, {
           withCredentials: true,
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
         console.log('Profile visibility status:', response.data);
-        setIsProfilePublic(response.data.is_profile_public);
+        const isPublic = response.data.is_profile_public;
+        setIsProfilePublic(isPublic);
+        // Also update Redux store when loading initial visibility
+        dispatch(setProfileVisibility(isPublic));
       } catch (error) {
         console.error('Error fetching profile visibility status:', error);
       }
@@ -54,7 +57,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     if (user?.user_type === 'veterinarian' && token) {
       fetchProfileVisibility();
     }
-  }, [user, token]);
+  }, [user, token, dispatch]);
 
   const handleLogout = () => {
     setLoggingOut(true);
@@ -91,6 +94,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       if (response.status === 200) {
         setIsProfilePublic(!!newVisibility);
+        // Immediately update Redux store
+        dispatch(setProfileVisibility(!!newVisibility));
         console.log('Profile visibility updated successfully to:', newVisibility);
       }
     } catch (error) {

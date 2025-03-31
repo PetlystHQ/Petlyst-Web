@@ -1188,7 +1188,10 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
       try {
         const token = authHeader.substring(7);
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userId = decoded.id;
+        
+        // Doğru şekilde ID'yi çıkarıyoruz - JWT token yapısındaki farklı fieldlar destekleniyor
+        userId = decoded.id || decoded.userId || decoded.user_id;
+        console.log("Authenticated user ID:", userId);
       } catch (error) {
         // Invalid token, continue as unauthenticated
         console.error('Error verifying token:', error);
@@ -1210,7 +1213,14 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     }
     
     const veterinarian = veterinarians.rows[0];
-    isProfileOwner = userId && userId === veterinarian.veterinarian_id;
+    
+    // ID formatları farklı olabileceği için string formatına çevirip karşılaştırıyoruz
+    isProfileOwner = userId && (String(userId) === String(veterinarian.veterinarian_id));
+    console.log("Profile owner check:", { 
+      userId: userId, 
+      vet_id: veterinarian.veterinarian_id, 
+      isOwner: isProfileOwner 
+    });
     
     // Check if the profile is public or the requester is the profile owner
     if (!veterinarian.is_profile_public && !isProfileOwner) {
@@ -1294,7 +1304,8 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     return res.json({
       success: true,
       profile,
-      is_private: !veterinarian.is_profile_public
+      is_private: !veterinarian.is_profile_public, 
+      is_owner: isProfileOwner
     });
     
   } catch (error) {
