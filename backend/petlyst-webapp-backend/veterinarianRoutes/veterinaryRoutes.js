@@ -3,6 +3,25 @@ const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
 const { encrypt } = require('../utils/encryption');
+// Multer ve S3 servislerini ekleyelim
+const multer = require('multer');
+const s3Service = require('../aws/s3Service');
+const { uploadVeterinarianPhoto, deleteVeterinarianPhoto } = s3Service;
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Get Veterinarian Verification Status for Authenticated Veterinary
 router.get('/verification-status', authenticateToken, async (req, res) => {
@@ -663,6 +682,260 @@ router.put('/profile', authenticateToken, async (req, res) => {
         console.error('Error updating veterinarian profile:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
+});
+
+// Upload veterinarian photo
+router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    console.log('===== UPLOAD VETERINARIAN PHOTO REQUEST RECEIVED =====');
+    console.log('Request body:', {
+      veterinarianName: req.body.veterinarianName,
+      userId: req.user?.userId
+    });
+    console.log('File info:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? `Buffer (${req.file.buffer.length} bytes)` : 'No buffer'
+    } : 'No file');
+    
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      console.error('Access denied - user is not a veterinarian');
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    const photo = req.file;
+    const { veterinarianName } = req.body;
+
+    // Validate required fields
+    if (!veterinarianName) {
+      console.error('Missing required field: veterinarianName');
+      return res.status(400).json({
+        success: false,
+        message: 'Veterinarian name is required'
+      });
+    }
+
+    if (!photo) {
+      console.error('No photo provided in the request');
+      return res.status(400).json({
+        success: false,
+        message: 'No photo provided'
+      });
+    }
+
+    // Upload to S3
+    try {
+      console.log('Uploading veterinarian photo:', {
+        fileName: photo.originalname,
+        fileSize: photo.size,
+        mimeType: photo.mimetype,
+        veterinarianId,
+        veterinarianName
+      });
+
+      const result = await uploadVeterinarianPhoto(
+        photo.buffer,
+        photo.originalname,
+        photo.mimetype,
+        veterinarianId.toString(),
+        veterinarianName
+      );
+
+      console.log('S3 upload successful:', result);
+      
+      // Ensure we have a valid URL
+      if (!result.url || !result.url.startsWith('http')) {
+        console.warn('S3 returned invalid URL, constructing fallback URL');
+        result.url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${result.key}`;
+        console.log('Using fallback URL:', result.url);
+      }
+
+      // Insert photo URL into veterinarian_albums table
+      const insertPhotoQuery = `
+        INSERT INTO veterinarian_albums (veterinarian_id, veterinarian_album_photo_url)
+        VALUES ($1, $2)
+        RETURNING *
+      `;
+      
+      const dbResult = await pool.query(insertPhotoQuery, [veterinarianId, result.url]);
+      console.log('Database insert successful:', dbResult.rows[0]);
+
+      res.status(200).json({
+        success: true,
+        message: 'Photo uploaded successfully',
+        photo: {
+          url: result.url,
+          key: result.key
+        }
+      });
+    } catch (s3Error) {
+      console.error('S3 upload error:', s3Error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to upload photo to storage: ${s3Error.message}`
+      });
+    }
+  } catch (error) {
+    console.error('Error uploading veterinarian photo:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get veterinarian photos
+router.get('/photos', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    
+    // Get user's name for logging purposes
+    const userQuery = `
+      SELECT user_name, user_surname
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [veterinarianId]);
+    const veterinarianName = userResult.rows.length > 0 
+      ? `${userResult.rows[0].user_name} ${userResult.rows[0].user_surname}`
+      : 'Unknown';
+    
+    // Get photos from veterinarian_albums table
+    let photosResult = { rows: [] };
+    try {
+      const getPhotosQuery = `
+        SELECT veterinarian_album_photo_id, veterinarian_album_photo_url, veterinarian_album_photo_url_created_at
+        FROM "veterinarian_albums"
+        WHERE veterinarian_id = $1
+        ORDER BY veterinarian_album_photo_url_created_at DESC
+      `;
+      
+      photosResult = await pool.query(getPhotosQuery, [veterinarianId]);
+    } catch (photoError) {
+      console.warn(`Could not fetch photos for veterinarian ${veterinarianId}:`, photoError.message);
+      // Continue with empty photos array
+    }
+    
+    // Log information about the veterinarian and photos
+    console.log('Fetching photos for veterinarian:', {
+      veterinarianId,
+      veterinarianName,
+      photoCount: photosResult.rows.length
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Photos fetched successfully',
+      photos: photosResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching veterinarian photos:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Delete veterinarian photo
+router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    const { photoId } = req.params;
+
+    // Get user's name for S3 path
+    const userQuery = `
+      SELECT user_name, user_surname
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [veterinarianId]);
+    const veterinarianName = userResult.rows.length > 0 
+      ? `${userResult.rows[0].user_name} ${userResult.rows[0].user_surname}`
+      : 'Unknown';
+
+    // Find the photo in veterinarian_albums
+    const findPhotoQuery = `
+      SELECT veterinarian_album_photo_id, veterinarian_album_photo_url 
+      FROM "veterinarian_albums"
+      WHERE veterinarian_album_photo_id = $1 AND veterinarian_id = $2
+    `;
+    
+    const photoResult = await pool.query(findPhotoQuery, [photoId, veterinarianId]);
+
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Photo not found',
+      });
+    }
+
+    const { veterinarian_album_photo_url } = photoResult.rows[0];
+
+    // Parse the S3 URL to get the key
+    const s3Key = veterinarian_album_photo_url.split('.amazonaws.com/')[1];
+    
+    console.log('Deleting photo:', {
+      photoId,
+      veterinarianId,
+      veterinarianName,
+      s3Key
+    });
+
+    // Delete from S3
+    try {
+      await deleteVeterinarianPhoto(s3Key);
+
+      // Delete the record from the database
+      const deletePhotoQuery = `
+        DELETE FROM veterinarian_albums 
+        WHERE veterinarian_album_photo_id = $1
+      `;
+      await pool.query(deletePhotoQuery, [photoId]);
+
+      res.status(200).json({
+        success: true,
+        message: 'Photo deleted successfully',
+      });
+    } catch (s3Error) {
+      console.error('S3 delete error:', s3Error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to delete photo from storage: ${s3Error.message}`,
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting veterinarian photo:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
 });
 
 module.exports = router; 

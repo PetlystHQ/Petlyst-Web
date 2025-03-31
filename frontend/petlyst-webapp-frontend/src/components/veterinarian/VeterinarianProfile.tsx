@@ -59,6 +59,13 @@ interface ProfileData {
   user_profile_photo: string | null;
 }
 
+// Fotoğraf interface'i ekle
+interface VeterinarianPhoto {
+  veterinarian_album_photo_id: number;
+  veterinarian_album_photo_url: string;
+  veterinarian_album_photo_url_created_at: string;
+}
+
 const VeterinarianProfile: React.FC = () => {
   const { token } = useAppSelector(state => state.auth);
   const [activeTab, setActiveTab] = useState<string>('education');
@@ -114,7 +121,7 @@ const VeterinarianProfile: React.FC = () => {
   const [deleteEducationId, setDeleteEducationId] = useState<number | null>(null);
   const [deleteCertificationId, setDeleteCertificationId] = useState<number | null>(null);
   const [deleteExpertiseId, setDeleteExpertiseId] = useState<number | null>(null);
-  const [deleteType, setDeleteType] = useState<'education' | 'certification' | 'expertise'>('education');
+  const [deleteType, setDeleteType] = useState<'education' | 'certification' | 'expertise' | 'photo'>('education');
 
   // Add new profile state
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -128,6 +135,15 @@ const VeterinarianProfile: React.FC = () => {
   const [languages, setLanguages] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   
+  // Photos state
+  const [photos, setPhotos] = useState<VeterinarianPhoto[]>([]);
+  const [photosLoading, setPhotosLoading] = useState<boolean>(true);
+  const [photosError, setPhotosError] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false);
+  const [photoToDelete, setPhotoToDelete] = useState<number | null>(null);
+  const [deletePhotoLoading, setDeletePhotoLoading] = useState<boolean>(false);
+  const [fileInputKey, setFileInputKey] = useState<number>(0); // For resetting file input
+
   useEffect(() => {
     if (activeTab === 'education') {
       fetchEducation();
@@ -137,6 +153,8 @@ const VeterinarianProfile: React.FC = () => {
       fetchExpertise();
     } else if (activeTab === 'biography') {
       fetchProfile();
+    } else if (activeTab === 'photos') {
+      fetchPhotos();
     }
   }, [activeTab, token]);
 
@@ -215,6 +233,140 @@ const VeterinarianProfile: React.FC = () => {
       setProfileError('Failed to load profile data. Please try again later.');
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const fetchPhotos = async () => {
+    try {
+      setPhotosLoading(true);
+      const response = await axios.get(API_ENDPOINTS.VET_PHOTOS, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data.success) {
+        setPhotos(response.data.photos || []);
+        setPhotosError(null);
+      } else {
+        setPhotosError(response.data.message || 'Failed to load photos.');
+      }
+    } catch (error) {
+      console.error('Error fetching photos:', error);
+      setPhotosError('Failed to load photos. Please try again later.');
+    } finally {
+      setPhotosLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setPhotosError('Only image files are allowed.');
+      return;
+    }
+    
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotosError('File size must be less than 10MB.');
+      return;
+    }
+    
+    try {
+      setUploadingPhoto(true);
+      setPhotosError(null);
+      
+      // Get veterinarian name from profile data
+      if (!profileData) {
+        await fetchProfile();
+      }
+      
+      const veterinarianName = profileData ? 
+        `${profileData.user_name} ${profileData.user_surname}` : 
+        'Unknown';
+      
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('veterinarianName', veterinarianName);
+      
+      // If a photo already exists, delete it first
+      if (photos.length > 0) {
+        try {
+          const photoId = photos[0].veterinarian_album_photo_id;
+          await axios.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          console.log('Existing photo deleted before upload');
+        } catch (deleteError) {
+          console.error('Error deleting existing photo:', deleteError);
+          // Continue with upload even if delete fails
+        }
+      }
+      
+      const response = await axios.post(
+        API_ENDPOINTS.UPLOAD_VET_PHOTO, 
+        formData, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Reset file input for future uploads
+        setFileInputKey(prev => prev + 1);
+        // Fetch updated photos
+        fetchPhotos();
+      } else {
+        setPhotosError(response.data.message || 'Failed to upload photo.');
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setPhotosError('Failed to upload photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const confirmDeletePhoto = (photoId: number) => {
+    setPhotoToDelete(photoId);
+    setShowDeleteModal(true);
+    setDeleteType('photo');
+  };
+
+  const deletePhoto = async (photoId: number) => {
+    try {
+      setDeletePhotoLoading(true);
+      
+      const response = await axios.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data.success) {
+        // Update photos state by removing the deleted photo
+        setPhotos(prevPhotos => 
+          prevPhotos.filter(photo => photo.veterinarian_album_photo_id !== photoId)
+        );
+      } else {
+        setPhotosError(response.data.message || 'Failed to delete photo.');
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      setPhotosError('Failed to delete photo. Please try again.');
+    } finally {
+      setDeletePhotoLoading(false);
+      setPhotoToDelete(null);
     }
   };
 
@@ -484,20 +636,25 @@ const VeterinarianProfile: React.FC = () => {
           }
         });
         fetchExpertise();
+      } else if (deleteType === 'photo' && photoToDelete) {
+        await deletePhoto(photoToDelete);
       }
       
       setShowDeleteModal(false);
       setDeleteEducationId(null);
       setDeleteCertificationId(null);
       setDeleteExpertiseId(null);
+      setPhotoToDelete(null);
     } catch (error) {
       console.error(`Error deleting ${deleteType}:`, error);
       if (deleteType === 'education') {
         setEducationError(`Failed to delete ${deleteType} record. Please try again.`);
       } else if (deleteType === 'certification') {
         setCertificationError(`Failed to delete ${deleteType} record. Please try again.`);
-      } else {
+      } else if (deleteType === 'expertise') {
         setExpertiseError(`Failed to delete ${deleteType} record. Please try again.`);
+      } else if (deleteType === 'photo') {
+        setPhotosError(`Failed to delete photo. Please try again.`);
       }
       setShowDeleteModal(false);
     }
@@ -508,6 +665,7 @@ const VeterinarianProfile: React.FC = () => {
     setDeleteEducationId(null);
     setDeleteCertificationId(null);
     setDeleteExpertiseId(null);
+    setPhotoToDelete(null);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -1654,6 +1812,173 @@ const VeterinarianProfile: React.FC = () => {
     );
   };
 
+  // PhotosSection ekle
+  const renderPhotosSection = () => {
+    if (photosLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (photosError) {
+      return (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4 rounded-r-md shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{photosError}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const hasPhoto = photos.length > 0;
+    const currentPhoto = hasPhoto ? photos[0] : null;
+
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-800">Profile Picture</h3>
+            <p className="text-sm text-gray-500 mt-1">Add a professional profile picture to enhance your presence</p>
+          </div>
+        </div>
+        
+        {/* No photo message */}
+        {!hasPhoto && (
+          <div className="flex flex-col items-center">
+            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 w-full max-w-lg mx-auto mb-6">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-500 mb-2">No profile picture yet</p>
+              <p className="text-sm text-gray-400 max-w-md mx-auto pb-4">
+                Add a professional profile picture to enhance your presence and build trust with pet owners.
+              </p>
+              
+              <label 
+                htmlFor="photo-upload-empty" 
+                className={`px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center cursor-pointer ${uploadingPhoto ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {uploadingPhoto ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Picture
+                  </>
+                )}
+                <input 
+                  id="photo-upload-empty" 
+                  type="file" 
+                  key={fileInputKey + "-empty"}
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handlePhotoUpload} 
+                  disabled={uploadingPhoto}
+                />
+              </label>
+            </div>
+          </div>
+        )}
+        
+        {/* Single photo display */}
+        {currentPhoto && (
+          <div className="flex flex-col items-center">
+            <div className="w-full max-w-2xl mx-auto bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex justify-center mb-4">
+                <div className="relative w-full flex justify-center">
+                  <img
+                    src={currentPhoto.veterinarian_album_photo_url}
+                    alt="Veterinarian profile"
+                    className="rounded-lg shadow-md object-contain max-h-[400px]"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-2 text-center mb-4">
+                <p className="text-xs text-gray-500">
+                  Uploaded on {new Date(currentPhoto.veterinarian_album_photo_url_created_at).toLocaleDateString()}
+                </p>
+              </div>
+              
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => confirmDeletePhoto(currentPhoto.veterinarian_album_photo_id)}
+                  className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md text-sm font-medium hover:bg-red-100 transition-colors shadow-sm inline-flex items-center"
+                  disabled={deletePhotoLoading}
+                >
+                  {deletePhotoLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Remove Picture
+                    </>
+                  )}
+                </button>
+                
+                <label 
+                  htmlFor="photo-upload" 
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm inline-flex items-center cursor-pointer ${uploadingPhoto ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Change Picture
+                    </>
+                  )}
+                  <input 
+                    id="photo-upload" 
+                    type="file" 
+                    key={fileInputKey}
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handlePhotoUpload} 
+                    disabled={uploadingPhoto}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       {/* Profile Tabs */}
@@ -1720,6 +2045,22 @@ const VeterinarianProfile: React.FC = () => {
               Biography
             </div>
           </button>
+          {/* Photos tab */}
+          <button
+            onClick={() => setActiveTab('photos')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'photos'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Profile Picture
+            </div>
+          </button>
         </nav>
       </div>
       
@@ -1729,6 +2070,7 @@ const VeterinarianProfile: React.FC = () => {
         {activeTab === 'certifications' && renderCertificationsSection()}
         {activeTab === 'expertise' && renderExpertiseSection()}
         {activeTab === 'biography' && renderBiographySection()}
+        {activeTab === 'photos' && renderPhotosSection()}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -1741,10 +2083,10 @@ const VeterinarianProfile: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
-              Delete {deleteType === 'education' ? 'Education' : deleteType === 'certification' ? 'Certification' : 'Expertise'} Record
+              Delete {deleteType === 'education' ? 'Education' : deleteType === 'certification' ? 'Certification' : deleteType === 'expertise' ? 'Expertise' : 'Photo'} {deleteType !== 'photo' ? 'Record' : ''}
             </h3>
             <p className="text-gray-600 text-center mb-6">
-              Are you sure you want to delete this {deleteType} record? This action cannot be undone.
+              Are you sure you want to delete this {deleteType}? This action cannot be undone.
             </p>
             <div className="flex justify-center space-x-3">
               <button
