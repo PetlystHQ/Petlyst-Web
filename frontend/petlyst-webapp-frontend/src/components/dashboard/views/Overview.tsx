@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DASHBOARD_VIEWS } from '../../../constants/dashboard';
 import { DashboardView } from '../../../types/dashboard';
 import ViewProfileButton from '../../veterinarian/ViewProfileButton';
+import { useAppSelector } from '../../../hooks/useAppSelector';
 
 interface OverviewProps {
   verificationStatus: string | null;
@@ -14,6 +15,12 @@ interface OverviewProps {
 }
 
 export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify, isLoading, onAddClinic, onViewChange, hasSubmittedClinics = false, isUpdating }) => {
+  // Force re-render when auth state changes (including any profile updates)
+  const auth = useAppSelector(state => state.auth);
+  const { profileVisibility } = auth;
+  
+  // Generate a unique key for ViewProfileButton each time profileVisibility changes
+  const profileButtonKey = useMemo(() => `profile-button-${profileVisibility}-${Date.now()}`, [profileVisibility]);
 
   if (isLoading) {
     return (
@@ -157,8 +164,12 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
         </div>
       </div>
       
-      {/* View Profile Button */}
-      <ViewProfileButton className="mt-4" />
+      {/* View Profile Button - with key that changes when profile visibility changes */}
+      <ViewProfileButton 
+        className="mt-4" 
+        forceRefresh={true} 
+        key={profileButtonKey} 
+      />
 
       {isUpdating && (
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">

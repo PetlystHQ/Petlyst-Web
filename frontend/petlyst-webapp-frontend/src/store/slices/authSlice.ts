@@ -11,10 +11,13 @@ interface User {
   profile_photo?: string;  // Maps to user_profile_photo
 }
 
-interface AuthState {
+export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  profileVisibility: boolean | null;
 }
 
 // Get stored values
@@ -25,6 +28,9 @@ const initialState: AuthState = {
   user: storedUser ? JSON.parse(storedUser) : null,
   token: storedToken,
   isAuthenticated: !!storedToken,
+  isLoading: false,
+  error: null,
+  profileVisibility: null,
 };
 
 const authSlice = createSlice({
@@ -56,8 +62,11 @@ const authSlice = createSlice({
       // Debug log
       console.log('logout - Clearing credentials');
     },
+    setProfileVisibility: (state, action: PayloadAction<boolean>) => {
+      state.profileVisibility = action.payload;
+    },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, logout, setProfileVisibility } = authSlice.actions;
 export default authSlice.reducer; 
