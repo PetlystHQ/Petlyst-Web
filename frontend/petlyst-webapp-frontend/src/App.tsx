@@ -30,7 +30,8 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {!isDashboard && !isAdminRoute && !isClinicPreview && <DefaultHeader />}
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<PetOwnerHomePage />} />
+        <Route path="/enterprise" element={<HomePage />} />
         <Route path="/pet-owner-home" element={<PetOwnerHomePage />} />
         <Route path="/search" element={<SearchResult />} />
         <Route path="/admin/login" element={<AdminLogin />} />
