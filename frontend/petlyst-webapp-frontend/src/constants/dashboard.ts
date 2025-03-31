@@ -23,4 +23,7 @@ export const API_ENDPOINTS = {
   CERTIFICATIONS: `${API_URL}/api/veterinarian/certifications`,
   EXPERTISE: `${API_URL}/api/veterinarian/expertise`,
   PROFILE: `${API_URL}/api/veterinarian/profile`,
+  // Veterinarian photos endpoints
+  VET_PHOTOS: `${API_URL}/api/veterinarian/photos`,
+  UPLOAD_VET_PHOTO: `${API_URL}/api/veterinarian/upload-photo`
 }; 

@@ -468,6 +468,223 @@ class S3Service {
       };
     }
   }
+
+  /**
+   * Generate a folder path for veterinarian photos
+   * @param {string} veterinarianId - The ID of the veterinarian
+   * @param {string} veterinarianName - The name of the veterinarian
+   * @returns {string} - The folder path
+   */
+  getVeterinarianPhotoPath(veterinarianId, veterinarianName) {
+    // Sanitize veterinarian name
+    const sanitizedVeterinarianName = veterinarianName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const folderName = `${veterinarianId}-${sanitizedVeterinarianName}`;
+    
+    console.log('Final veterinarian folder path:', `veterinarian-photos/${folderName}`);
+    return `veterinarian-photos/${folderName}`;
+  }
+
+  /**
+   * Upload a veterinarian photo to S3
+   * @param {Buffer} fileBuffer - The file buffer to upload
+   * @param {string} fileName - The original file name
+   * @param {string} contentType - The content type of the file
+   * @param {string} veterinarianId - The ID of the veterinarian
+   * @param {string} veterinarianName - The name of the veterinarian
+   * @returns {Promise<string>} - The URL of the uploaded file
+   */
+  async uploadVeterinarianPhoto(fileBuffer, fileName, contentType, veterinarianId, veterinarianName) {
+    try {
+      console.log('=========== STARTING VETERINARIAN PHOTO S3 UPLOAD PROCESS ===========');
+      console.log('Upload parameters:', { fileName, contentType, veterinarianId, veterinarianName });
+      console.log('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
+      console.log('ENV Check:', {
+        accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
+        secretKeyExists: !!process.env.AWS_SECRET_ACCESS_KEY,
+        bucket: process.env.AWS_S3_BUCKET,
+        region: process.env.AWS_REGION
+      });
+      
+      if (!fileBuffer || fileBuffer.length === 0) {
+        throw new Error('Empty file buffer provided');
+      }
+      
+      if (!fileName) {
+        throw new Error('No filename provided');
+      }
+      
+      if (!veterinarianId || !veterinarianName) {
+        throw new Error('Missing veterinarian information');
+      }
+      
+      // Generate unique file name with timestamp
+      const timestamp = new Date().getTime();
+      const fileExtension = fileName.split('.').pop() || 'jpg';
+      const uniqueFileName = `${timestamp}.${fileExtension}`;
+      console.log('Generated unique filename:', uniqueFileName);
+
+      // Generate the full path including the veterinarian-specific folder
+      const folderPath = this.getVeterinarianPhotoPath(veterinarianId, veterinarianName);
+      const fullPath = `${folderPath}/${uniqueFileName}`;
+      console.log('IMPORTANT - Full path for S3 object:', fullPath);
+      console.log('Veterinarian folder path:', folderPath);
+      console.log('Folder structure will be:', {
+        bucket: s3Config.bucket,
+        mainFolder: 'veterinarian-photos',
+        veterinarianFolder: this.getVeterinarianPhotoPath(veterinarianId, veterinarianName).split('veterinarian-photos/')[1],
+        filename: uniqueFileName
+      });
+
+      console.log('Preparing S3 upload with params:', {
+        Bucket: s3Config.bucket,
+        Key: fullPath,
+        ContentType: contentType,
+        FileSize: fileBuffer.length
+      });
+
+      const params = {
+        Bucket: s3Config.bucket,
+        Key: fullPath,
+        Body: fileBuffer,
+        ContentType: contentType
+      };
+
+      try {
+        console.log('Initiating S3 upload...');
+        const result = await s3.upload(params).promise();
+        console.log('S3 upload completed successfully:', {
+          ETag: result.ETag,
+          Location: result.Location,
+          Key: result.Key,
+          Bucket: result.Bucket
+        });
+        
+        // Her durumda elle URL oluşturalım, Location'a güvenmeyelim
+        const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
+        console.log('Manually constructed URL:', manualUrl);
+        console.log('S3 returned Location:', result.Location || 'No Location returned');
+        
+        // Farklılık varsa uyarı gösterelim
+        if (result.Location && result.Location !== manualUrl) {
+          console.warn('Warning: S3 Location differs from manually constructed URL');
+          console.warn(`S3 Location: ${result.Location}`);
+          console.warn(`Manual URL: ${manualUrl}`);
+        }
+        
+        return {
+          url: manualUrl, // Her zaman manuel URL'yi kullan
+          key: fullPath,
+          s3Location: result.Location // Debugging için ek bilgi
+        };
+      } catch (uploadError) {
+        console.error('Direct S3 upload error:', {
+          message: uploadError.message,
+          code: uploadError.code,
+          region: s3Config.region,
+          bucket: s3Config.bucket
+        });
+        throw uploadError;
+      }
+    } catch (error) {
+      console.error('Error uploading veterinarian photo to S3:', {
+        error: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        stack: error.stack
+      });
+      throw new Error(`Failed to upload veterinarian photo to S3: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete a veterinarian photo from S3
+   * @param {string} key - The key of the file to delete
+   * @returns {Promise<void>}
+   */
+  async deleteVeterinarianPhoto(key) {
+    try {
+      const params = {
+        Bucket: s3Config.bucket,
+        Key: key
+      };
+
+      await s3.deleteObject(params).promise();
+    } catch (error) {
+      console.error('Error deleting veterinarian photo from S3:', error);
+      throw new Error('Failed to delete veterinarian photo from S3');
+    }
+  }
+
+  /**
+   * Delete all photos for a specific veterinarian
+   * @param {string} veterinarianId - The ID of the veterinarian
+   * @param {string} veterinarianName - The name of the veterinarian
+   * @returns {Promise<void>}
+   */
+  async deleteVeterinarianFolder(veterinarianId, veterinarianName) {
+    try {
+      console.log(`Starting deletion of veterinarian folder for veterinarian ID: ${veterinarianId}`);
+      const folderPath = this.getVeterinarianPhotoPath(veterinarianId, veterinarianName);
+      
+      // First, list all objects in the folder
+      const listParams = {
+        Bucket: s3Config.bucket,
+        Prefix: folderPath + '/'
+      };
+
+      console.log('Listing objects with params:', listParams);
+      const listedObjects = await s3.listObjectsV2(listParams).promise();
+      
+      if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+        console.log(`Found ${listedObjects.Contents.length} objects to delete`);
+        
+        // Create an array of objects to delete in a single operation
+        const deleteParams = {
+          Bucket: s3Config.bucket,
+          Delete: {
+            Objects: listedObjects.Contents.map(obj => ({ Key: obj.Key })),
+            Quiet: false
+          }
+        };
+        
+        console.log(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
+        const deleteResult = await s3.deleteObjects(deleteParams).promise();
+        console.log('Delete operation completed:', deleteResult);
+        
+        // Check if the deletion was successful
+        if (deleteResult.Deleted) {
+          console.log(`Successfully deleted ${deleteResult.Deleted.length} objects`);
+        }
+        
+        if (deleteResult.Errors && deleteResult.Errors.length > 0) {
+          console.error('Error deleting some objects:', deleteResult.Errors);
+          throw new Error(`Failed to delete some veterinarian photos: ${deleteResult.Errors.length} errors occurred`);
+        }
+        
+        return {
+          success: true,
+          deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0,
+          errors: deleteResult.Errors || []
+        };
+      } else {
+        console.log(`No objects found in folder ${folderPath}`);
+        return {
+          success: true,
+          deletedCount: 0,
+          message: "No objects found to delete"
+        };
+      }
+    } catch (error) {
+      console.error('Error deleting veterinarian folder:', error);
+      throw new Error(`Failed to delete veterinarian folder: ${error.message}`);
+    }
+  }
 }
 
 // Export both the class and an instance
@@ -481,3 +698,7 @@ module.exports.getClinicPhotoSignedUrl = s3ServiceInstance.getClinicPhotoSignedU
 module.exports.getClinicPhotoPath = s3ServiceInstance.getClinicPhotoPath.bind(s3ServiceInstance);
 module.exports.deleteClinicFolder = s3ServiceInstance.deleteClinicFolder.bind(s3ServiceInstance);
 module.exports.testS3Upload = s3ServiceInstance.testS3Upload ? s3ServiceInstance.testS3Upload.bind(s3ServiceInstance) : undefined;
+module.exports.getVeterinarianPhotoPath = s3ServiceInstance.getVeterinarianPhotoPath.bind(s3ServiceInstance);
+module.exports.uploadVeterinarianPhoto = s3ServiceInstance.uploadVeterinarianPhoto.bind(s3ServiceInstance);
+module.exports.deleteVeterinarianPhoto = s3ServiceInstance.deleteVeterinarianPhoto.bind(s3ServiceInstance);
+module.exports.deleteVeterinarianFolder = s3ServiceInstance.deleteVeterinarianFolder.bind(s3ServiceInstance);
