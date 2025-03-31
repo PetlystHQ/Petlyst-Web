@@ -2,6 +2,7 @@ import React, { useState, useEffect, KeyboardEvent } from 'react';
 import { useAppSelector } from '../hooks/useAppSelector';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
 
 interface SearchSuggestion {
   text: string;
@@ -221,7 +222,7 @@ const PetOwnerHomePage: React.FC = () => {
             className="w-full h-full object-cover object-bottom"
           />
           {/* Slight overlay for better text readability */}
-          <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-[2px]"></div>
+          <div className="absolute inset-0 bg-blue-900/20"></div>
         </div>
         
         {/* Content Container - positioned above the background */}
@@ -241,10 +242,7 @@ const PetOwnerHomePage: React.FC = () => {
               <div className="relative group">
                 {/* Search icon */}
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                  <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    <circle cx="10" cy="10" r="7" fill="none" strokeOpacity="0.3"></circle>
-                  </svg>
+                  <SearchIcon size="lg" className="text-blue-500" />
                 </div>
                 
                 {/* Input field */}
@@ -337,9 +335,7 @@ const PetOwnerHomePage: React.FC = () => {
                 } transition-all duration-200 shadow-sm z-20 flex items-center space-x-1`}
                 title="Emergency services only"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+                <WarningIcon size="md" />
               </button>
               
               {/* Search button */}
@@ -359,9 +355,7 @@ const PetOwnerHomePage: React.FC = () => {
                 ) : (
                   <>
                     <span>Search</span>
-                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                    </svg>
+                    <ArrowRightIcon size="sm" className="ml-2" />
                   </>
                 )}
               </button>
