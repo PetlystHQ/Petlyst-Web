@@ -24,6 +24,7 @@ const PetOwnerHomePage: React.FC = () => {
   const [popularAnimalTypes, setPopularAnimalTypes] = useState<string[]>([]);
   const [popularServices, setPopularServices] = useState<string[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [isEmergency, setIsEmergency] = useState(false);
 
   // Fetch popular searches when component mounts
   useEffect(() => {
@@ -123,8 +124,23 @@ const PetOwnerHomePage: React.FC = () => {
     setIsSearching(true);
     setShowSuggestions(false);
 
+    // Prepare URL parameters
+    const params = new URLSearchParams();
+    params.set('query', searchQuery);
+    
+    // Add emergency parameter if enabled
+    if (isEmergency) {
+      params.set('emergency', 'true');
+    }
+
     // Navigate to search results page
-    navigate(`/search?query=${encodeURIComponent(searchQuery)}`);
+    navigate(`/search?${params.toString()}`);
+  };
+
+  // Handle emergency toggle
+  const toggleEmergency = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent form submission
+    setIsEmergency(!isEmergency);
   };
 
   // Handle suggestion click
@@ -196,156 +212,164 @@ const PetOwnerHomePage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section with Search */}
-      <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-6">
-          Find the Perfect Care for Your Pet
-        </h1>
-        <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
-          Search for veterinarians, pet services, and more to keep your furry friends happy and healthy
-        </p>
+      <div className="relative mb-16">
+        {/* Background Image Container */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl shadow-lg">
+          <img 
+            src="https://d2j5evtsf6ql1v.cloudfront.net/petlyst-hero-image.png" 
+            alt="Pets" 
+            className="w-full h-full object-cover object-bottom"
+          />
+          {/* Slight overlay for better text readability */}
+          <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-[2px]"></div>
+        </div>
         
-        {/* Fancy Search Bar */}
-        <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative group">
-              {/* Search icon */}
-              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  <circle cx="10" cy="10" r="7" fill="none" strokeOpacity="0.3"></circle>
-                </svg>
-              </div>
-              
-              {/* Input field */}
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search for veterinarians, services, or pet care..."
-                className="w-full pl-16 pr-20 py-6 text-lg rounded-full border-2 border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 outline-none transition-all duration-300 shadow-lg group-hover:shadow-xl"
-                onBlur={() => {
-                  // Small delay to allow click events on suggestions to fire
-                  setTimeout(() => {
-                    setShowSuggestions(false);
-                    setSelectedSuggestionIndex(-1);
-                  }, 150);
-                }}
-                onFocus={() => {
-                  if (searchQuery.length >= 2) {
-                    setShowSuggestions(true);
-                  }
-                }}
-              />
-              
-              {/* Animated gradient border on hover/focus */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm"></div>
-              
-              {/* Suggestions dropdown */}
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
-                  <ul className="divide-y divide-gray-50">
-                    {suggestions.map((suggestion, index) => (
-                      <li 
-                        key={`${suggestion.type}-${index}`}
-                        className={`px-5 py-3.5 cursor-pointer flex items-center transition-colors duration-150 ${
-                          index === selectedSuggestionIndex ? 'bg-blue-50' : 'hover:bg-blue-50'
-                        }`}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        onMouseEnter={() => setSelectedSuggestionIndex(index)}
-                      >
-                        {/* Icon based on suggestion type */}
-                        <span className="mr-4 flex-shrink-0">
-                          {suggestion.type === 'clinic' && (
-                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                          )}
-                          {suggestion.type === 'animal_type' && (
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905a3.61 3.61 0 01-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
-                            </svg>
-                          )}
-                          {(suggestion.type === 'medical_service' || suggestion.type === 'additional_service') && (
-                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                          )}
-                          {suggestion.type === 'city' && (
-                            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                          )}
-                        </span>
-                        <div className="flex-1 min-w-0 text-left">
-                          <p className="font-medium text-gray-900 truncate">{suggestion.text}</p>
-                          <p className="text-sm text-gray-500 mt-0.5">
-                            {suggestion.type === 'clinic' && 'Clinic'}
-                            {suggestion.type === 'animal_type' && 'Animal Type'}
-                            {suggestion.type === 'medical_service' && 'Medical Service'}
-                            {suggestion.type === 'additional_service' && 'Additional Service'}
-                            {suggestion.type === 'city' && 'City'}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            
-            {/* Search button */}
-            <button
-              type="submit"
-              className="absolute right-3.5 top-1/2 transform -translate-y-1/2 bg-white border-2 border-blue-500 text-blue-600 px-6 py-3 rounded-full font-medium hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-md flex items-center"
-              disabled={isSearching}
-            >
-              {isSearching ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Searching...
-                </span>
-              ) : (
-                <>
-                  <span>Search</span>
-                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                  </svg>
-                </>
-              )}
-            </button>
-          </form>
+        {/* Content Container - positioned above the background */}
+        <div className="relative z-10 text-center py-20 px-4">
+          <h1 className="text-4xl font-bold text-white mb-6 text-shadow-sm drop-shadow-lg">
+            Find the Purrfect Care for Your Pet
+          </h1>
           
-          {/* Popular searches */}
-          {(popularAnimalTypes.length > 0 || popularServices.length > 0) && (
-            <div className="mt-6 text-sm text-gray-600">
-              <span className="mr-2">Popular searches:</span>
-              <div className="inline-flex flex-wrap gap-2 mt-2">
-                {popularAnimalTypes.slice(0, 3).map((type, index) => (
-                  <button
-                    key={`animal-${index}`}
-                    onClick={() => handlePopularSearchClick(type)}
-                    className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
-                  >
-                    {type}
-                  </button>
-                ))}
-                {popularServices.slice(0, 3).map((service, index) => (
-                  <button
-                    key={`service-${index}`}
-                    onClick={() => handlePopularSearchClick(service)}
-                    className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors"
-                  >
-                    {service}
-                  </button>
-                ))}
+          {/* Short description */}
+          <p className="text-xl text-white mb-10 max-w-2xl mx-auto text-shadow-sm">
+            Skip the worry, start with a clinic that truly cares
+          </p>
+          
+          {/* Fancy Search Bar */}
+          <div className="max-w-4xl mx-auto mb-16">
+            <form onSubmit={handleSearch} className="relative">
+              <div className="relative group">
+                {/* Search icon */}
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    <circle cx="10" cy="10" r="7" fill="none" strokeOpacity="0.3"></circle>
+                  </svg>
+                </div>
+                
+                {/* Input field */}
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search for veterinarians, services, or pet care..."
+                  className="w-full pl-14 pr-36 py-4 text-base rounded-full border-2 border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 outline-none transition-all duration-300 shadow-lg group-hover:shadow-xl"
+                  onBlur={() => {
+                    // Small delay to allow click events on suggestions to fire
+                    setTimeout(() => {
+                      setShowSuggestions(false);
+                      setSelectedSuggestionIndex(-1);
+                    }, 150);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.length >= 2) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                />
+                
+                {/* Animated gradient border on hover/focus */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm"></div>
+                
+                {/* Suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+                    <ul className="divide-y divide-gray-50">
+                      {suggestions.map((suggestion, index) => (
+                        <li 
+                          key={`${suggestion.type}-${index}`}
+                          className={`px-5 py-3.5 cursor-pointer flex items-center transition-colors duration-150 ${
+                            index === selectedSuggestionIndex ? 'bg-blue-50' : 'hover:bg-blue-50'
+                          }`}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                        >
+                          {/* Icon based on suggestion type */}
+                          <span className="mr-4 flex-shrink-0">
+                            {suggestion.type === 'clinic' && (
+                              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                              </svg>
+                            )}
+                            {suggestion.type === 'animal_type' && (
+                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905a3.61 3.61 0 01-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
+                              </svg>
+                            )}
+                            {(suggestion.type === 'medical_service' || suggestion.type === 'additional_service') && (
+                              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                              </svg>
+                            )}
+                            {suggestion.type === 'city' && (
+                              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              </svg>
+                            )}
+                          </span>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="font-medium text-gray-900 truncate">{suggestion.text}</p>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                              {suggestion.type === 'clinic' && 'Clinic'}
+                              {suggestion.type === 'animal_type' && 'Animal Type'}
+                              {suggestion.type === 'medical_service' && 'Medical Service'}
+                              {suggestion.type === 'additional_service' && 'Additional Service'}
+                              {suggestion.type === 'city' && 'City'}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+              
+              {/* Emergency button */}
+              <button
+                type="button"
+                onClick={toggleEmergency}
+                className={`absolute right-[132px] top-1/2 transform -translate-y-1/2 p-2 rounded-full ${
+                  isEmergency 
+                    ? 'bg-red-600 text-white shadow-md ring-2 ring-red-300' 
+                    : 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                } transition-all duration-200 shadow-sm z-20 flex items-center space-x-1`}
+                title="Emergency services only"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </button>
+              
+              {/* Search button */}
+              <button
+                type="submit"
+                className="absolute right-3.5 top-1/2 transform -translate-y-1/2 bg-white border-2 border-blue-500 text-blue-600 px-4 py-2 rounded-full font-medium hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-md flex items-center"
+                disabled={isSearching}
+              >
+                {isSearching ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Searching...
+                  </span>
+                ) : (
+                  <>
+                    <span>Search</span>
+                    <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                    </svg>
+                  </>
+                )}
+              </button>
+            </form>
+            
+            {/* Spacing element */}
+            <div className="mt-10"></div>
+          </div>
         </div>
       </div>
 
