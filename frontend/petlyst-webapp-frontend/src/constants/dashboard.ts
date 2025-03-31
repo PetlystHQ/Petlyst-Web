@@ -1,7 +1,7 @@
 import { DashboardView } from '../types/dashboard';
 
 // API base URL - Default to localhost if environment variable is not set
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const DASHBOARD_VIEWS: Record<DashboardView, DashboardView> = {
   overview: 'overview',
@@ -25,5 +25,7 @@ export const API_ENDPOINTS = {
   PROFILE: `${API_URL}/api/veterinarian/profile`,
   // Veterinarian photos endpoints
   VET_PHOTOS: `${API_URL}/api/veterinarian/photos`,
-  UPLOAD_VET_PHOTO: `${API_URL}/api/veterinarian/upload-photo`
+  UPLOAD_VET_PHOTO: `${API_URL}/api/veterinarian/upload-photo`,
+  // Profile visibility endpoint
+  PROFILE_VISIBILITY: `${API_URL}/api/veterinarian/profile-visibility`
 }; 

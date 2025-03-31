@@ -938,4 +938,97 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
   }
 });
 
+// GET veterinarian profile visibility status
+router.get('/profile-visibility', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    
+    const query = `
+      SELECT is_profile_public 
+      FROM veterinarians 
+      WHERE veterinarian_id = $1
+    `;
+    
+    const result = await pool.query(query, [veterinarianId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Veterinarian profile not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      is_profile_public: result.rows[0].is_profile_public || false
+    });
+  } catch (error) {
+    console.error('Error fetching profile visibility status:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
+// UPDATE veterinarian profile visibility
+router.put('/profile-visibility', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    const { is_profile_public } = req.body;
+    
+    // Validate input
+    if (typeof is_profile_public !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'is_profile_public must be a boolean value'
+      });
+    }
+    
+    const query = `
+      UPDATE veterinarians
+      SET is_profile_public = $1
+      WHERE veterinarian_id = $2
+      RETURNING is_profile_public
+    `;
+    
+    const result = await pool.query(query, [is_profile_public, veterinarianId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Veterinarian profile not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Profile visibility updated successfully',
+      is_profile_public: result.rows[0].is_profile_public
+    });
+  } catch (error) {
+    console.error('Error updating profile visibility status:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
 module.exports = router; 
