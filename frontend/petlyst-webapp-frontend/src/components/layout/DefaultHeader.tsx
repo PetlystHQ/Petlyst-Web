@@ -13,7 +13,7 @@ const DefaultHeader: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const isPetOwnerPage = location.pathname === '/pet-owner-home' || location.pathname.startsWith('/search');
+  const isPetOwnerPage = location.pathname === '/' || location.pathname === '/pet-owner-home' || location.pathname.startsWith('/search');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -94,7 +94,7 @@ const DefaultHeader: React.FC = () => {
                 </a>
 
                 {isPetOwnerPage ? (
-                  <Link to="/" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
+                  <Link to="/enterprise" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7"></path>
                     </svg>
@@ -102,7 +102,7 @@ const DefaultHeader: React.FC = () => {
                     <span className="md:hidden">Enterprise</span>
                   </Link>
                 ) : (
-                  <Link to="/pet-owner-home" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Pet Owner Page">
+                  <Link to="/" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Pet Owner Page">
                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7"></path>
                     </svg>
