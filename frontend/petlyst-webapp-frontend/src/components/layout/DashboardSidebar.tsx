@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout } from '../../store/slices/authSlice';
 import { DashboardView, VerificationStatus } from '../../types/dashboard';
-import { DASHBOARD_VIEWS } from '../../constants/dashboard';
+import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
+import axios from 'axios';
 
 interface DashboardSidebarProps {
   currentView: DashboardView;
@@ -23,9 +24,37 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector(state => state.auth);
+  const { user, token } = useAppSelector(state => state.auth);
   const isActive = (view: DashboardView) => currentView === view;
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isProfilePublic, setIsProfilePublic] = useState(false);
+  const [isUpdatingProfileVisibility, setIsUpdatingProfileVisibility] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingVisibilityChange, setPendingVisibilityChange] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Load profile visibility status
+    const fetchProfileVisibility = async () => {
+      try {
+        console.log('Fetching profile visibility status...');
+        // Hardcoded URL, kesin çalışacak şekilde
+        const response = await axios.get('http://localhost:3000/api/veterinarian/profile-visibility', {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        console.log('Profile visibility status:', response.data);
+        setIsProfilePublic(response.data.is_profile_public);
+      } catch (error) {
+        console.error('Error fetching profile visibility status:', error);
+      }
+    };
+
+    if (user?.user_type === 'veterinarian' && token) {
+      fetchProfileVisibility();
+    }
+  }, [user, token]);
 
   const handleLogout = () => {
     setLoggingOut(true);
@@ -33,6 +62,49 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     setTimeout(() => {
       navigate('/');
     }, 1000);
+  };
+
+  const handleToggleClick = () => {
+    const newVisibility = !isProfilePublic;
+    setPendingVisibilityChange(newVisibility);
+    setShowConfirmModal(true);
+  };
+
+  const confirmVisibilityChange = async () => {
+    try {
+      setIsUpdatingProfileVisibility(true);
+      const newVisibility = pendingVisibilityChange;
+      
+      console.log('Trying to update profile visibility to:', newVisibility);
+      
+      // Hardcoded URL, kesin çalışacak şekilde
+      const response = await axios.put('http://localhost:3000/api/veterinarian/profile-visibility', {
+        is_profile_public: newVisibility
+      }, {
+        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log('Profile visibility update response:', response.data);
+
+      if (response.status === 200) {
+        setIsProfilePublic(!!newVisibility);
+        console.log('Profile visibility updated successfully to:', newVisibility);
+      }
+    } catch (error) {
+      console.error('Error updating profile visibility:', error);
+    } finally {
+      setIsUpdatingProfileVisibility(false);
+      setShowConfirmModal(false);
+      setPendingVisibilityChange(null);
+    }
+  };
+
+  const cancelVisibilityChange = () => {
+    setShowConfirmModal(false);
+    setPendingVisibilityChange(null);
   };
 
   const isFeatureAccessible = verificationStatus === 'verified';
@@ -191,6 +263,43 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </ul>
         </div>
 
+        {/* Profile Visibility Toggle - before logout */}
+        {user?.user_type === 'veterinarian' && (
+          <div className="px-4 pb-2 border-t border-gray-200 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-900">Profile Visibility</span>
+              <button 
+                onClick={handleToggleClick}
+                disabled={isUpdatingProfileVisibility}
+                className="relative inline-flex items-center h-5 rounded-full w-9 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                aria-pressed={isProfilePublic}
+                aria-label="Toggle profile visibility"
+              >
+                <span className={`${isProfilePublic ? 'bg-blue-600' : 'bg-gray-300'} absolute h-5 w-9 mx-auto rounded-full transition-colors duration-200 ease-in-out`}></span>
+                <span className={`${isProfilePublic ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${isUpdatingProfileVisibility ? 'opacity-60' : ''}`}></span>
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 flex items-center">
+              {isProfilePublic ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Public
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                  Private
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Logout Button */}
         <div className="mt-auto p-4 border-t border-gray-200">
           <button
@@ -214,6 +323,84 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-auto shadow-xl transform transition-all duration-300 scale-100">
+            <div className="flex items-center mb-4">
+              {pendingVisibilityChange ? (
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </div>
+              )}
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Profile Visibility Change</h3>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 mb-5">
+              <p className="text-gray-600">
+                {pendingVisibilityChange ? (
+                  <span className="flex flex-col space-y-2">
+                    <span className="font-medium text-blue-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Making your profile public
+                    </span>
+                    <span>Your profile information will be visible to all users, including:</span>
+                    <ul className="list-disc ml-5 text-sm">
+                      <li>Your education history</li>
+                      <li>Your certifications</li>
+                      <li>Your areas of expertise</li>
+                      <li>Your profile photos</li>
+                    </ul>
+                  </span>
+                ) : (
+                  <span className="flex flex-col space-y-2">
+                    <span className="font-medium text-gray-700 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Making your profile private
+                    </span>
+                    <span>Your profile will only be visible to you. Other users will not be able to see your professional information.</span>
+                  </span>
+                )}
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelVisibilityChange}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel
+              </button>
+              <button
+                onClick={confirmVisibilityChange}
+                className={`px-4 py-2 ${pendingVisibilityChange ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'} text-white rounded-md flex items-center transition-colors`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
