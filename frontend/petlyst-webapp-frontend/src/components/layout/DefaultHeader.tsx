@@ -76,41 +76,26 @@ const DefaultHeader: React.FC = () => {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Enterprise/Community toggle - visible to all users */}
-              <div className="mr-2 flex items-center space-x-2">
-                {/* Download App button */}
-                <a 
-                  href="https://play.google.com/store" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="px-4 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center"
-                  title="Download our mobile app"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 4l0 10M12 14l4-4M12 14l-4-4M12 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                  <span className="hidden md:inline">Download App</span>
-                  <span className="md:hidden">App</span>
-                </a>
+              {/* Download App button */}
+              <a 
+                href="https://play.google.com/store" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-green-600 hover:text-green-800 transition-colors text-sm font-medium"
+                title="Download our mobile app"
+              >
+                <span>Download App</span>
+              </a>
 
-                {isPetOwnerPage ? (
-                  <Link to="/enterprise" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Enterprise Page">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7"></path>
-                    </svg>
-                    <span className="hidden md:inline">Enterprise</span>
-                    <span className="md:hidden">Enterprise</span>
-                  </Link>
-                ) : (
-                  <Link to="/" className="px-4 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-colors text-sm font-medium flex items-center" title="Go to Pet Owner Page">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7"></path>
-                    </svg>
-                    <span className="hidden md:inline">Community</span>
-                    <span className="md:hidden">Community</span>
-                  </Link>
-                )}
-              </div>
+              {isPetOwnerPage ? (
+                <Link to="/enterprise" className="text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium" title="Go to Enterprise Page">
+                  <span>Enterprise</span>
+                </Link>
+              ) : (
+                <Link to="/" className="text-blue-600 hover:text-blue-800 transition-colors text-sm font-medium" title="Go to Pet Owner Page">
+                  <span>Community</span>
+                </Link>
+              )}
               
               {user ? (
                 <div className="relative flex items-center" ref={dropdownRef}>
