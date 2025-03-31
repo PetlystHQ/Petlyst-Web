@@ -1314,4 +1314,102 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
   }
 });
 
+// Check profile completion status
+router.get('/profile-completion', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    
+    // Get profile data
+    const profileQuery = `
+      SELECT v.biography, v.preferred_languages
+      FROM veterinarians v
+      WHERE v.veterinarian_id = $1
+    `;
+    
+    const profileResult = await pool.query(profileQuery, [veterinarianId]);
+    
+    if (profileResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Veterinarian profile not found'
+      });
+    }
+    
+    // Check education
+    const educationQuery = `
+      SELECT COUNT(*) as count
+      FROM veterinarian_education
+      WHERE veterinarian_id = $1
+    `;
+    
+    const educationResult = await pool.query(educationQuery, [veterinarianId]);
+    
+    // Check certifications
+    const certificationsQuery = `
+      SELECT COUNT(*) as count
+      FROM veterinarian_certifications
+      WHERE veterinarian_id = $1
+    `;
+    
+    const certificationsResult = await pool.query(certificationsQuery, [veterinarianId]);
+    
+    // Check expertise
+    const expertiseQuery = `
+      SELECT COUNT(*) as count
+      FROM veterinarian_expertise
+      WHERE veterinarian_id = $1
+    `;
+    
+    const expertiseResult = await pool.query(expertiseQuery, [veterinarianId]);
+    
+    // Check photos
+    const photosQuery = `
+      SELECT COUNT(*) as count
+      FROM veterinarian_albums
+      WHERE veterinarian_id = $1
+    `;
+    
+    const photosResult = await pool.query(photosQuery, [veterinarianId]);
+    
+    // Determine what's incomplete
+    const incomplete = {
+      biography: !profileResult.rows[0].biography || profileResult.rows[0].biography.trim() === '',
+      languages: !profileResult.rows[0].preferred_languages || profileResult.rows[0].preferred_languages.length === 0,
+      education: parseInt(educationResult.rows[0].count) === 0,
+      certifications: parseInt(certificationsResult.rows[0].count) === 0,
+      expertise: parseInt(expertiseResult.rows[0].count) === 0,
+      photos: parseInt(photosResult.rows[0].count) === 0
+    };
+    
+    // Calculate completion percentage
+    const totalFields = Object.keys(incomplete).length;
+    const completedFields = Object.values(incomplete).filter(value => !value).length;
+    const completionPercentage = Math.round((completedFields / totalFields) * 100);
+    
+    // Return status
+    res.status(200).json({
+      success: true,
+      completion: {
+        percentage: completionPercentage,
+        incomplete: incomplete,
+        isComplete: completionPercentage === 100
+      }
+    });
+  } catch (error) {
+    console.error('Error checking profile completion status:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
 module.exports = router; 

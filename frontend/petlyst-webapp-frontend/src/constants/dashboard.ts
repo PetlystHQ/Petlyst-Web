@@ -32,5 +32,6 @@ export const API_ENDPOINTS = {
   PUBLIC_PROFILE: `${API_URL}/api/veterinarian/public-profile`,
   PUBLIC_PROFILE_BY_SLUG: `${API_URL}/api/veterinarian/public-profile-by-slug`,
   // Public profiles list endpoint
-  PUBLIC_PROFILES: `${API_URL}/api/veterinarian/public-profiles`
+  PUBLIC_PROFILES: `${API_URL}/api/veterinarian/public-profiles`,
+  PROFILE_COMPLETION: `${API_URL}/api/veterinarian/profile-completion`,
 }; 
