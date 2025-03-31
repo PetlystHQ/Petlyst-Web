@@ -1,6 +1,7 @@
 import React from 'react';
 import { DASHBOARD_VIEWS } from '../../../constants/dashboard';
 import { DashboardView } from '../../../types/dashboard';
+import ViewProfileButton from '../../veterinarian/ViewProfileButton';
 
 interface OverviewProps {
   verificationStatus: string | null;
@@ -155,6 +156,9 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
           </button>
         </div>
       </div>
+      
+      {/* View Profile Button */}
+      <ViewProfileButton className="mt-4" />
 
       {isUpdating && (
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">

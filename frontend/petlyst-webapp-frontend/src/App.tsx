@@ -15,6 +15,8 @@ import ClinicPreviewPage from './pages/ClinicPreviewPage';
 import EditClinicPage from './pages/EditClinicPage';
 import ManagementDashboard from './pages/ManagementDashboard';
 import SearchResult from './pages/SearchResult';
+import VeterinariansListPage from './pages/VeterinariansListPage';
+import SingleVeterinarianPage from './pages/SingleVeterinarianPage';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
@@ -34,6 +36,9 @@ const AppContent: React.FC = () => {
         <Route path="/enterprise" element={<HomePage />} />
         <Route path="/pet-owner-home" element={<PetOwnerHomePage />} />
         <Route path="/search" element={<SearchResult />} />
+        <Route path="/veterinarians" element={<VeterinariansListPage />} />
+        <Route path="/veterinarians/:id" element={<SingleVeterinarianPage />} />
+        <Route path="/veterinarians/profile/:slug" element={<SingleVeterinarianPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 

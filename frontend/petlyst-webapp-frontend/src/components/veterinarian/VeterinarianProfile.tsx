@@ -678,7 +678,8 @@ const VeterinarianProfile: React.FC = () => {
     if (educationLoading) {
       return (
         <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
         </div>
       );
     }
@@ -916,7 +917,8 @@ const VeterinarianProfile: React.FC = () => {
     if (certificationLoading) {
       return (
         <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
         </div>
       );
     }
@@ -1130,7 +1132,8 @@ const VeterinarianProfile: React.FC = () => {
     if (expertiseLoading) {
       return (
         <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
         </div>
       );
     }
@@ -1575,7 +1578,8 @@ const VeterinarianProfile: React.FC = () => {
     if (profileLoading) {
       return (
         <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
         </div>
       );
     }
@@ -1817,7 +1821,8 @@ const VeterinarianProfile: React.FC = () => {
     if (photosLoading) {
       return (
         <div className="flex justify-center items-center py-12">
-          <div className="w-10 h-10 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
         </div>
       );
     }
