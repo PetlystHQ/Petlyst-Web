@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { DashboardView, VerificationStatus, Clinic } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
@@ -158,6 +158,7 @@ const VeterinarianDashboard: React.FC = () => {
   
   const { user, token } = useAppSelector(state => state.auth);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!token) {
@@ -166,7 +167,14 @@ const VeterinarianDashboard: React.FC = () => {
     }
 
     fetchVerificationStatus();
-  }, [token, navigate]);
+    
+    // Check if we need to activate a specific view from location state
+    if (location.state && location.state.viewToActivate) {
+      setCurrentView(location.state.viewToActivate);
+      // Clear the state to prevent it from persisting on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [token, navigate, location]);
 
   useEffect(() => {
     if (verificationStatus === 'verified') {

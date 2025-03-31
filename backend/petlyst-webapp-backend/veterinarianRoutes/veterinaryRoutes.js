@@ -7,6 +7,7 @@ const { encrypt } = require('../utils/encryption');
 const multer = require('multer');
 const s3Service = require('../aws/s3Service');
 const { uploadVeterinarianPhoto, deleteVeterinarianPhoto } = s3Service;
+const jwt = require('jsonwebtoken');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -20,6 +21,149 @@ const upload = multer({
     } else {
       cb(new Error('Only image files are allowed'));
     }
+  }
+});
+
+// Bu fonksiyon bir isimden benzersiz slug oluşturur
+async function generateUniqueSlug(name, surname) {
+  // Temel slug oluştur
+  let baseSlug = `dr-${name.toLowerCase()}-${surname.toLowerCase()}`
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  
+  // Slug'un benzersiz olup olmadığını kontrol et
+  let slug = baseSlug;
+  let isUnique = false;
+  let counter = 0;
+  
+  while (!isUnique) {
+    // Veritabanında bu slug'ın var olup olmadığını kontrol et
+    const checkQuery = `
+      SELECT veterinarian_id FROM veterinarians 
+      WHERE slug = $1
+    `;
+    const result = await pool.query(checkQuery, [slug]);
+    
+    if (result.rows.length === 0) {
+      isUnique = true;
+    } else {
+      // Eğer slug zaten varsa, 6 karakterli rastgele bir belirteç ekle
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      slug = `${baseSlug}-${randomStr}`;
+      counter++;
+      
+      // Sonsuz döngüyü önlemek için maksimum 5 deneme yap
+      if (counter > 5) {
+        // Son çare olarak timestamp ekle
+        slug = `${baseSlug}-${Date.now()}`;
+        isUnique = true;
+      }
+    }
+  }
+  
+  return slug;
+}
+
+// ELLE ÇAĞIRILACAK olan initializeSlugColumn fonksiyonu
+async function initializeSlugColumn() {
+  try {
+    console.log("[SLUG MIGRATION] Başlangıç: Veterinarians tablosuna slug sütunu ekleniyor...");
+    
+    // Önce ALTER TABLE komutuyla sütun ekle (eğer yoksa)
+    try {
+      const addColumnQuery = `
+        ALTER TABLE veterinarians 
+        ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;
+      `;
+      await pool.query(addColumnQuery);
+      console.log("[SLUG MIGRATION] Slug sütunu eklendi.");
+    } catch (err) {
+      console.error("[SLUG MIGRATION] Slug sütunu eklenirken hata:", err);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("[SLUG MIGRATION] Slug sütunu oluşturma hatası:", error);
+    return false;
+  }
+}
+
+// Admin için slug oluşturma API'si
+router.post('/admin/generate-slugs', authenticateToken, async (req, res) => {
+  try {
+    // Sadece adminler veya yetkililer kullanabilir
+    if (req.user.userType !== 'admin' && req.user.userType !== 'staff') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Bu işlemi sadece admin veya yetkili personel yapabilir' 
+      });
+    }
+    
+    // İlk olarak sütunu ekle
+    const columnCreated = await initializeSlugColumn();
+    if (!columnCreated) {
+      return res.status(500).json({
+        success: false,
+        message: 'Slug sütunu oluşturulamadı'
+      });
+    }
+    
+    // Slug değeri olmayan veya boş olan tüm veterinerleri bul
+    const findVetsQuery = `
+      SELECT v.veterinarian_id, u.user_name, u.user_surname
+      FROM veterinarians v
+      JOIN users u ON v.veterinarian_id = u.user_id
+      WHERE v.slug IS NULL OR v.slug = ''
+    `;
+    
+    const vetsToUpdate = await pool.query(findVetsQuery);
+    console.log(`[SLUG MIGRATION] ${vetsToUpdate.rows.length} veteriner için slug oluşturulacak.`);
+    
+    const updates = [];
+    
+    // Her biri için slug oluştur ve güncelle
+    for (const vet of vetsToUpdate.rows) {
+      try {
+        const slug = await generateUniqueSlug(vet.user_name, vet.user_surname);
+        
+        const updateQuery = `
+          UPDATE veterinarians
+          SET slug = $1
+          WHERE veterinarian_id = $2
+          RETURNING veterinarian_id, slug
+        `;
+        
+        const result = await pool.query(updateQuery, [slug, vet.veterinarian_id]);
+        
+        if (result.rows.length > 0) {
+          updates.push({
+            id: vet.veterinarian_id,
+            name: `${vet.user_name} ${vet.user_surname}`,
+            slug: result.rows[0].slug
+          });
+          console.log(`[SLUG MIGRATION] Veteriner ID ${vet.veterinarian_id} için slug oluşturuldu: ${slug}`);
+        }
+      } catch (err) {
+        console.error(`[SLUG MIGRATION] ID ${vet.veterinarian_id} için slug güncellenirken hata:`, err);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: `${updates.length} veteriner için slug oluşturuldu`,
+      updates
+    });
+  } catch (error) {
+    console.error('Slug oluşturma hatası:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error',
+      error: error.message
+    });
   }
 });
 
@@ -1028,6 +1172,134 @@ router.put('/profile-visibility', authenticateToken, async (req, res) => {
       success: false,
       message: error.message || 'Internal server error'
     });
+  }
+});
+
+// Slug-by-name endpoint yerine slug-by-slug endpoint ile değiştirelim
+router.get('/public-profile-by-slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    let userId = null;
+    let isProfileOwner = false;
+    
+    // Check if the requester is authenticated
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+      } catch (error) {
+        // Invalid token, continue as unauthenticated
+        console.error('Error verifying token:', error);
+      }
+    }
+    
+    // Find the veterinarian by slug
+    const veterinarianQuery = `
+      SELECT v.veterinarian_id, v.is_profile_public, v.veterinarian_verification_status, v.slug
+      FROM veterinarians v
+      WHERE v.slug = $1
+      LIMIT 1
+    `;
+    
+    const veterinarians = await pool.query(veterinarianQuery, [slug]);
+    
+    if (veterinarians.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Veterinarian not found' });
+    }
+    
+    const veterinarian = veterinarians.rows[0];
+    isProfileOwner = userId && userId === veterinarian.veterinarian_id;
+    
+    // Check if the profile is public or the requester is the profile owner
+    if (!veterinarian.is_profile_public && !isProfileOwner) {
+      return res.status(403).json({ success: false, message: 'This profile is private' });
+    }
+    
+    // Get the complete profile data
+    const userDataQuery = `
+      SELECT u.user_name as user_name, u.user_surname as user_surname, 
+             u.user_email as user_email, u.user_profile_photo as user_profile_photo,
+             v.biography, v.preferred_languages, v.veterinarian_verification_status
+      FROM users u
+      JOIN veterinarians v ON u.user_id = v.veterinarian_id
+      WHERE u.user_id = $1
+    `;
+    
+    const userData = await pool.query(userDataQuery, [veterinarian.veterinarian_id]);
+    
+    if (userData.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User data not found' });
+    }
+    
+    // Fetch education data
+    const educationQuery = `
+      SELECT e.education_id, e.school_name, e.field_of_study, e.start_date, e.end_date, e.is_current
+      FROM veterinarian_education e
+      WHERE e.veterinarian_id = $1
+      ORDER BY e.is_current DESC, e.end_date DESC, e.start_date DESC
+    `;
+    
+    const educationData = await pool.query(educationQuery, [veterinarian.veterinarian_id]);
+    
+    // Fetch certification data
+    const certificationQuery = `
+      SELECT c.certification_id, c.certification_name, c.issuing_organization, 
+             c.issue_date, c.certification_number
+      FROM veterinarian_certifications c
+      WHERE c.veterinarian_id = $1
+      ORDER BY c.issue_date DESC
+    `;
+    
+    const certificationData = await pool.query(certificationQuery, [veterinarian.veterinarian_id]);
+    
+    // Fetch expertise data
+    const expertiseQuery = `
+      SELECT e.expertise_id, e.expertise_area
+      FROM veterinarian_expertise e
+      WHERE e.veterinarian_id = $1
+    `;
+    
+    const expertiseData = await pool.query(expertiseQuery, [veterinarian.veterinarian_id]);
+    
+    // Fetch photos
+    const photosQuery = `
+      SELECT p.veterinarian_album_photo_id, p.veterinarian_album_photo_url
+      FROM veterinarian_albums p
+      WHERE p.veterinarian_id = $1
+    `;
+    
+    const photosData = await pool.query(photosQuery, [veterinarian.veterinarian_id]);
+    
+    // Generate slug from the user's name (for compatibility)
+    const generatedSlug = `dr-${userData.rows[0].user_name.toLowerCase()}-${userData.rows[0].user_surname.toLowerCase()}`
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+    
+    // Return the complete profile with the slug
+    const profile = {
+      user_id: veterinarian.veterinarian_id,
+      ...userData.rows[0],
+      education: educationData.rows || [],
+      certifications: certificationData.rows || [],
+      expertise: expertiseData.rows || [],
+      photos: photosData.rows || [],
+      slug: veterinarian.slug || generatedSlug // Use the stored slug from DB, fallback to generated slug
+    };
+    
+    return res.json({
+      success: true,
+      profile,
+      is_private: !veterinarian.is_profile_public
+    });
+    
+  } catch (error) {
+    console.error('Error fetching veterinarian profile by slug:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
