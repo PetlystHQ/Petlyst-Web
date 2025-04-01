@@ -415,7 +415,10 @@ export const Clinics: React.FC<ClinicsProps> = ({
             {/* Manage Clinic Button - Only for verified and archived clinics */}
             {(clinic.clinic_verification_status === 'verified' || clinic.clinic_verification_status === 'archived') && (
               <button
-                onClick={() => navigate(`/management-dashboard/${clinic.clinic_id}`)}
+                onClick={() => {
+                  localStorage.setItem('selectedClinicId', clinic.clinic_id);
+                  navigate('/management-dashboard');
+                }}
                 className="flex-1 flex items-center justify-center text-base font-medium px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors"
               >
                 <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
