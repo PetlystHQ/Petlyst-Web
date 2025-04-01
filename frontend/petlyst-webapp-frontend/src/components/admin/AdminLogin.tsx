@@ -39,15 +39,26 @@ const AdminLogin: React.FC = () => {
                 throw new Error('No user data received');
             }
 
-            if (response.data.user.userType !== 'admin') {
+            // Check both possible field names for user type
+            const userType = response.data.user.userType || response.data.user.user_type;
+            console.log('Login response:', response.data.user);
+            console.log('User type from response:', userType);
+            
+            if (userType !== 'admin') {
                 setError('Access denied. Admin privileges required.');
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUser');
                 return;
             }
 
+            // Include the user_type in the stored user data
+            const userData = {
+                ...response.data.user,
+                userType: userType // Ensure userType is consistent regardless of API response format
+            };
+
             localStorage.setItem('adminToken', response.data.token);
-            localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+            localStorage.setItem('adminUser', JSON.stringify(userData));
 
             navigate('/admin/dashboard');
         } catch (err: any) {

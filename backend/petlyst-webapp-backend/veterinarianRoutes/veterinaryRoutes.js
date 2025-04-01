@@ -3,11 +3,14 @@ const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
 const { encrypt } = require('../utils/encryption');
+const { checkVerificationStatus } = require('../middleware/verificationMiddleware');
 // Multer ve S3 servislerini ekleyelim
 const multer = require('multer');
 const s3Service = require('../aws/s3Service');
 const { uploadVeterinarianPhoto, deleteVeterinarianPhoto } = s3Service;
 const jwt = require('jsonwebtoken');
+const ClinicVeterinarian = require('../models/clinicVeterinarianModel');
+const Clinic = require('../models/clinicModel');
 
 // Configure multer for memory storage
 const upload = multer({
@@ -1543,6 +1546,347 @@ router.get('/profile-completion', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
+    });
+  }
+});
+
+// Veterinerin kliniğe katılma isteği göndermesi
+router.post('/request-join-clinic/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const veterinarianId = req.user.userId;
+    
+    // Yetkilendirme: Sadece veteriner kullanıcılar bu endpointi kullanabilir
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlemi sadece veteriner kullanıcılar yapabilir'
+      });
+    }
+    
+    // Klinik varlığını ve durumunu kontrol et
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic) {
+      return res.status(404).json({
+        success: false,
+        message: 'Klinik bulunamadı'
+      });
+    }
+    
+    if (clinic.clinic_verification_status !== 'verified') {
+      return res.status(400).json({
+        success: false,
+        message: 'Sadece onaylanmış kliniklere katılma isteği gönderilebilir'
+      });
+    }
+    
+    // Veterinerin gönderdiği istekleri ve durumunu kontrol et
+    const existingRequests = await ClinicVeterinarian.getVeterinarianRequests(veterinarianId);
+    
+    const hasActiveRequest = existingRequests.some(req => req.status === 'pending');
+    const alreadyApproved = existingRequests.some(req => req.status === 'approved');
+    
+    if (alreadyApproved) {
+      return res.status(400).json({
+        success: false,
+        message: 'Zaten onaylanmış bir kliniğe bağlısınız'
+      });
+    }
+    
+    if (hasActiveRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'Zaten bekleyen bir katılma isteğiniz var'
+      });
+    }
+    
+    const result = await ClinicVeterinarian.requestToJoinClinic(veterinarianId, clinicId);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Clinic participation request sent successfully',
+      request: result
+    });
+  } catch (error) {
+    console.error('Error requesting to join clinic:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Sunucu hatası'
+    });
+  }
+});
+
+// Veterinerin gönderdiği istekleri görüntülemesi
+router.get('/clinic-requests', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const veterinarianId = req.user.userId;
+    
+    // Yetkilendirme: Sadece veteriner kullanıcılar bu endpointi kullanabilir
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlemi sadece veteriner kullanıcılar yapabilir'
+      });
+    }
+    
+    const requests = await ClinicVeterinarian.getVeterinarianRequests(veterinarianId);
+    
+    res.status(200).json({
+      success: true,
+      requests
+    });
+  } catch (error) {
+    console.error('Error getting veterinarian requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Veterinerin kliniği terk etmesi
+router.delete('/leave-clinic/:id', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const veterinarianId = req.user.userId;
+    
+    // Yetkilendirme: Sadece veteriner kullanıcılar bu endpointi kullanabilir
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlemi sadece veteriner kullanıcılar yapabilir'
+      });
+    }
+    
+    // İlişki varlığını kontrol et
+    const clinicVet = await pool.query(
+      'SELECT id, is_clinic_creator, veterinarian_id FROM clinic_veterinarians WHERE id = $1',
+      [id]
+    );
+    
+    if (clinicVet.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Klinik ilişkisi bulunamadı'
+      });
+    }
+    
+    // Yetkilendirme kontrolü
+    if (clinicVet.rows[0].veterinarian_id !== veterinarianId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlemi yapma yetkiniz yok'
+      });
+    }
+    
+    // Klinik yaratıcısı kliniği terk edemez
+    if (clinicVet.rows[0].is_clinic_creator) {
+      return res.status(400).json({
+        success: false,
+        message: 'Klinik sahibi olarak kliniği terk edemezsiniz'
+      });
+    }
+    
+    await ClinicVeterinarian.removeVeterinarianFromClinic(id);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Klinikten başarıyla ayrıldınız'
+    });
+  } catch (error) {
+    console.error('Error leaving clinic:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Veterinerin çalıştığı kliniği görüntülemesi
+router.get('/my-clinic', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const veterinarianId = req.user.userId;
+    
+    // Yetkilendirme: Sadece veteriner kullanıcılar bu endpointi kullanabilir
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlemi sadece veteriner kullanıcılar yapabilir'
+      });
+    }
+    
+    const clinicInfo = await ClinicVeterinarian.getVeterinarianClinic(veterinarianId);
+    
+    if (!clinicInfo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Çalıştığınız bir klinik bulunamadı'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      clinic: clinicInfo
+    });
+  } catch (error) {
+    console.error('Error getting veterinarian clinic:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Get clinic operator information
+router.get('/clinic-operator/:clinicId', async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    
+    // Validate clinic ID
+    if (!clinicId || isNaN(clinicId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid clinic ID'
+      });
+    }
+    
+    // Query to find the clinic creator/operator
+    const query = `
+      SELECT cv.veterinarian_id, u.user_name as operator_name, u.user_surname as operator_surname
+      FROM clinic_veterinarians cv
+      JOIN users u ON cv.veterinarian_id = u.user_id
+      WHERE cv.clinic_id = $1 AND cv.is_clinic_creator = true
+      LIMIT 1
+    `;
+    
+    const result = await pool.query(query, [clinicId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic operator not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      operator: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching clinic operator:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Get operators for multiple clinics in one request
+router.post('/clinic-operators', async (req, res) => {
+  try {
+    const { clinicIds } = req.body;
+    
+    // Validate clinic IDs
+    if (!clinicIds || !Array.isArray(clinicIds) || clinicIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid clinic IDs. Please provide an array of clinic IDs.'
+      });
+    }
+    
+    // Query to find operators for multiple clinics
+    const query = `
+      SELECT cv.clinic_id, cv.veterinarian_id, u.user_name as operator_name, u.user_surname as operator_surname
+      FROM clinic_veterinarians cv
+      JOIN users u ON cv.veterinarian_id = u.user_id
+      WHERE cv.clinic_id = ANY($1) AND cv.is_clinic_creator = true
+    `;
+    
+    const result = await pool.query(query, [clinicIds]);
+    
+    // Create a map of clinic_id to operator data
+    const operatorMap = {};
+    result.rows.forEach(row => {
+      operatorMap[row.clinic_id] = {
+        veterinarian_id: row.veterinarian_id,
+        operator_name: row.operator_name,
+        operator_surname: row.operator_surname
+      };
+    });
+    
+    res.status(200).json({
+      success: true,
+      operators: operatorMap
+    });
+  } catch (error) {
+    console.error('Error fetching clinic operators:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// Check if veterinarian has any pending join requests
+router.get('/check-pending-requests', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. User is not a veterinarian.'
+      });
+    }
+
+    const veterinarianId = req.user.userId;
+    
+    // Query to check for any pending requests
+    const query = `
+      SELECT id, clinic_id, status, created_at 
+      FROM clinic_veterinarians 
+      WHERE veterinarian_id = $1 AND status = 'pending'
+      LIMIT 1
+    `;
+    
+    const result = await pool.query(query, [veterinarianId]);
+    
+    // If there's at least one pending request
+    const hasPendingRequest = result.rows.length > 0;
+    
+    // If pending request exists, include its details
+    let pendingRequest = null;
+    if (hasPendingRequest) {
+      pendingRequest = result.rows[0];
+      
+      // Get clinic name for the pending request
+      try {
+        const clinicQuery = `
+          SELECT clinic_name FROM clinics WHERE clinic_id = $1
+        `;
+        const clinicResult = await pool.query(clinicQuery, [pendingRequest.clinic_id]);
+        
+        if (clinicResult.rows.length > 0) {
+          pendingRequest.clinic_name = clinicResult.rows[0].clinic_name;
+        }
+      } catch (error) {
+        console.error('Error fetching clinic details:', error);
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      hasPendingRequest,
+      pendingRequest
+    });
+  } catch (error) {
+    console.error('Error checking pending requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
     });
   }
 });

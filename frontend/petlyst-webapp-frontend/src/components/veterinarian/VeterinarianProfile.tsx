@@ -66,6 +66,20 @@ interface VeterinarianPhoto {
   veterinarian_album_photo_url_created_at: string;
 }
 
+// Add new clinic interface
+interface Clinic {
+  clinic_id: number;
+  clinic_name: string;
+  clinic_type: string;
+  clinic_description: string | null;
+  province: string;
+  district: string;
+  clinic_address: string | null;
+  photos: string[];
+  operator_name?: string;
+  operator_surname?: string;
+}
+
 const VeterinarianProfile: React.FC = () => {
   const { token } = useAppSelector(state => state.auth);
   const [activeTab, setActiveTab] = useState<string>('education');
@@ -143,7 +157,31 @@ const VeterinarianProfile: React.FC = () => {
   const [photoToDelete, setPhotoToDelete] = useState<number | null>(null);
   const [deletePhotoLoading, setDeletePhotoLoading] = useState<boolean>(false);
   const [fileInputKey, setFileInputKey] = useState<number>(0); // For resetting file input
-
+  
+  // Clinic search state
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [clinicSearchQuery, setClinicSearchQuery] = useState<string>('');
+  const [clinicSearchLoading, setClinicSearchLoading] = useState<boolean>(false);
+  const [clinicSearchError, setClinicSearchError] = useState<string | null>(null);
+  const [clinicJoinLoading, setClinicJoinLoading] = useState<boolean>(false);
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  const [showJoinConfirmationModal, setShowJoinConfirmationModal] = useState<boolean>(false);
+  const [clinicJoinError, setClinicJoinError] = useState<string | null>(null);
+  const [clinicJoinSuccess, setClinicJoinSuccess] = useState<string | null>(null);
+  const [myClinic, setMyClinic] = useState<any | null>(null);
+  const [myClinicLoading, setMyClinicLoading] = useState<boolean>(false);
+  
+  // Verification status state
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'unverified' | null>(null);
+  const [verificationLoading, setVerificationLoading] = useState<boolean>(false);
+  
+  // New state to track if any join request has been sent
+  const [hasActivePendingRequest, setHasActivePendingRequest] = useState<boolean>(false);
+  
+  // State for pending request
+  const [hasPendingRequest, setHasPendingRequest] = useState<boolean>(false);
+  const [pendingRequestDetails, setPendingRequestDetails] = useState<any>(null);
+  
   useEffect(() => {
     if (activeTab === 'education') {
       fetchEducation();
@@ -155,8 +193,35 @@ const VeterinarianProfile: React.FC = () => {
       fetchProfile();
     } else if (activeTab === 'photos') {
       fetchPhotos();
+    } else if (activeTab === 'clinics') {
+      fetchMyClinic();
+      fetchVerificationStatus();
+      checkPendingRequests();
     }
   }, [activeTab, token]);
+  
+  // Fetch verification status immediately when component loads
+  useEffect(() => {
+    fetchVerificationStatus();
+  }, [token]);
+
+  // Check for selectedProfileTab in localStorage and switch to that tab if available
+  useEffect(() => {
+    const selectedTab = localStorage.getItem('selectedProfileTab');
+    if (selectedTab) {
+      setActiveTab(selectedTab);
+      // Clear the localStorage item after switching tabs
+      localStorage.removeItem('selectedProfileTab');
+    }
+  }, []);
+  
+  // Check for pending requests when tab changes to clinics
+  useEffect(() => {
+    if (activeTab === 'clinics') {
+      fetchMyClinic();
+      checkPendingRequests();
+    }
+  }, [activeTab]);
 
   const fetchEducation = async () => {
     try {
@@ -1984,6 +2049,497 @@ const VeterinarianProfile: React.FC = () => {
     );
   };
 
+  // Fetch my clinic to see if the veterinarian is already associated with a clinic
+  const fetchMyClinic = async () => {
+    try {
+      setMyClinicLoading(true);
+      
+      const response = await axios.get('http://localhost:3000/api/veterinarian/my-clinic', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        setMyClinic(response.data.clinic);
+        // If user is associated with a clinic, they can't have pending requests
+        setHasPendingRequest(false);
+        setPendingRequestDetails(null);
+      } else {
+        setMyClinic(null);
+        // Check for pending requests separately
+        await checkPendingRequests();
+      }
+    } catch (error) {
+      console.error('Error fetching my clinic:', error);
+      setMyClinic(null);
+    } finally {
+      setMyClinicLoading(false);
+    }
+  };
+  
+  // Fetch verification status
+  const fetchVerificationStatus = async () => {
+    try {
+      setVerificationLoading(true);
+      console.log("Fetching verification status...");
+      
+      const response = await axios.get(API_ENDPOINTS.VERIFICATION_STATUS, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("Verification API response:", response.data);
+      
+      if (response.data && response.data.verification_status) {
+        console.log("Setting verification status to:", response.data.verification_status);
+        setVerificationStatus(response.data.verification_status);
+      } else {
+        console.log("No verification_status in response, defaulting to 'unverified'");
+        setVerificationStatus('unverified');
+      }
+    } catch (error) {
+      console.error('Error fetching verification status:', error);
+      console.log("Setting verification status to 'unverified' due to error");
+      setVerificationStatus('unverified');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+  
+  // Search for clinics
+  const searchClinics = async () => {
+    if (!clinicSearchQuery.trim()) return;
+    
+    try {
+      setClinicSearchLoading(true);
+      setClinicSearchError(null);
+      setClinics([]);
+      
+      const response = await axios.get(`http://localhost:3000/api/pet-owners/search-clinics`, {
+        params: {
+          query: clinicSearchQuery,
+          limit: 50
+        }
+      });
+      
+      if (response.data && response.data.success && Array.isArray(response.data.clinics)) {
+        const clinicsData = response.data.clinics;
+        
+        // Get clinic ids for operator information
+        const clinicIds = clinicsData.map((clinic: Clinic) => clinic.clinic_id);
+        
+        if (clinicIds.length > 0) {
+          try {
+            // Fetch operators for all clinics in a single request
+            const operatorsResponse = await axios.post(
+              'http://localhost:3000/api/veterinarian/clinic-operators',
+              { clinicIds },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+            
+            if (operatorsResponse.data && operatorsResponse.data.success) {
+              const operatorsMap = operatorsResponse.data.operators;
+              
+              // Add operator info to each clinic
+              const clinicsWithOperators = clinicsData.map((clinic: Clinic) => {
+                if (operatorsMap[clinic.clinic_id]) {
+                  return {
+                    ...clinic,
+                    operator_name: operatorsMap[clinic.clinic_id].operator_name,
+                    operator_surname: operatorsMap[clinic.clinic_id].operator_surname
+                  };
+                }
+                return clinic;
+              });
+              
+              setClinics(clinicsWithOperators);
+            } else {
+              console.warn('Failed to fetch operators for clinics');
+              setClinics(clinicsData);
+            }
+          } catch (operatorError) {
+            console.error('Error fetching clinic operators:', operatorError);
+            setClinics(clinicsData);
+          }
+        } else {
+          setClinics(clinicsData);
+        }
+      } else {
+        setClinicSearchError('Failed to fetch clinics. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error searching clinics:', error);
+      setClinicSearchError('An error occurred while searching for clinics. Please try again.');
+    } finally {
+      setClinicSearchLoading(false);
+    }
+  };
+  
+  // Handle clinic search input change
+  const handleClinicSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setClinicSearchQuery(e.target.value);
+  };
+  
+  // Handle clinic search form submit
+  const handleClinicSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchClinics();
+  };
+  
+  // Show join confirmation modal
+  const showJoinConfirmation = (clinic: Clinic) => {
+    setSelectedClinic(clinic);
+    setShowJoinConfirmationModal(true);
+    setClinicJoinError(null);
+  };
+  
+  // Send join request
+  const sendJoinRequest = async () => {
+    if (!selectedClinic) return;
+    
+    try {
+      setClinicJoinLoading(true);
+      setClinicJoinError(null);
+      
+      const response = await axios.post(
+        `http://localhost:3000/api/veterinarian/request-join-clinic/${selectedClinic.clinic_id}`, 
+        {}, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        setClinicJoinSuccess(`Your request to join ${selectedClinic.clinic_name} has been sent successfully!`);
+        setShowJoinConfirmationModal(false);
+        
+        // Check pending requests after submitting
+        await checkPendingRequests();
+        fetchMyClinic(); // Refresh my clinic status
+      } else {
+        setClinicJoinError('Failed to send join request. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error sending join request:', error);
+      setClinicJoinError(error.response?.data?.message || 'An error occurred while sending the join request. Please try again.');
+    } finally {
+      setClinicJoinLoading(false);
+    }
+  };
+  
+  // Render clinic search section
+  const renderClinicSearchSection = () => {
+    if (myClinicLoading || verificationLoading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">Loading...</p>
+        </div>
+      );
+    }
+    
+    // If the veterinarian is already associated with a clinic, show the clinic info
+    if (myClinic) {
+      return (
+        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">My Clinic</h3>
+              <p className="text-sm text-gray-500 mt-1">You are currently associated with the following clinic</p>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row">
+              <div className="md:flex-1">
+                <h3 className="text-lg font-semibold text-gray-800">{myClinic.clinic_name}</h3>
+                <p className="text-sm text-gray-600 mt-2">
+                  {myClinic.province}, {myClinic.district}
+                </p>
+                <div className="mt-4">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Associated
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // The clinic search content
+    const clinicSearchContent = (
+      <div>
+        {/* Pending Request Banner */}
+        {hasPendingRequest && pendingRequestDetails && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-md shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-10a1 1 0 10-2 0v3.5a1 1 0 102 0V8zm-1 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 font-medium">
+                  You have a pending join request for {pendingRequestDetails.clinic_name || 'a clinic'}.
+                </p>
+                <p className="text-sm text-yellow-600 mt-1">
+                  You cannot send new join requests until this request is approved or canceled.
+                </p>
+                <p className="text-xs text-yellow-500 mt-1">
+                  Request sent on {new Date(pendingRequestDetails.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Search Form */}
+        <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100 mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">Clinic Search</h3>
+              <p className="text-sm text-gray-500 mt-1">Search for clinics and send join requests</p>
+            </div>
+          </div>
+          
+          <form onSubmit={handleClinicSearchSubmit}>
+            <div className="relative">
+              <input
+                type="text"
+                value={clinicSearchQuery}
+                onChange={handleClinicSearchInputChange}
+                placeholder="Search for clinics by name, location, or services..."
+                className="w-full p-4 pl-12 pr-14 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                disabled={hasPendingRequest}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="submit"
+                  className={`px-4 py-2 ${hasPendingRequest 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm font-medium transition-colors shadow-sm inline-flex items-center`}
+                  disabled={clinicSearchLoading || !clinicSearchQuery.trim() || hasPendingRequest}
+                >
+                  {clinicSearchLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Searching...
+                    </>
+                  ) : (
+                    'Search'
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        {/* Success Message */}
+        {clinicJoinSuccess && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">{clinicJoinSuccess}</p>
+              </div>
+              <div className="ml-auto pl-3">
+                <div className="-mx-1.5 -my-1.5">
+                  <button
+                    onClick={() => setClinicJoinSuccess(null)}
+                    className="inline-flex rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Error Message */}
+        {clinicSearchError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{clinicSearchError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Search Results */}
+        {clinics.length > 0 && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Search Results</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {clinics.map((clinic) => (
+                <div key={clinic.clinic_id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-gray-800">{clinic.clinic_name}</h4>
+                      
+                      <div className="mt-2 text-sm text-gray-600">
+                        <div className="flex items-start">
+                          <svg className="h-5 w-5 text-gray-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{clinic.province}, {clinic.district}</span>
+                        </div>
+                      </div>
+                      
+                      {(clinic.operator_name || clinic.operator_surname) && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <div className="flex items-start">
+                            <svg className="h-5 w-5 text-gray-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>Clinic Owner: {clinic.operator_name} {clinic.operator_surname}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => showJoinConfirmation(clinic)}
+                      className={`mt-4 w-full px-4 py-2 ${hasPendingRequest 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm font-medium transition-colors shadow-sm`}
+                      disabled={hasPendingRequest}
+                    >
+                      {hasPendingRequest 
+                        ? 'Request Pending' 
+                        : 'Send Join Request'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Empty search results message */}
+        {!clinicSearchLoading && clinicSearchQuery && clinics.length === 0 && !clinicSearchError && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+            <div className="text-center py-10">
+              <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No clinics found</h3>
+              <p className="mt-1 text-sm text-gray-500">Try changing your search query to find more results.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+    
+    // Render content with or without blur overlay based on verification status
+    if (verificationStatus !== 'verified') {
+      return (
+        <div className="relative">
+          {/* Blurred content */}
+          <div className="blur-sm pointer-events-none">
+            {clinicSearchContent}
+          </div>
+          
+          {/* Verification required overlay - horizontal banner style */}
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10 rounded-lg">
+            <div className={`bg-white shadow-lg rounded-lg border ${verificationStatus === 'pending' ? 'border-yellow-300 border-2' : 'border-red-300 border-2'} p-6 w-full max-w-3xl mx-auto`}>
+              <div className="flex flex-col md:flex-row items-center">
+                <div className="flex-shrink-0 mr-6 mb-4 md:mb-0">
+                  {verificationStatus === 'pending' ? (
+                    <svg className="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className={`text-xl font-semibold ${verificationStatus === 'pending' ? 'text-yellow-800' : 'text-red-800'} mb-2`}>
+                    {verificationStatus === 'pending' ? 'Verification In Progress' : 'Verification Required'}
+                  </h3>
+                  <p className="text-gray-700 mb-4 font-medium">
+                    {verificationStatus === 'pending' 
+                      ? "Your verification is pending approval. Once your account is verified, you'll be able to search and join clinics. Thank you for your patience."
+                      : "You must be a verified veterinarian to search and join clinics. Please complete the verification process to access this feature."}
+                  </p>
+                  <div className={`inline-flex ${verificationStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'} px-4 py-2 rounded-full text-sm font-medium`}>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-bold">{verificationStatus === 'pending' ? 'Verification Pending' : 'Not Verified'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Return normal content for verified veterinarians
+    return clinicSearchContent;
+  };
+
+  // Function to check if veterinarian has pending requests
+  const checkPendingRequests = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/veterinarian/check-pending-requests', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data && response.data.success) {
+        setHasPendingRequest(response.data.hasPendingRequest);
+        setPendingRequestDetails(response.data.pendingRequest);
+      } else {
+        setHasPendingRequest(false);
+        setPendingRequestDetails(null);
+      }
+    } catch (error) {
+      console.error('Error checking pending requests:', error);
+      setHasPendingRequest(false);
+      setPendingRequestDetails(null);
+    }
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
       {/* Profile Tabs */}
@@ -2066,6 +2622,22 @@ const VeterinarianProfile: React.FC = () => {
               Profile Picture
             </div>
           </button>
+          {/* Clinics tab */}
+          <button
+            onClick={() => setActiveTab('clinics')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'clinics'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Clinics
+            </div>
+          </button>
         </nav>
       </div>
       
@@ -2076,6 +2648,7 @@ const VeterinarianProfile: React.FC = () => {
         {activeTab === 'expertise' && renderExpertiseSection()}
         {activeTab === 'biography' && renderBiographySection()}
         {activeTab === 'photos' && renderPhotosSection()}
+        {activeTab === 'clinics' && renderClinicSearchSection()}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -2105,6 +2678,68 @@ const VeterinarianProfile: React.FC = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Join Clinic Confirmation Modal */}
+      {showJoinConfirmationModal && selectedClinic && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mx-auto mb-4">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+              Confirm Join Request
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to send a request to join <span className="font-semibold">{selectedClinic.clinic_name}</span>?
+            </p>
+            
+            {clinicJoinError && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4 rounded-r-md shadow-sm">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{clinicJoinError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowJoinConfirmationModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendJoinRequest}
+                disabled={clinicJoinLoading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center"
+              >
+                {clinicJoinLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  'Confirm & Send Request'
+                )}
               </button>
             </div>
           </div>
