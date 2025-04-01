@@ -11,66 +11,84 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Find the Best Care for Your Pets
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Connect with trusted veterinarians and manage your pet's health in one place
-        </p>
+    <div className="container mx-auto px-4 py-8 overflow-hidden">
+      {/* Hero Section with Background Image */}
+      <div className="relative mb-16 min-h-[580px]">
+        {/* Background Image Container */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl shadow-lg">
+          <img 
+            src="https://d2j5evtsf6ql1v.cloudfront.net/petlyst-hero-enterprise-image.png" 
+            alt="Pet Care" 
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Slight overlay for better text readability */}
+          <div className="absolute inset-0 bg-blue-900/30"></div>
+        </div>
+        
+        {/* Content Container - positioned above the background */}
+        <div className="relative z-10 text-left py-20 px-8 md:px-12">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-6 text-shadow-sm drop-shadow-lg">
+              The Digital Bridge <br />for Better Veterinary Care
+            </h1>
+            
+            {/* Short description */}
+            <p className="text-xl text-white mb-4 text-shadow-sm leading-relaxed">
+              Petlyst connects veterinary professionals to <br /> smarter tools, stronger workflows, and client relationships
+            </p>
+            <p className="text-xl text-white mb-12 font-semibold bg-blue-500/30 px-4 py-2 rounded inline-block shadow-sm">
+              all through one seamless digital platform.
+            </p>
+          </div>
+
+          {/* Four cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-16 mx-auto px-2">
+            {/* Card 1 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-lg p-6 transform transition-transform hover:scale-105">
+              <div className="text-blue-600 mb-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Workflow</h3>
+              <p className="text-sm text-gray-700">Streamline operations with smart scheduling and reporting tools.</p>
+            </div>
+            
+            {/* Card 2 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-lg p-6 transform transition-transform hover:scale-105">
+              <div className="text-blue-600 mb-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure Communication</h3>
+              <p className="text-sm text-gray-700">Secure client communication with encrypted chats and video calls.</p>
+            </div>
+            
+            {/* Card 3 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-lg p-6 transform transition-transform hover:scale-105">
+              <div className="text-blue-600 mb-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Data-Driven Insights</h3>
+              <p className="text-sm text-gray-700">Power decisions with analytics and custom dashboards.</p>
+            </div>
+
+            {/* Card 4 */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-lg p-6 transform transition-transform hover:scale-105">
+              <div className="text-blue-600 mb-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Client-Centered Experience</h3>
+              <p className="text-sm text-gray-700">Enhance client experience with easy booking and personalized care.</p>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-        {/* Feature 1 */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="text-blue-600 mb-4">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Easy Scheduling</h3>
-          <p className="text-gray-600">Book appointments with veterinarians at your convenience</p>
-        </div>
-
-        {/* Feature 2 */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="text-blue-600 mb-4">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Health Records</h3>
-          <p className="text-gray-600">Keep all your pet's medical records in one secure place</p>
-        </div>
-
-        {/* Feature 3 */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="text-blue-600 mb-4">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">Direct Communication</h3>
-          <p className="text-gray-600">Chat with veterinarians and get quick responses</p>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      {!user && (
-        <div className="bg-blue-600 text-white rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Join Our Community Today</h2>
-          <p className="text-xl mb-6">Get started with managing your pet's health care</p>
-          <button
-            onClick={() => setIsAuthModalOpen(true)}
-            className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-          >
-            Get Started
-          </button>
-        </div>
-      )}
 
       {/* Auth Modal */}
       <AuthModal 
