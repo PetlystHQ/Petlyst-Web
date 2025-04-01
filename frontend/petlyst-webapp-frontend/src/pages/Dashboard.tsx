@@ -31,6 +31,8 @@ const Dashboard: React.FC = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   const navigate = useNavigate();
   const { user } = useAppSelector(state => state.auth);
+  const redirectState = location.state as { pendingRequest?: boolean } | null;
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
 
   // Check if veterinarian has any clinics
   useEffect(() => {
@@ -96,6 +98,18 @@ const Dashboard: React.FC = () => {
       ensureSlug();
     }
   }, [user, token]);
+
+  useEffect(() => {
+    // Check if redirected due to pending clinic request
+    if (redirectState?.pendingRequest) {
+      setNotificationMessage("You cannot add or edit clinics while you have a pending clinic join request.");
+      // Clear the state after 5 seconds
+      const timer = setTimeout(() => {
+        setNotificationMessage(null);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [redirectState]);
 
   const handleAddClinic = () => {
     // Navigate to the add clinic page instead of opening a modal
@@ -199,6 +213,25 @@ const Dashboard: React.FC = () => {
           Back to Petlyst
         </button>
       </div>
+      
+      {/* Notification message for redirected users */}
+      {notificationMessage && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {notificationMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {renderContent()}
 
       <VerificationModal

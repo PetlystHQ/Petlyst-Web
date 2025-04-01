@@ -31,6 +31,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const [isUpdatingProfileVisibility, setIsUpdatingProfileVisibility] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState<boolean | null>(null);
+  const [hasPendingClinicRequest, setHasPendingClinicRequest] = useState(false);
 
   useEffect(() => {
     // Load profile visibility status
@@ -54,10 +55,33 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       }
     };
 
+    // Check for pending clinic requests
+    const checkPendingRequests = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/veterinarian/check-pending-requests', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && response.data.success) {
+          setHasPendingClinicRequest(response.data.hasPendingRequest);
+          
+          // If user has a pending request and is currently on the clinic view, redirect to overview
+          if (response.data.hasPendingRequest && currentView === DASHBOARD_VIEWS.clinics) {
+            onViewChange(DASHBOARD_VIEWS.overview);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking pending clinic requests:', error);
+      }
+    };
+
     if (user?.user_type === 'veterinarian' && token) {
       fetchProfileVisibility();
+      checkPendingRequests();
     }
-  }, [user, token, dispatch]);
+  }, [user, token, dispatch, currentView, onViewChange]);
 
   const handleLogout = () => {
     setLoggingOut(true);
@@ -113,6 +137,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   };
 
   const isFeatureAccessible = verificationStatus === 'verified';
+  // Check if user can access clinic features - must be verified and not have pending requests
+  const canAccessClinicFeatures = isFeatureAccessible && !hasPendingClinicRequest;
 
   const getVerificationStatusDisplay = () => {
     switch (verificationStatus) {
@@ -213,6 +239,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               {user?.name} {user?.surname}
             </h2>
             {getVerificationStatusDisplay()}
+            
+            {/* Pending clinic request indicator */}
+            {hasPendingClinicRequest && (
+              <span className="mt-2 text-xs text-yellow-600 font-medium flex items-center bg-yellow-50 px-2 py-1 rounded">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Pending Clinic Request
+              </span>
+            )}
           </div>
         </div>
 
@@ -249,8 +285,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               </button>
             </li>
 
-            {/* Conditional Navigation Items - Only for verified users */}
-            {isFeatureAccessible && (
+            {/* Conditional Navigation Items - Only for verified users without pending requests */}
+            {canAccessClinicFeatures && (
               <li>
                 <button
                   onClick={() => {
