@@ -23,6 +23,13 @@ interface VeterinarianProfile {
   slug?: string;
 }
 
+// Add a new interface for the clinic data
+interface ApprovedClinic {
+  clinic_id: number;
+  clinic_name: string;
+  association_status: string;
+}
+
 interface Education {
   education_id: number;
   school_name: string;
@@ -55,6 +62,7 @@ const SingleVeterinarianPage: React.FC = () => {
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState<VeterinarianProfile | null>(null);
+  const [approvedClinic, setApprovedClinic] = useState<ApprovedClinic | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isPrivateProfile, setIsPrivateProfile] = useState<boolean>(false);
@@ -112,6 +120,11 @@ const SingleVeterinarianPage: React.FC = () => {
             
             setIsProfileOwner(isOwner);
           }
+          
+          // If we have a user_id, fetch the approved clinic
+          if (response.data.profile && response.data.profile.user_id) {
+            fetchApprovedClinic(response.data.profile.user_id);
+          }
         } else {
           setError(response.data.message || 'Failed to load veterinarian profile');
         }
@@ -133,6 +146,21 @@ const SingleVeterinarianPage: React.FC = () => {
       fetchVeterinarianProfile();
     }
   }, [slug, user, token]);
+
+  // Function to fetch the approved clinic for the veterinarian
+  const fetchApprovedClinic = async (veterinarianId: number) => {
+    try {
+      const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${veterinarianId}`);
+      
+      if (response.data && response.data.success) {
+        setApprovedClinic(response.data.clinic);
+      }
+    } catch (error) {
+      // Just log the error, but don't show an error message to the user
+      // since this is an enhancement, not a critical feature
+      console.error('Error fetching approved clinic:', error);
+    }
+  };
 
   // Function to update profile visibility
   const updateProfileVisibility = async (makePublic: boolean) => {
@@ -365,6 +393,35 @@ const SingleVeterinarianPage: React.FC = () => {
             
             {/* Main profile details */}
             <div className="md:w-2/3 p-6">
+              {/* Approved Clinic Information */}
+              {approvedClinic && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-medium text-gray-800 flex items-center mb-3">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Works At
+                  </h2>
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <div className="flex flex-row items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">{approvedClinic.clinic_name}</h3>
+                      </div>
+                      <a
+                        href={`/search?clinic=${approvedClinic.clinic_id}`}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
+                      >
+                        <svg className="mr-1 -ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Clinic
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Biography */}
               <div className="mb-6">
                 <h2 className="text-lg font-medium text-gray-800 flex items-center mb-3">

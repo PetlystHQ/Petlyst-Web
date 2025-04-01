@@ -1377,10 +1377,6 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     
     const userData = await pool.query(userDataQuery, [veterinarian.veterinarian_id]);
     
-    if (userData.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User data not found' });
-    }
-    
     // Fetch education data
     const educationQuery = `
       SELECT e.education_id, e.school_name, e.field_of_study, e.start_date, e.end_date, e.is_current
@@ -1888,6 +1884,44 @@ router.get('/check-pending-requests', authenticateToken, async (req, res) => {
       message: 'Server error',
       error: error.message
     });
+  }
+});
+
+// Get approved clinic for a veterinarian (public endpoint)
+router.get('/approved-clinic/:veterinarianId', async (req, res) => {
+  try {
+    const veterinarianId = parseInt(req.params.veterinarianId);
+    
+    if (isNaN(veterinarianId)) {
+      return res.status(400).json({ success: false, message: 'Invalid veterinarian ID' });
+    }
+    
+    // Query to get the approved clinic for this veterinarian - simplified
+    const query = `
+      SELECT 
+        c.clinic_id, 
+        c.clinic_name,
+        cv.status as association_status
+      FROM 
+        clinic_veterinarians cv
+      JOIN 
+        clinics c ON cv.clinic_id = c.clinic_id
+      WHERE 
+        cv.veterinarian_id = $1 
+        AND cv.status = 'approved'
+      LIMIT 1
+    `;
+    
+    const result = await pool.query(query, [veterinarianId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(200).json({ success: true, clinic: null });
+    }
+    
+    res.json({ success: true, clinic: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching approved clinic:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
