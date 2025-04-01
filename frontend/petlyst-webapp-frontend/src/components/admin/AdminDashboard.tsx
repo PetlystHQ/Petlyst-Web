@@ -35,8 +35,12 @@ const AdminDashboard: React.FC = () => {
     
     const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
     const adminToken = localStorage.getItem('adminToken');
+    
+    // Handle inconsistency in field naming
+    const adminName = adminUser.name || adminUser.user_name || 'Admin';
 
     useEffect(() => {
+        console.log('Admin dashboard mounted with user:', adminUser);
         fetchPendingRequests();
         fetchPendingClinics();
     }, [adminToken]);
@@ -193,7 +197,7 @@ const AdminDashboard: React.FC = () => {
                             <h1 className="text-lg md:text-xl font-bold text-gray-800 ml-2 md:ml-0">Admin Dashboard</h1>
                         </div>
                         <div className="flex items-center space-x-2 md:space-x-4">
-                            <span className="text-sm md:text-base text-gray-600 hidden sm:inline-block">Welcome, {adminUser.name}</span>
+                            <span className="text-sm md:text-base text-gray-600 hidden sm:inline-block">Welcome, {adminName}</span>
                             <button
                                 onClick={handleLogout}
                                 className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 md:px-4 md:py-2 rounded-md text-xs md:text-sm font-medium transition duration-150 ease-in-out"
@@ -233,7 +237,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                     <div className="flex flex-col space-y-2">
                         <div className="p-2 border-b border-gray-200">
-                            <span className="text-gray-600">Welcome, {adminUser.name}</span>
+                            <span className="text-gray-600">Welcome, {adminName}</span>
                         </div>
                         <button
                             onClick={handleLogout}

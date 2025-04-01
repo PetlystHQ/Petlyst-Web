@@ -3,6 +3,7 @@ const router = express.Router();
 const authenticateToken = require('../middleware/authenticateToken');
 const { checkVerificationStatus } = require('../middleware/verificationMiddleware');
 const Clinic = require('../models/clinicModel');
+const ClinicVeterinarian = require('../models/clinicVeterinarianModel');
 const pool = require('../config/db');
 const multer = require('multer');
 // Import S3Service instance with all methods
@@ -634,6 +635,16 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       
       // Add additional services
       await saveAdditionalServices(client, newClinic.clinic_id, additional_services);
+      
+      // Klinik yaratıcısını otomatik olarak ekle
+      try {
+        // Klinik oluşturan veterineri otomatik olarak ekle
+        await ClinicVeterinarian.addClinicCreator(clinicData.clinic_operator_id, newClinic.clinic_id);
+        console.log(`Added clinic creator for new clinic ${newClinic.clinic_id}`);
+      } catch (creatorError) {
+        console.error('Error adding clinic creator:', creatorError);
+        // Klinik oluşturma işlemine devam et, hata olsa bile
+      }
       
       // Commit the transaction
       await client.query('COMMIT');
@@ -1530,6 +1541,129 @@ router.put('/:clinicId/services', authenticateToken, checkVerificationStatus, as
     });
   } finally {
     client.release();
+  }
+});
+
+// Kliniğe bağlı veterinerleri listeler
+router.get('/:clinicId/veterinarians', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const { status } = req.query;
+    const operatorId = req.user.userId;
+    
+    // Yetkilendirme: Sadece klinik sahibi görebilir
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic || clinic.clinic_operator_id !== operatorId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu kliniğin veterinerlerini görüntüleme yetkiniz yok'
+      });
+    }
+    
+    const veterinarians = await ClinicVeterinarian.getClinicVeterinarians(clinicId, status);
+    
+    res.status(200).json({
+      success: true,
+      veterinarians
+    });
+  } catch (error) {
+    console.error('Error getting clinic veterinarians:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Veteriner isteğini onaylama/reddetme
+router.put('/:clinicId/veterinarian/:id/status', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId, id } = req.params;
+    const { status } = req.body;
+    const operatorId = req.user.userId;
+    
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz durum değeri. "approved" veya "rejected" olmalıdır.'
+      });
+    }
+    
+    // Yetkilendirme: Sadece klinik sahibi işlem yapabilir
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic || clinic.clinic_operator_id !== operatorId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu klinikte veteriner taleplerini yönetme yetkiniz yok'
+      });
+    }
+    
+    const result = await ClinicVeterinarian.updateRequestStatus(id, status);
+    
+    res.status(200).json({
+      success: true,
+      message: status === 'approved' ? 'Veteriner talebi onaylandı' : 'Veteriner talebi reddedildi',
+      veterinarianRequest: result
+    });
+  } catch (error) {
+    console.error('Error updating veterinarian request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Veterineri klinikten çıkarma (Klinik tarafından)
+router.delete('/:clinicId/veterinarian/:id', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId, id } = req.params;
+    const operatorId = req.user.userId;
+    
+    // Yetkilendirme: Sadece klinik sahibi işlem yapabilir
+    const clinic = await Clinic.getClinicById(clinicId);
+    
+    if (!clinic || clinic.clinic_operator_id !== operatorId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu klinikte veteriner çıkarma yetkiniz yok'
+      });
+    }
+    
+    // Klinik yaratıcısı silinemez kontrolü
+    const requestDetails = await pool.query(
+      'SELECT id, is_clinic_creator FROM clinic_veterinarians WHERE id = $1',
+      [id]
+    );
+    
+    if (requestDetails.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Veteriner bulunamadı'
+      });
+    }
+    
+    if (requestDetails.rows[0].is_clinic_creator) {
+      return res.status(400).json({
+        success: false,
+        message: 'Klinik sahibi klinikten çıkarılamaz'
+      });
+    }
+    
+    await ClinicVeterinarian.removeVeterinarianFromClinic(id);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Veteriner klinikten başarıyla çıkarıldı'
+    });
+  } catch (error) {
+    console.error('Error removing veterinarian from clinic:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sunucu hatası'
+    });
   }
 });
 

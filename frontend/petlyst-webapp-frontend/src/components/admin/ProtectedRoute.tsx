@@ -18,9 +18,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Special handling for admin routes
   if (allowedUserType === 'admin') {
+    // Add debugging
+    console.log('Admin route check:', { adminToken, adminUser });
+    
     if (!adminToken || !adminUser) {
+      console.log('Admin authentication failed: Missing token or user data');
       return <Navigate to="/admin/login" state={{ from: location }} replace />;
     }
+    
+    // Check for admin userType in both formats
+    const isAdmin = adminUser.userType === 'admin' || adminUser.user_type === 'admin';
+    
+    if (!isAdmin) {
+      console.log('User is not an admin:', adminUser);
+      return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    }
+    
+    console.log('Admin authentication successful');
     return <>{children}</>;
   }
 
