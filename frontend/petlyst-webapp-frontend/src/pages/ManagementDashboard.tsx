@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import axios from 'axios';
@@ -22,7 +22,8 @@ interface MenuItem {
 }
 
 const ManagementDashboard: React.FC = () => {
-  const { clinicId } = useParams<{ clinicId: string }>();
+  // URL'den clinicId parametresi almak yerine, localStorage'dan alıyoruz
+  const clinicId = localStorage.getItem('selectedClinicId');
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
