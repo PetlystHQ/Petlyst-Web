@@ -34,4 +34,5 @@ export const API_ENDPOINTS = {
   // Public profiles list endpoint
   PUBLIC_PROFILES: `${API_URL}/api/veterinarian/public-profiles`,
   PROFILE_COMPLETION: `${API_URL}/api/veterinarian/profile-completion`,
+  ENSURE_SLUG: `${API_URL}/api/veterinarian/ensure-slug`,
 }; 

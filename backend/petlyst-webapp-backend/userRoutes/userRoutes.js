@@ -235,30 +235,13 @@ transporter.verify(function(error, success) {
   }
 });
 
-// Add cleanup function
-async function cleanupExpiredTokens() {
-  try {
-    const query = `
-      DELETE FROM password_reset_tokens 
-      WHERE reset_token_expires_at < CURRENT_TIMESTAMP 
-      OR reset_token_is_used = TRUE
-    `;
-    await pool.query(query);
-  } catch (error) {
-    console.error('Error cleaning up expired tokens:', error);
-  }
-}
-
-// Run cleanup every hour
-setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
-
 // Request password reset
 router.post('/reset-password', async (req, res) => {
   try {
     const { email } = req.body;
 
     // Check if user exists
-    const userQuery = 'SELECT id, email FROM users WHERE email = $1';
+    const userQuery = 'SELECT user_id, user_email FROM users WHERE user_email = $1';
     const userResult = await pool.query(userQuery, [email]);
 
     if (userResult.rows.length === 0) {
@@ -277,7 +260,7 @@ router.post('/reset-password', async (req, res) => {
       INSERT INTO password_reset_tokens (user_id, user_email, reset_code, reset_token_expires_at)
       VALUES ($1, $2, $3, $4)
     `;
-    await pool.query(insertQuery, [userResult.rows[0].id, email, verificationCode, expiresAt]);
+    await pool.query(insertQuery, [userResult.rows[0].user_id, email, verificationCode, expiresAt]);
 
     // Clean up old tokens for this user
     await pool.query(
@@ -439,7 +422,7 @@ router.post('/verify-reset', async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
     // Update password in database
-    const updateQuery = 'UPDATE users SET password = $1 WHERE email = $2';
+    const updateQuery = 'UPDATE users SET user_password = $1 WHERE user_email = $2';
     await pool.query(updateQuery, [hashedPassword, email]);
 
     // Mark token as used
@@ -461,6 +444,24 @@ router.post('/verify-reset', async (req, res) => {
     });
   }
 });
+
+// Add cleanup function
+async function cleanupExpiredTokens() {
+  try {
+    const query = `
+      DELETE FROM password_reset_tokens 
+      WHERE reset_token_expires_at < CURRENT_TIMESTAMP 
+      OR reset_token_is_used = TRUE
+    `;
+    await pool.query(query);
+    console.log('Expired or used password reset tokens cleaned up');
+  } catch (error) {
+    console.error('Error cleaning up expired tokens:', error);
+  }
+}
+
+// Run cleanup every hour
+setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
 
 // Update Theme Preference - Experimental
 router.post('/update-theme', authenticateToken, async (req, res) => {
