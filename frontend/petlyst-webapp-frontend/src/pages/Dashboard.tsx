@@ -21,6 +21,11 @@ const Dashboard: React.FC = () => {
   const [refreshKey] = useState(0);
   const [hasSubmittedClinics, setHasSubmittedClinics] = useState(false);
   const [checkingClinics, setCheckingClinics] = useState(true);
+  
+  // Veterinerin onaylanmış bir klinik ilişkisi var mı kontrol etmek için state
+  const [hasApprovedClinic, setHasApprovedClinic] = useState(false);
+  const [checkingApprovedClinic, setCheckingApprovedClinic] = useState(true);
+  
   const { 
     verificationStatus, 
     isLoading, 
@@ -33,6 +38,40 @@ const Dashboard: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const redirectState = location.state as { pendingRequest?: boolean } | null;
   const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+
+  // Check if veterinarian has approved clinic association
+  useEffect(() => {
+    const checkApprovedClinicStatus = async () => {
+      if (!token || !user || user.user_type !== 'veterinarian') {
+        setCheckingApprovedClinic(false);
+        return;
+      }
+      
+      setCheckingApprovedClinic(true);
+      try {
+        // API endpoint we created to check for approved clinic
+        const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // Set hasApprovedClinic to true if the API returns a clinic
+        setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
+        console.log('Approved clinic check:', response.data);
+      } catch (error) {
+        console.error('Error checking approved clinic status:', error);
+        setHasApprovedClinic(false);
+      } finally {
+        setCheckingApprovedClinic(false);
+      }
+    };
+    
+    // Run the check when verification status is verified
+    if (verificationStatus === 'verified') {
+      checkApprovedClinicStatus();
+    }
+  }, [token, user, verificationStatus]);
 
   // Check if veterinarian has any clinics
   useEffect(() => {
@@ -103,13 +142,60 @@ const Dashboard: React.FC = () => {
     // Check if redirected due to pending clinic request
     if (redirectState?.pendingRequest) {
       setNotificationMessage("You cannot add or edit clinics while you have a pending clinic join request.");
-      // Clear the state after 5 seconds
+      // Clear the state after 8 seconds
       const timer = setTimeout(() => {
         setNotificationMessage(null);
       }, 8000);
+      
+      // Immediately clear the redirect state after using it
+      window.history.replaceState({}, document.title);
+      
       return () => clearTimeout(timer);
     }
   }, [redirectState]);
+
+  // Klinik durumu değişikliğini dinle
+  useEffect(() => {
+    const handleClinicStatusChange = async () => {
+      console.log('Clinic status change detected');
+      if (localStorage.getItem('clinic_status_changed') === 'true') {
+        // API üzerinden klinik durumunu güncelle
+        if (token && user && user.user_type === 'veterinarian') {
+          setCheckingApprovedClinic(true);
+          try {
+            const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${user.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            // Durumu API'dan gelen yanıta göre güncelle
+            setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
+            console.log('Approved clinic check after status change:', response.data);
+          } catch (error) {
+            console.error('Error checking approved clinic status after change:', error);
+            setHasApprovedClinic(false);
+          } finally {
+            setCheckingApprovedClinic(false);
+          }
+        } else {
+          // Token veya kullanıcı yoksa doğrudan false olarak ayarla
+          setHasApprovedClinic(false);
+        }
+        
+        // localStorage'ı temizle
+        localStorage.removeItem('clinic_status_changed');
+      }
+    };
+
+    // Event listener ekle
+    window.addEventListener('clinicStatusChanged', handleClinicStatusChange);
+    
+    // Component unmount olduğunda event listener'ı kaldır
+    return () => {
+      window.removeEventListener('clinicStatusChanged', handleClinicStatusChange);
+    };
+  }, [token, user]);
 
   const handleAddClinic = () => {
     // Navigate to the add clinic page instead of opening a modal
@@ -136,10 +222,11 @@ const Dashboard: React.FC = () => {
     const commonProps = {
       verificationStatus,
       onVerify: () => setIsVerificationModalOpen(true),
-      isLoading: isLoading || checkingClinics,
+      isLoading: isLoading || checkingClinics || checkingApprovedClinic,
       onAddClinic: handleAddClinic,
       onViewChange: setCurrentView,
-      hasSubmittedClinics
+      hasSubmittedClinics,
+      hasApprovedClinic // Pass the approved clinic status to Overview
     };
 
     // Profile view is always accessible regardless of verification status

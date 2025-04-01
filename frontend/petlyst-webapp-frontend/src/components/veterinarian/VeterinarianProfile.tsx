@@ -78,6 +78,11 @@ interface Clinic {
   photos: string[];
   operator_name?: string;
   operator_surname?: string;
+  location_name?: string;
+  location_district?: string;
+  location_province?: string;
+  services?: string;
+  status?: boolean;
 }
 
 const VeterinarianProfile: React.FC = () => {
@@ -181,6 +186,11 @@ const VeterinarianProfile: React.FC = () => {
   // State for pending request
   const [hasPendingRequest, setHasPendingRequest] = useState<boolean>(false);
   const [pendingRequestDetails, setPendingRequestDetails] = useState<any>(null);
+  
+  // Önce yeni bir state ekleyelim - klinikten ayrılma modalı için
+  const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState<boolean>(false);
+  const [leavingClinicLoading, setLeavingClinicLoading] = useState<boolean>(false);
+  const [leaveClinicError, setLeaveClinicError] = useState<string | null>(null);
   
   useEffect(() => {
     if (activeTab === 'education') {
@@ -2224,6 +2234,11 @@ const VeterinarianProfile: React.FC = () => {
         // Check pending requests after submitting
         await checkPendingRequests();
         fetchMyClinic(); // Refresh my clinic status
+        
+        // Overview sayfasının güncellenmesi için event tetikle
+        localStorage.setItem('clinic_status_changed', 'true');
+        const event = new Event('clinicStatusChanged');
+        window.dispatchEvent(event);
       } else {
         setClinicJoinError('Failed to send join request. Please try again.');
       }
@@ -2250,7 +2265,7 @@ const VeterinarianProfile: React.FC = () => {
     if (myClinic) {
       return (
         <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-xl font-semibold text-gray-800">My Clinic</h3>
               <p className="text-sm text-gray-500 mt-1">You are currently associated with the following clinic</p>
@@ -2258,23 +2273,63 @@ const VeterinarianProfile: React.FC = () => {
           </div>
           
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-            <div className="flex flex-col md:flex-row">
-              <div className="md:flex-1">
+            <div className="flex justify-between items-center">
+              <div>
                 <h3 className="text-lg font-semibold text-gray-800">{myClinic.clinic_name}</h3>
-                <p className="text-sm text-gray-600 mt-2">
-                  {myClinic.province}, {myClinic.district}
+              </div>
+              <button
+                onClick={showLeaveConfirmation}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
+              >
+                Leave Clinic
+              </button>
+            </div>
+          </div>
+          
+          {/* Klinikten ayrılma onay modalı */}
+          {showLeaveConfirmationModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Leave Clinic Confirmation</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to leave <span className="font-semibold">{myClinic.clinic_name}</span>? This action cannot be undone.
                 </p>
-                <div className="mt-4">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Associated
-                  </span>
+                
+                {leaveClinicError && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    <p className="text-sm text-red-700">{leaveClinicError}</p>
+                  </div>
+                )}
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowLeaveConfirmationModal(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                    disabled={leavingClinicLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLeaveClinic}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors flex items-center"
+                    disabled={leavingClinicLoading}
+                  >
+                    {leavingClinicLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      'Leave Clinic'
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       );
     }
@@ -2403,47 +2458,53 @@ const VeterinarianProfile: React.FC = () => {
         {clinics.length > 0 && (
           <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Search Results</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               {clinics.map((clinic) => (
                 <div key={clinic.clinic_id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col h-full">
-                    <div className="flex-1">
+                  <div className="flex justify-between">
+                    <div>
                       <h4 className="text-lg font-semibold text-gray-800">{clinic.clinic_name}</h4>
-                      
-                      <div className="mt-2 text-sm text-gray-600">
-                        <div className="flex items-start">
-                          <svg className="h-5 w-5 text-gray-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span>{clinic.province}, {clinic.district}</span>
-                        </div>
-                      </div>
-                      
-                      {(clinic.operator_name || clinic.operator_surname) && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          <div className="flex items-start">
-                            <svg className="h-5 w-5 text-gray-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>Clinic Owner: {clinic.operator_name} {clinic.operator_surname}</span>
-                          </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {clinic.location_name ? (
+                          `${clinic.location_name}, ${clinic.location_district}, ${clinic.location_province}`
+                        ) : (
+                          `${clinic.district}, ${clinic.province}`
+                        )}
+                      </p>
+                      {clinic.operator_name && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">Clinic Owner:</span> {clinic.operator_name} {clinic.operator_surname}
+                        </p>
+                      )}
+                      {clinic.services && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {clinic.services.split(',').map((service, index) => (
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {service.trim()}
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>
-                    
-                    <button
-                      onClick={() => showJoinConfirmation(clinic)}
-                      className={`mt-4 w-full px-4 py-2 ${hasPendingRequest 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md text-sm font-medium transition-colors shadow-sm`}
-                      disabled={hasPendingRequest}
-                    >
-                      {hasPendingRequest 
-                        ? 'Request Pending' 
-                        : 'Send Join Request'}
-                    </button>
+                    <div className="flex items-start">
+                      {clinic.status ? (
+                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Associated
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => showJoinConfirmation(clinic)}
+                          disabled={hasPendingRequest}
+                          className={`px-3 py-1 ${
+                            hasPendingRequest
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          } rounded-md text-sm font-medium transition-colors`}
+                        >
+                          Join
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2451,7 +2512,17 @@ const VeterinarianProfile: React.FC = () => {
           </div>
         )}
         
-        {/* Empty search results message */}
+        {/* Loading Indicator */}
+        {clinicSearchLoading && (
+          <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+            <div className="flex justify-center items-center py-8">
+              <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin"></div>
+              <p className="text-gray-600 ml-4 font-medium">Searching clinics...</p>
+            </div>
+          </div>
+        )}
+        
+        {/* No Results Found */}
         {!clinicSearchLoading && clinicSearchQuery && clinics.length === 0 && !clinicSearchError && (
           <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
             <div className="text-center py-10">
@@ -2538,6 +2609,51 @@ const VeterinarianProfile: React.FC = () => {
       setHasPendingRequest(false);
       setPendingRequestDetails(null);
     }
+  };
+
+  // Klinikten ayrılma fonksiyonu
+  const handleLeaveClinic = async () => {
+    if (!myClinic) return;
+    
+    try {
+      setLeavingClinicLoading(true);
+      setLeaveClinicError(null);
+      
+      const response = await axios.delete(
+        `http://localhost:3000/api/veterinarian/leave-clinic/${myClinic.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        // Başarıyla ayrılındı
+        setMyClinic(null);
+        setShowLeaveConfirmationModal(false);
+        setClinicJoinSuccess("You have successfully left the clinic.");
+        
+        // Overview sayfasındaki hasApprovedClinic state'inin güncellenmesi için event tetikle
+        localStorage.setItem('clinic_status_changed', 'true');
+        // Custom event fırlat
+        const event = new Event('clinicStatusChanged');
+        window.dispatchEvent(event);
+      } else {
+        setLeaveClinicError('Failed to leave clinic. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error leaving clinic:', error);
+      setLeaveClinicError(error.response?.data?.message || 'An error occurred while leaving the clinic. Please try again.');
+    } finally {
+      setLeavingClinicLoading(false);
+    }
+  };
+
+  // Klinikten ayrılma onay modalını gösterme fonksiyonu
+  const showLeaveConfirmation = () => {
+    setShowLeaveConfirmationModal(true);
+    setLeaveClinicError(null);
   };
 
   return (
