@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { DASHBOARD_VIEWS } from '../../../constants/dashboard';
 import { DashboardView } from '../../../types/dashboard';
 import ViewProfileButton from '../../veterinarian/ViewProfileButton';
@@ -19,11 +19,29 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
   // Force re-render when auth state changes (including any profile updates)
   const auth = useAppSelector(state => state.auth);
   const { profileVisibility } = auth;
+  const [forceLoaded, setForceLoaded] = useState(false);
   
   // Generate a unique key for ViewProfileButton each time profileVisibility changes
   const profileButtonKey = useMemo(() => `profile-button-${profileVisibility}-${Date.now()}`, [profileVisibility]);
 
-  if (isLoading) {
+  // Safety timeout to prevent infinite loading
+  useEffect(() => {
+    console.log('Overview loading state:', isLoading);
+    
+    // If loading takes too long, force content to display after 5 seconds
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        console.log('Loading timeout reached, forcing content to display');
+        setForceLoaded(true);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // Show the content if either loading is complete or the force timeout has occurred
+  if (isLoading && !forceLoaded) {
+    console.log('Showing loading spinner in Overview');
     return (
       <div className="flex justify-center items-center h-64">
         <div className="w-12 h-12 relative">
@@ -34,9 +52,11 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
     );
   }
 
-  if (verificationStatus === 'pending') {
-    return (
-      <div className="space-y-6">
+  console.log('Rendering Overview content, verification status:', verificationStatus);
+  return (
+    <div className="space-y-6">
+      {/* Verification Status Messages - conditionally rendered */}
+      {verificationStatus === 'pending' && (
         <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -57,13 +77,9 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (verificationStatus !== 'verified') {
-    return (
-      <div className="space-y-6">
+      {verificationStatus !== 'verified' && verificationStatus !== 'pending' && (
         <div className="bg-orange-50 border-l-4 border-orange-500 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -93,13 +109,10 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="space-y-6">
-      {!hasSubmittedClinics && (
+      {/* Clinic Card - only displayed when verified */}
+      {verificationStatus === 'verified' && !hasSubmittedClinics && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-8">
             <div className="flex items-center justify-between">
@@ -140,35 +153,38 @@ export const Overview: React.FC<OverviewProps> = ({ verificationStatus, onVerify
         </div>
       )}
       
-      {/* Profile Completion Card - shows missing profile sections */}
+      {/* Profile Completion Card - shows missing profile sections (visible regardless of verification) */}
       <ProfileCompletionCard className="mb-4" onViewChange={onViewChange} />
       
-      <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-100 overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-purple-800">Video Conference</h3>
-              <p className="mt-1 text-sm text-purple-600">Start or join a video meeting with pet owners using Jitsi Meet</p>
+      {/* Video Conference Card - only visible for verified veterinarians */}
+      {verificationStatus === 'verified' && (
+        <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-100 overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-purple-800">Video Conference</h3>
+                <p className="mt-1 text-sm text-purple-600">Start or join a video meeting with pet owners using Jitsi Meet</p>
+              </div>
+              <div className="hidden md:block">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
             </div>
-            <div className="hidden md:block">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button
+              onClick={() => window.open('https://meet.jit.si/PetlystVeterinarianMeeting', '_blank')}
+              className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-            </div>
+              Start Jitsi Meeting
+            </button>
           </div>
-          <button
-            onClick={() => window.open('https://meet.jit.si/PetlystVeterinarianMeeting', '_blank')}
-            className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Start Jitsi Meeting
-          </button>
         </div>
-      </div>
+      )}
       
-      {/* View Profile Button - with key that changes when profile visibility changes */}
+      {/* View Profile Button - visible regardless of verification status */}
       <ViewProfileButton 
         className="mt-4" 
         forceRefresh={true} 

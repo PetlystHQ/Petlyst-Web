@@ -9,9 +9,10 @@ import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import VeterinarianProfile from '../components/veterinarian/VeterinarianProfile';
 import { DashboardView } from '../types/dashboard';
-import { DASHBOARD_VIEWS, VIEW_TITLES } from '../constants/dashboard';
+import { DASHBOARD_VIEWS, VIEW_TITLES, API_ENDPOINTS } from '../constants/dashboard';
 import { Clinic } from '../types/dashboard';
 import { RootState } from '../store';
+import { useAppSelector } from '../hooks/useAppSelector';
 
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
@@ -29,6 +30,7 @@ const Dashboard: React.FC = () => {
   } = useVerificationStatus();
   const token = useSelector((state: RootState) => state.auth.token);
   const navigate = useNavigate();
+  const { user } = useAppSelector(state => state.auth);
 
   // Check if veterinarian has any clinics
   useEffect(() => {
@@ -68,6 +70,32 @@ const Dashboard: React.FC = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+
+  // Effect to ensure veterinarian has a slug
+  useEffect(() => {
+    // Only run for veterinarian users
+    if (user?.user_type === 'veterinarian' && token) {
+      const ensureSlug = async () => {
+        try {
+          console.log('Ensuring veterinarian has a slug...');
+          setCheckingClinics(true); // Use existing loading state to show spinner
+          const response = await axios.post(API_ENDPOINTS.ENSURE_SLUG, {}, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          console.log('Slug ensure response:', response.data);
+        } catch (error) {
+          console.error('Error ensuring slug:', error);
+        } finally {
+          setCheckingClinics(false); // Always ensure loading state is cleared
+        }
+      };
+      
+      ensureSlug();
+    }
+  }, [user, token]);
 
   const handleAddClinic = () => {
     // Navigate to the add clinic page instead of opening a modal

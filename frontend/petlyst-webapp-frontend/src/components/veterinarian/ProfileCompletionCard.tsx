@@ -109,42 +109,36 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
   if (incomplete.biography) incompleteItems.push({ 
     id: 'biography', 
     label: 'Biography',
-    icon: '📝',
     color: 'bg-blue-100 text-blue-800 border-blue-200'
   });
   
   if (incomplete.languages) incompleteItems.push({ 
     id: 'languages', 
     label: 'Languages',
-    icon: '🗣️',
     color: 'bg-green-100 text-green-800 border-green-200'
   });
   
   if (incomplete.education) incompleteItems.push({ 
     id: 'education', 
     label: 'Education',
-    icon: '🎓',
     color: 'bg-purple-100 text-purple-800 border-purple-200'
   });
   
   if (incomplete.certifications) incompleteItems.push({ 
     id: 'certifications', 
     label: 'Certifications',
-    icon: '📜',
     color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
   });
   
   if (incomplete.expertise) incompleteItems.push({ 
     id: 'expertise', 
     label: 'Expertise',
-    icon: '⭐',
     color: 'bg-pink-100 text-pink-800 border-pink-200'
   });
   
   if (incomplete.photos) incompleteItems.push({ 
     id: 'photos', 
     label: 'Photos',
-    icon: '📸',
     color: 'bg-indigo-100 text-indigo-800 border-indigo-200'
   });
 
@@ -169,7 +163,6 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
                   key={item.id} 
                   className={`inline-flex items-center px-3 py-1.5 rounded-full border ${item.color} text-sm`}
                 >
-                  <span className="mr-1">{item.icon}</span>
                   {item.label}
                 </span>
               ))}

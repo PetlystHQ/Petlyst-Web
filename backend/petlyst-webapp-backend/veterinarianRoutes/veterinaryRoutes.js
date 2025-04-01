@@ -223,9 +223,26 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
         // Encrypt the TC number before storing
         const encryptedTcNumber = encrypt(tc_number);
 
+        // Get user information for slug generation
+        const userQuery = `
+            SELECT user_name, user_surname
+            FROM users
+            WHERE user_id = $1
+        `;
+        const userResult = await pool.query(userQuery, [userId]);
+        
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        
+        const { user_name, user_surname } = userResult.rows[0];
+        
+        // Generate a unique slug for the veterinarian
+        const slug = await generateUniqueSlug(user_name, user_surname);
+
         // First, check if a profile already exists
         const checkQuery = `
-            SELECT veterinarian_id 
+            SELECT veterinarian_id, slug
             FROM veterinarians 
             WHERE veterinarian_id = $1
         `;
@@ -238,30 +255,148 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
                 SET 
                     veterinarian_graduate_barcode = $1,
                     veterinarian_tc_number = $2,
-                    veterinarian_verification_status = 'pending'
-                WHERE veterinarian_id = $3
+                    veterinarian_verification_status = 'pending',
+                    slug = COALESCE(slug, $3)  -- Keep existing slug if it exists, otherwise use the new one
+                WHERE veterinarian_id = $4
                 RETURNING *
             `;
-            await pool.query(updateQuery, [graduation_barcode, encryptedTcNumber, userId]);
+            await pool.query(updateQuery, [graduation_barcode, encryptedTcNumber, slug, userId]);
         } else {
             // Create new profile
             const insertQuery = `
                 INSERT INTO veterinarians 
-                (veterinarian_id, veterinarian_graduate_barcode, veterinarian_tc_number, veterinarian_verification_status)
-                VALUES ($1, $2, $3, 'pending')
+                (veterinarian_id, veterinarian_graduate_barcode, veterinarian_tc_number, veterinarian_verification_status, slug)
+                VALUES ($1, $2, $3, 'pending', $4)
                 RETURNING *
             `;
-            await pool.query(insertQuery, [userId, graduation_barcode, encryptedTcNumber]);
+            await pool.query(insertQuery, [userId, graduation_barcode, encryptedTcNumber, slug]);
         }
 
         res.status(200).json({ 
             message: 'Verification details submitted successfully. Your application is under review.',
-            status: 'pending'
+            status: 'pending',
+            slug: slug
         });
 
     } catch (error) {
         console.error('Error submitting verification details:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Add a new endpoint to ensure all veterinarians have slugs
+router.post('/ensure-slug', authenticateToken, async (req, res) => {
+    try {
+        console.log('Starting ensure-slug process for user:', req.user.userId);
+        // Only allow veterinarians
+        if (req.user.userType !== 'veterinarian') {
+            console.log('User is not a veterinarian:', req.user.userType);
+            return res.status(403).json({ 
+                success: false,
+                message: 'Access denied. User is not a veterinarian.' 
+            });
+        }
+
+        const userId = req.user.userId;
+        console.log('Checking slug for veterinarian ID:', userId);
+        
+        // Check if veterinarian already has a slug
+        const checkQuery = `
+            SELECT v.slug, u.user_name, u.user_surname
+            FROM veterinarians v
+            JOIN users u ON v.veterinarian_id = u.user_id
+            WHERE v.veterinarian_id = $1
+        `;
+        
+        console.log('Executing slug check query');
+        const checkResult = await pool.query(checkQuery, [userId]);
+        console.log('Slug check result rows:', checkResult.rows.length);
+        
+        // If no veterinarian record yet, create one with a slug
+        if (checkResult.rows.length === 0) {
+            console.log('No veterinarian record found, creating new record with slug');
+            // Get user info first
+            const userQuery = `
+                SELECT user_name, user_surname
+                FROM users
+                WHERE user_id = $1
+            `;
+            
+            const userResult = await pool.query(userQuery, [userId]);
+            
+            if (userResult.rows.length === 0) {
+                console.log('User not found in database');
+                return res.status(404).json({ 
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+            
+            const { user_name, user_surname } = userResult.rows[0];
+            console.log('Generating slug for:', user_name, user_surname);
+            const slug = await generateUniqueSlug(user_name, user_surname);
+            console.log('Generated unique slug:', slug);
+            
+            // Create a veterinarian profile with the slug
+            const insertQuery = `
+                INSERT INTO veterinarians
+                (veterinarian_id, slug, veterinarian_verification_status, is_profile_public)
+                VALUES ($1, $2, 'unverified', false)
+                RETURNING slug
+            `;
+            
+            console.log('Creating new veterinarian record');
+            const result = await pool.query(insertQuery, [userId, slug]);
+            console.log('New veterinarian record created with slug:', result.rows[0].slug);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Veterinarian profile created with slug',
+                slug: result.rows[0].slug
+            });
+        }
+        
+        // If veterinarian exists but has no slug, generate and update one
+        if (checkResult.rows[0].slug === null) {
+            console.log('Veterinarian record exists but has no slug');
+            const { user_name, user_surname } = checkResult.rows[0];
+            console.log('Generating slug for existing veterinarian:', user_name, user_surname);
+            const slug = await generateUniqueSlug(user_name, user_surname);
+            console.log('Generated slug for existing veterinarian:', slug);
+            
+            const updateQuery = `
+                UPDATE veterinarians
+                SET slug = $1
+                WHERE veterinarian_id = $2
+                RETURNING slug
+            `;
+            
+            console.log('Updating veterinarian record with new slug');
+            const result = await pool.query(updateQuery, [slug, userId]);
+            console.log('Updated veterinarian record with slug:', result.rows[0].slug);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Slug generated and updated',
+                slug: result.rows[0].slug
+            });
+        }
+        
+        // Veterinarian already has a slug
+        console.log('Veterinarian already has a slug:', checkResult.rows[0].slug);
+        return res.status(200).json({
+            success: true,
+            message: 'Veterinarian already has a slug',
+            slug: checkResult.rows[0].slug
+        });
+        
+    } catch (error) {
+        console.error('Error ensuring slug:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error ensuring slug',
+            error: error.message
+        });
     }
 });
 
