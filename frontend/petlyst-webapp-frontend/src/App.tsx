@@ -7,6 +7,7 @@ import DefaultHeader from './components/layout/DefaultHeader';
 import HomePage from './pages/HomePage';
 import PetOwnerHomePage from './pages/PetOwnerHomePage';
 import ProtectedRoute from './components/admin/ProtectedRoute';
+import ProtectedClinicRoute from './components/admin/ProtectedClinicRoute';
 import Dashboard from './pages/Dashboard';
 import AddClinicPage from './pages/AddClinicPage';
 import AdminLogin from './components/admin/AdminLogin';
@@ -59,9 +60,9 @@ const AppContent: React.FC = () => {
         <Route 
           path="/add-clinic" 
           element={
-            <ProtectedRoute allowedUserType="veterinarian">
+            <ProtectedClinicRoute>
               <AddClinicPage />
-            </ProtectedRoute>
+            </ProtectedClinicRoute>
           } 
         />
         <Route path="/clinic-preview/:clinicId" element={
@@ -70,9 +71,9 @@ const AppContent: React.FC = () => {
           </ProtectedRoute>
         } />
         <Route path="/edit-clinic/:clinicId" element={
-          <ProtectedRoute allowedUserType="veterinarian">
+          <ProtectedClinicRoute>
             <EditClinicPage />
-          </ProtectedRoute>
+          </ProtectedClinicRoute>
         } />
         <Route path="/management-dashboard/:clinicId" element={
           <ProtectedRoute allowedUserType="veterinarian">
