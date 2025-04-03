@@ -154,7 +154,7 @@ const upload = multer({
 // Base route: /api/clinics
 
 // Archive clinic (change status from verified to archived)
-router.patch('/archive/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
+router.put('/archive/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
@@ -197,7 +197,7 @@ router.patch('/archive/:clinicId', authenticateToken, checkVerificationStatus, a
 });
 
 // Restore clinic (change status from archived to verified)
-router.patch('/restore/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
+router.put('/restore/:clinicId', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
     const { clinicId } = req.params;
     const operator_id = req.user.userId;

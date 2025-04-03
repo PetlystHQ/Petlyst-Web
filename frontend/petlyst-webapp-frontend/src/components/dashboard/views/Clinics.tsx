@@ -23,7 +23,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
-  const [archiveConfirmationId, setArchiveConfirmationId] = useState<string | null>(null);
   const token = useSelector((state: RootState) => state.auth.token);
   const navigate = useNavigate();
 
@@ -54,40 +53,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
       setError(err.response?.data?.message || 'Failed to fetch clinics');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleArchiveClinic = async (clinicId: string) => {
-    setActionLoading(clinicId);
-    try {
-      await axios.patch(`http://localhost:3000/api/clinics/archive/${clinicId}`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      await fetchClinics(); // Refresh the list after archiving
-    } catch (err: any) {
-      console.error('Error archiving clinic:', err);
-      setError(err.response?.data?.message || 'Failed to archive clinic');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleRestoreClinic = async (clinicId: string) => {
-    setActionLoading(clinicId);
-    try {
-      await axios.patch(`http://localhost:3000/api/clinics/restore/${clinicId}`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      await fetchClinics(); // Refresh the list after restoring
-    } catch (err: any) {
-      console.error('Error restoring clinic:', err);
-      setError(err.response?.data?.message || 'Failed to restore clinic');
-    } finally {
-      setActionLoading(null);
     }
   };
 
@@ -123,24 +88,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
     if (deleteConfirmationId) {
       handleDeleteClinic(deleteConfirmationId);
       setDeleteConfirmationId(null);
-    }
-  };
-
-  // Show archive confirmation popup
-  const showArchiveConfirmation = (clinicId: string) => {
-    setArchiveConfirmationId(clinicId);
-  };
-
-  // Cancel archive operation
-  const cancelArchive = () => {
-    setArchiveConfirmationId(null);
-  };
-
-  // Confirm and execute archive operation
-  const confirmArchive = () => {
-    if (archiveConfirmationId) {
-      handleArchiveClinic(archiveConfirmationId);
-      setArchiveConfirmationId(null);
     }
   };
 
@@ -244,42 +191,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Archive Confirmation Modal */}
-      {archiveConfirmationId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-modal-slide-in border border-gray-200">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-orange-50 border border-orange-100 mb-5">
-                <svg className="h-8 w-8 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Archive Clinic</h3>
-              <p className="text-sm text-gray-600 mb-6 max-w-sm mx-auto">
-                Are you sure you want to archive this clinic? Archiving will remove your clinic from indexing in the internet and the Petlyst app. You can restore it later if needed.
-              </p>
-            </div>
-            <div className="flex w-full gap-3">
-              <button
-                onClick={cancelArchive}
-                className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-all duration-200 text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmArchive}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 shadow-sm hover:shadow transition-all duration-200 text-sm font-medium flex items-center justify-center"
-              >
-                <svg className="w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-                Yes, Archive
               </button>
             </div>
           </div>
@@ -452,62 +363,30 @@ export const Clinics: React.FC<ClinicsProps> = ({
               {clinic.clinic_verification_status === 'verified' ? 'View Clinic' : 'View Submission'}
             </button>
               
-            {clinic.clinic_verification_status === 'verified' && (
+            {clinic.clinic_verification_status === 'pending' && (
             <button
-                onClick={() => showArchiveConfirmation(clinic.clinic_id)}
+                onClick={() => showDeleteConfirmation(clinic.clinic_id)}
                 disabled={actionLoading === clinic.clinic_id}
                 className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
                   actionLoading === clinic.clinic_id
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
-              }`}
-            >
-                <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-                {actionLoading === clinic.clinic_id ? 'Archiving...' : 'Archive Clinic'}
-            </button>
-          )}
-          {clinic.clinic_verification_status === 'archived' && (
-            <button
-              onClick={() => handleRestoreClinic(clinic.clinic_id)}
-              disabled={actionLoading === clinic.clinic_id}
-              className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
-                actionLoading === clinic.clinic_id
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-green-50 text-green-600 hover:bg-green-100'
-              }`}
-            >
-              <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {actionLoading === clinic.clinic_id ? 'Restoring...' : 'Restore Clinic'}
-            </button>
-          )}
-          {clinic.clinic_verification_status === 'pending' && (
-            <button
-              onClick={() => showDeleteConfirmation(clinic.clinic_id)}
-              disabled={actionLoading === clinic.clinic_id}
-              className={`flex-1 flex items-center justify-center text-base font-medium px-4 py-3 rounded-lg transition-colors ${
-                actionLoading === clinic.clinic_id
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-red-50 text-red-600 hover:bg-red-100'
               }`}
             >
-              <svg 
-                className="h-5 w-5 mr-2" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.75"
-              >
-                <path 
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
-                />
-              </svg>
-              Delete Submission
+                <svg 
+                  className="h-5 w-5 mr-2" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.75"
+                >
+                  <path 
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                  />
+                </svg>
+                Delete Submission
             </button>
           )}
             </div>
