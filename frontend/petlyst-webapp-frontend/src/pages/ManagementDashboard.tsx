@@ -21,6 +21,40 @@ interface MenuItem {
   expanded?: boolean;
 }
 
+// Define interfaces for veterinarian data
+interface VeterinarianData {
+  id: string;
+  veterinarian_id: string;
+  clinic_id: string;
+  status: string;
+  user_name: string;
+  user_surname: string;
+  user_email: string;
+  user_phone: string;
+  is_clinic_creator: boolean;
+  created_at: string;
+}
+
+// Interface for modal state
+interface ConfirmModalState {
+  isOpen: boolean;
+  veterinarianId: string | null;
+  veterinarianName: string | null;
+}
+
+// Added interfaces for approve and reject modal states
+interface ApproveModalState {
+  isOpen: boolean;
+  veterinarianId: string | null;
+  veterinarianName: string | null;
+}
+
+interface RejectModalState {
+  isOpen: boolean;
+  veterinarianId: string | null;
+  veterinarianName: string | null;
+}
+
 const ManagementDashboard: React.FC = () => {
   // URL'den clinicId parametresi almak yerine, localStorage'dan alıyoruz
   const clinicId = localStorage.getItem('selectedClinicId');
@@ -31,6 +65,33 @@ const ManagementDashboard: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   
+  // Staff management states
+  const [staffMembers, setStaffMembers] = useState<VeterinarianData[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<VeterinarianData[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+    isOpen: false,
+    veterinarianId: null,
+    veterinarianName: null
+  });
+  
+  // Added new modal states for approve and reject actions
+  const [approveModal, setApproveModal] = useState<ApproveModalState>({
+    isOpen: false,
+    veterinarianId: null,
+    veterinarianName: null
+  });
+  
+  const [rejectModal, setRejectModal] = useState<RejectModalState>({
+    isOpen: false,
+    veterinarianId: null,
+    veterinarianName: null
+  });
+
   const token = useSelector((state: RootState) => state.auth.token);
   const userId = useSelector((state: RootState) => state.auth.user?.id);
   const navigate = useNavigate();
@@ -126,9 +187,18 @@ const ManagementDashboard: React.FC = () => {
     {
       name: 'Staff',
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
+        <div className="flex items-center">
+          <div className="relative">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          {pendingRequests && pendingRequests.length > 0 && (
+            <div className="ml-2 px-1.5 py-0.5 text-xs bg-yellow-400 text-yellow-800 rounded-full font-bold">
+              {pendingRequests.length}
+            </div>
+          )}
+        </div>
       ),
       onClick: () => setActiveTab('staff'),
     },
@@ -172,6 +242,303 @@ const ManagementDashboard: React.FC = () => {
     const updatedMenuItems = [...menuItems];
     updatedMenuItems[index].expanded = !updatedMenuItems[index].expanded;
     setMenuItems(updatedMenuItems);
+  };
+
+  // Fetch clinic veterinarians
+  const fetchClinicVeterinarians = async () => {
+    if (!token || !clinicId) return;
+
+    setStaffLoading(true);
+    setStaffError(null);
+
+    try {
+      // Fetch all veterinarians (both approved and pending)
+      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/veterinarians`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('Fetched veterinarians:', response.data);
+
+      if (response.data.success && response.data.veterinarians) {
+        // Separate pending requests from approved staff members
+        const allVets = response.data.veterinarians;
+        const approved = allVets.filter((vet: VeterinarianData) => vet.status === 'approved');
+        const pending = allVets.filter((vet: VeterinarianData) => vet.status === 'pending');
+        
+        console.log('Pending requests count:', pending.length);
+        setStaffMembers(approved);
+        setPendingRequests(pending);
+      } else {
+        setStaffError('Failed to load staff members');
+      }
+    } catch (err: any) {
+      console.error('Error fetching clinic veterinarians:', err);
+      setStaffError(err.response?.data?.message || 'Failed to fetch staff members');
+    } finally {
+      setStaffLoading(false);
+    }
+  };
+
+  // Handle veterinarian request approval/rejection
+  const handleRequestAction = async (requestId: string, status: 'approved' | 'rejected') => {
+    if (!token || !clinicId) return;
+
+    setActionInProgress(requestId);
+
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/api/clinics/${clinicId}/veterinarian/${requestId}/status`,
+        { status },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log(`Request ${status} response:`, response.data);
+
+      if (response.data.success) {
+        // Close the modal if open
+        if (status === 'approved') {
+          setApproveModal({
+            isOpen: false,
+            veterinarianId: null,
+            veterinarianName: null
+          });
+        } else {
+          setRejectModal({
+            isOpen: false,
+            veterinarianId: null,
+            veterinarianName: null
+          });
+        }
+        
+        // Refresh the list
+        fetchClinicVeterinarians();
+      } else {
+        setStaffError(`Failed to ${status === 'approved' ? 'approve' : 'reject'} request`);
+      }
+    } catch (err: any) {
+      console.error(`Error ${status === 'approved' ? 'approving' : 'rejecting'} request:`, err);
+      setStaffError(err.response?.data?.message || `Failed to ${status === 'approved' ? 'approve' : 'reject'} request`);
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Handle removing a veterinarian from the clinic
+  const handleRemoveVeterinarian = async (vetId: string) => {
+    if (!token || !clinicId) return;
+
+    setActionInProgress(vetId);
+
+    try {
+      const response = await axios.delete(
+        `http://localhost:3000/api/clinics/${clinicId}/veterinarian/${vetId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Remove veterinarian response:', response.data);
+
+      if (response.data.success) {
+        // Refresh the list
+        fetchClinicVeterinarians();
+        // Close the modal
+        setConfirmModal({
+          isOpen: false,
+          veterinarianId: null,
+          veterinarianName: null
+        });
+      } else {
+        setStaffError('Failed to remove veterinarian');
+      }
+    } catch (err: any) {
+      console.error('Error removing veterinarian:', err);
+      setStaffError(err.response?.data?.message || 'Failed to remove veterinarian');
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Open the confirmation modal
+  const openRemoveConfirmationModal = (staff: VeterinarianData) => {
+    setConfirmModal({
+      isOpen: true,
+      veterinarianId: staff.id,
+      veterinarianName: `${staff.user_name} ${staff.user_surname}`
+    });
+  };
+
+  // Close the confirmation modal
+  const closeConfirmationModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      veterinarianId: null,
+      veterinarianName: null
+    });
+  };
+
+  // Open the confirmation modal for approval
+  const openApproveConfirmationModal = (request: VeterinarianData) => {
+    setApproveModal({
+      isOpen: true,
+      veterinarianId: request.id,
+      veterinarianName: `${request.user_name} ${request.user_surname}`
+    });
+  };
+
+  // Open the confirmation modal for rejection
+  const openRejectConfirmationModal = (request: VeterinarianData) => {
+    setRejectModal({
+      isOpen: true,
+      veterinarianId: request.id,
+      veterinarianName: `${request.user_name} ${request.user_surname}`
+    });
+  };
+
+  // Close the approval confirmation modal
+  const closeApproveModal = () => {
+    setApproveModal({
+      isOpen: false,
+      veterinarianId: null,
+      veterinarianName: null
+    });
+  };
+
+  // Close the rejection confirmation modal
+  const closeRejectModal = () => {
+    setRejectModal({
+      isOpen: false,
+      veterinarianId: null,
+      veterinarianName: null
+    });
+  };
+
+  // Confirmation Modal Component
+  const ConfirmationModal = () => {
+    if (!confirmModal.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+          <div className="flex items-center text-red-600 mb-4">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <h3 className="text-xl font-bold">Remove Veterinarian</h3>
+          </div>
+          
+          <p className="text-gray-700 mb-6">
+            Are you sure you want to remove <span className="font-semibold">Dr. {confirmModal.veterinarianName}</span> from your clinic? This action cannot be undone.
+          </p>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={closeConfirmationModal}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => confirmModal.veterinarianId && handleRemoveVeterinarian(confirmModal.veterinarianId)}
+              disabled={actionInProgress === confirmModal.veterinarianId}
+              className={`px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors ${
+                actionInProgress === confirmModal.veterinarianId ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {actionInProgress === confirmModal.veterinarianId ? 'Removing...' : 'Remove'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Approval Confirmation Modal Component
+  const ApprovalConfirmationModal = () => {
+    if (!approveModal.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+          <div className="flex items-center text-green-600 mb-4">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-xl font-bold">Approve Request</h3>
+          </div>
+          
+          <p className="text-gray-700 mb-6">
+            Are you sure you want to approve <span className="font-semibold">Dr. {approveModal.veterinarianName}</span>'s request to join your clinic? They will gain access to clinic information.
+          </p>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={closeApproveModal}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => approveModal.veterinarianId && handleRequestAction(approveModal.veterinarianId, 'approved')}
+              disabled={actionInProgress === approveModal.veterinarianId}
+              className={`px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors ${
+                actionInProgress === approveModal.veterinarianId ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {actionInProgress === approveModal.veterinarianId ? 'Approving...' : 'Approve'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Rejection Confirmation Modal Component
+  const RejectionConfirmationModal = () => {
+    if (!rejectModal.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+          <div className="flex items-center text-red-600 mb-4">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-xl font-bold">Reject Request</h3>
+          </div>
+          
+          <p className="text-gray-700 mb-6">
+            Are you sure you want to reject <span className="font-semibold">Dr. {rejectModal.veterinarianName}</span>'s request to join your clinic? This action cannot be undone.
+          </p>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={closeRejectModal}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => rejectModal.veterinarianId && handleRequestAction(rejectModal.veterinarianId, 'rejected')}
+              disabled={actionInProgress === rejectModal.veterinarianId}
+              className={`px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors ${
+                actionInProgress === rejectModal.veterinarianId ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {actionInProgress === rejectModal.veterinarianId ? 'Rejecting...' : 'Reject'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -245,6 +612,13 @@ const ManagementDashboard: React.FC = () => {
       document.body.classList.remove('management-dashboard-page');
     };
   }, [clinicId, token, userId]);
+
+  // Fetch staff data when active tab changes to staff
+  useEffect(() => {
+    if (activeTab === 'staff' && clinicId && token) {
+      fetchClinicVeterinarians();
+    }
+  }, [activeTab, clinicId, token]);
 
   // Redirect to home if unauthorized
   useEffect(() => {
@@ -402,83 +776,155 @@ const ManagementDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Staff Management</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Staff Member
-              </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                    JS
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-medium">Dr. John Smith</h3>
-                    <p className="text-gray-600">Head Veterinarian</p>
-                  </div>
-                </div>
-                <div className="mt-4 text-sm text-gray-600">
-                  <div className="flex items-center mb-1">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            {staffError && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    john.smith@example.com
                   </div>
-                  <div className="flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    (555) 123-4567
+                  <div className="ml-3">
+                    <p className="text-sm text-red-700">{staffError}</p>
                   </div>
-                </div>
-                <div className="mt-4 flex space-x-2">
-                  <button className="px-3 py-1 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50">
-                    Edit
-                  </button>
-                  <button className="px-3 py-1 text-sm text-red-600 border border-red-600 rounded-md hover:bg-red-50">
-                    Remove
-                  </button>
                 </div>
               </div>
-              
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-lg">
-                    MJ
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-medium">Dr. Mary Johnson</h3>
-                    <p className="text-gray-600">Veterinarian</p>
-                  </div>
-                </div>
-                <div className="mt-4 text-sm text-gray-600">
-                  <div className="flex items-center mb-1">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    mary.johnson@example.com
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    (555) 987-6543
-                  </div>
-                </div>
-                <div className="mt-4 flex space-x-2">
-                  <button className="px-3 py-1 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50">
-                    Edit
-                  </button>
-                  <button className="px-3 py-1 text-sm text-red-600 border border-red-600 rounded-md hover:bg-red-50">
-                    Remove
-                  </button>
+            )}
+            
+            {staffLoading ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="w-10 h-10 relative">
+                  <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin"></div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Pending Requests Section */}
+                {pendingRequests.length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center mb-4">
+                      <h3 className="text-lg font-medium text-gray-900">Pending Join Requests</h3>
+                      <span className="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
+                        {pendingRequests.length}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {pendingRequests.map((request) => (
+                        <div key={request.id} className="bg-yellow-50 rounded-lg transition-all duration-200 border-2 border-yellow-300 hover:border-yellow-400 overflow-hidden">
+                          <div className="p-4 flex justify-between items-center">
+                            <div className="flex flex-col">
+                              <h3 className="font-medium text-yellow-800">Dr. {request.user_name} {request.user_surname}</h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800 border border-yellow-300">
+                                  Pending Approval
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(request.created_at).toLocaleDateString()}
+                                </span>
+                                {request.user_phone && (
+                                  <span className="inline-flex items-center text-xs text-gray-500">
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    {request.user_phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => openApproveConfirmationModal(request)}
+                                disabled={actionInProgress === request.id}
+                                className={`px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                                  actionInProgress === request.id ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                              >
+                                {actionInProgress === request.id ? 'Processing...' : 'Approve'}
+                              </button>
+                              <button
+                                onClick={() => openRejectConfirmationModal(request)}
+                                disabled={actionInProgress === request.id}
+                                className={`px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                                  actionInProgress === request.id ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                              >
+                                {actionInProgress === request.id ? 'Processing...' : 'Reject'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Staff Members Section */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Current Staff Members</h3>
+                  
+                  {staffMembers.length === 0 ? (
+                    <div className="bg-gray-50 p-6 text-center rounded-lg border border-gray-200">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No staff members</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Your clinic doesn't have any staff members yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {staffMembers.map((staff) => (
+                        <div key={staff.id} className={`rounded-lg transition-all duration-200 border-2 overflow-hidden ${
+                          staff.is_clinic_creator 
+                            ? 'bg-purple-50 border-purple-300 hover:border-purple-400' 
+                            : 'bg-blue-50 border-blue-300 hover:border-blue-400'
+                        }`}>
+                          <div className="p-4 flex justify-between items-center">
+                            <div className="flex flex-col">
+                              <h3 className={`font-medium ${staff.is_clinic_creator ? 'text-purple-800' : 'text-blue-800'}`}>Dr. {staff.user_name} {staff.user_surname}</h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  staff.is_clinic_creator 
+                                    ? 'bg-purple-200 text-purple-800 border border-purple-300' 
+                                    : 'bg-blue-200 text-blue-800 border border-blue-300'
+                                }`}>
+                                  {staff.is_clinic_creator ? 'Clinic Owner' : 'Veterinarian'}
+                                </span>
+                                {staff.user_phone && (
+                                  <span className="inline-flex items-center text-xs text-gray-500">
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    {staff.user_phone}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              {!staff.is_clinic_creator && (
+                                <button
+                                  onClick={() => openRemoveConfirmationModal(staff)}
+                                  className={`px-3 py-1.5 text-sm font-medium text-red-600 border border-red-600 rounded-md hover:bg-red-50 ${
+                                    actionInProgress === staff.id ? 'opacity-50 cursor-not-allowed' : ''
+                                  }`}
+                                >
+                                  {actionInProgress === staff.id ? 'Removing...' : 'Remove'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         );
         
@@ -569,6 +1015,11 @@ const ManagementDashboard: React.FC = () => {
                   <div className="flex items-center">
                     <span className={sidebarCollapsed ? '' : 'mr-3'}>{item.icon}</span>
                     {!sidebarCollapsed && <span>{item.name}</span>}
+                    {!sidebarCollapsed && item.name === 'Staff' && pendingRequests && pendingRequests.length > 0 && activeTab !== 'staff' && (
+                      <span className="ml-2 w-5 h-5 flex items-center justify-center bg-yellow-400 text-yellow-800 text-xs font-medium rounded-full">
+                        {pendingRequests.length}
+                      </span>
+                    )}
                   </div>
                   
                   {!sidebarCollapsed && item.subItems && (
@@ -656,6 +1107,11 @@ const ManagementDashboard: React.FC = () => {
           {renderContent()}
         </div>
       </div>
+
+      {/* Render the confirmation modals */}
+      <ConfirmationModal />
+      <ApprovalConfirmationModal />
+      <RejectionConfirmationModal />
     </div>
   );
 };
