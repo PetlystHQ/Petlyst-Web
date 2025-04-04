@@ -4,7 +4,7 @@ import axios from 'axios';
 
 interface SearchSuggestion {
   text: string;
-  type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city';
+  type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
 }
 
 // Common Turkish cities to suggest
@@ -86,8 +86,14 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
     e.preventDefault();
     if (!searchQuery.trim()) return;
     
-    onSearch(searchQuery);
-    setShowSuggestions(false);
+    // For regular search with the search button, use the 'all' filter by default
+    // to ensure both clinics and veterinarians are included in results
+    const params = new URLSearchParams();
+    params.set('query', searchQuery);
+    params.set('veterinarian', 'all'); // Set to 'all' to include both clinics and veterinarians
+    
+    // Navigate using window.location for full page reload and consistent behavior
+    window.location.href = `/search?${params.toString()}`;
   };
 
   // Handle suggestion click
@@ -95,8 +101,59 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
     setSearchQuery(suggestion.text);
     setShowSuggestions(false);
     
-    // Use the suggestion text as the search query
-    onSearch(suggestion.text);
+    // Create appropriate URL parameters
+    const params = new URLSearchParams();
+    
+    // If this is a veterinarian suggestion, we need to use a custom handler
+    if (suggestion.type === 'veterinarian') {
+      // Set veterinarian parameter to 'any' to indicate we're searching for veterinarians
+      params.set('veterinarian', 'any');
+      // Use a dedicated parameter for veterinarian name
+      params.set('veterinarianName', suggestion.text);
+      // Do NOT include query parameter for veterinarian searches
+      
+      // Kesinlikle veterinarian=any kullan, hiçbir koşulda boş string olmamalı
+      console.log("Searching for veterinarian:", suggestion.text);
+      
+      // Navigate using window.location to ensure full page reload
+      window.location.href = `/search?${params.toString()}`;
+      return;
+    } else if (suggestion.type === 'clinic') {
+      // For clinic type, set veterinarian to empty string to show only clinics
+      params.set('veterinarian', '');
+      params.set('query', suggestion.text);
+      
+      // Navigate using window.location to ensure full page reload
+      window.location.href = `/search?${params.toString()}`;
+      return;
+    } else if (suggestion.type === 'animal_type' || 
+              suggestion.type === 'medical_service' || 
+              suggestion.type === 'additional_service' ||
+              suggestion.type === 'city') {
+      // For these types, show all results
+      params.set('query', suggestion.text);
+      params.set('veterinarian', 'all');
+      
+      // Add specific filter based on type
+      if (suggestion.type === 'animal_type') {
+        params.set('animalType', suggestion.text);
+      } else if (suggestion.type === 'medical_service') {
+        params.set('medicalService', suggestion.text);
+      } else if (suggestion.type === 'additional_service') {
+        params.set('additionalService', suggestion.text);
+      } else if (suggestion.type === 'city') {
+        params.set('province', suggestion.text);
+      }
+      
+      // Navigate using window.location to ensure full page reload
+      window.location.href = `/search?${params.toString()}`;
+      return;
+    }
+    
+    // For all other suggestion types or fallback, use all results
+    params.set('query', suggestion.text);
+    params.set('veterinarian', 'all');
+    window.location.href = `/search?${params.toString()}`;
   };
 
   // Handle keyboard navigation
@@ -205,6 +262,11 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                       </svg>
                     )}
+                    {suggestion.type === 'veterinarian' && (
+                      <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                    )}
                   </span>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="font-medium text-gray-900 truncate">{suggestion.text}</p>
@@ -214,6 +276,7 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
                       {suggestion.type === 'medical_service' && 'Medical Service'}
                       {suggestion.type === 'additional_service' && 'Additional Service'}
                       {suggestion.type === 'city' && 'City'}
+                      {suggestion.type === 'veterinarian' && 'Veterinarian'}
                     </p>
                   </div>
                 </li>

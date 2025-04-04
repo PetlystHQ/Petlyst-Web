@@ -12,6 +12,9 @@ interface SearchFilterProps {
     additionalService?: string;
     clinicType?: string;
     emergency?: string;
+    veterinarian?: string;
+    expertise?: string;
+    veterinarianName?: string;
   };
 }
 
@@ -31,6 +34,11 @@ interface Service {
   service_type: string;
 }
 
+interface ExpertiseArea {
+  expertise_area: string;
+  count: number;
+}
+
 const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilters }) => {
   // State for filter options from API
   const [locations, setLocations] = useState<LocationData>({ provinces: [], districts: [] });
@@ -39,18 +47,21 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     medical: Service[];
     additional: Service[];
   }>({ medical: [], additional: [] });
+  const [expertiseAreas, setExpertiseAreas] = useState<ExpertiseArea[]>([]);
   
   // Loading states
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [loadingAnimalTypes, setLoadingAnimalTypes] = useState(false);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [loadingExpertise, setLoadingExpertise] = useState(false);
   
   // UI state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     location: false,
     animalType: false,
     clinicType: false,
-    services: false
+    services: false,
+    expertise: false
   });
 
   // Fetch locations (provinces and districts)
@@ -136,6 +147,25 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     fetchServices();
   }, []);
   
+  // Fetch expertise areas
+  useEffect(() => {
+    const fetchExpertiseAreas = async () => {
+      setLoadingExpertise(true);
+      try {
+        const response = await axios.get('/api/pet-owners/veterinarian-expertise-areas');
+        if (response.data.success) {
+          setExpertiseAreas(response.data.expertiseAreas);
+        }
+      } catch (error) {
+        console.error('Error fetching expertise areas:', error);
+      } finally {
+        setLoadingExpertise(false);
+      }
+    };
+    
+    fetchExpertiseAreas();
+  }, []);
+  
   // Toggle filter section expansion
   const toggleSection = (section: string) => {
     setExpanded(prev => ({
@@ -183,6 +213,49 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
               className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentFilters.emergency === 'true' ? 'translate-x-6' : 'translate-x-1'}`}
             />
           </button>
+        </div>
+      </div>
+
+      {/* Search Type Filter - NEW SECTION */}
+      <div className="border-b border-gray-200 px-4 py-3">
+        <div className="flex flex-col">
+          <span className="font-medium text-gray-800 mb-3">Search Type</span>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => updateFilters({ veterinarian: 'all' })}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium ${
+                currentFilters.veterinarian === 'all'
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => {
+                // Explicitly set the veterinarian parameter to empty string
+                updateFilters({ veterinarian: '' });
+              }}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium ${
+                // Make sure this is an explicit string comparison for empty string
+                currentFilters.veterinarian === ''
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Clinics
+            </button>
+            <button
+              onClick={() => updateFilters({ veterinarian: 'any' })}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium ${
+                currentFilters.veterinarian === 'any' || currentFilters.veterinarianName
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Veterinarians
+            </button>
+          </div>
         </div>
       </div>
 
@@ -263,44 +336,46 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
       </div>
       
       {/* Clinic Type Filter */}
-      <div className="border-b border-gray-200">
-        <button
-          onClick={() => toggleSection('clinicType')}
-          className="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50"
-        >
-          <span className="font-medium text-gray-800">Clinic Type</span>
-          <svg
-            className={`h-5 w-5 text-gray-500 transform ${expanded.clinicType ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+      {!currentFilters.veterinarian && (
+        <div className="border-b border-gray-200">
+          <button
+            onClick={() => toggleSection('clinicType')}
+            className="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        
-        {expanded.clinicType && (
-          <div className="px-4 py-3 border-t border-gray-100">
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {['Veterinary Clinic', 'Animal Hospital'].map(type => (
-                  <button
-                    key={type}
-                    onClick={() => handleFilterChange('clinicType', type)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                      currentFilters.clinicType === type
-                        ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+            <span className="font-medium text-gray-800">Clinic Type</span>
+            <svg
+              className={`h-5 w-5 text-gray-500 transform ${expanded.clinicType ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {expanded.clinicType && (
+            <div className="px-4 py-3 border-t border-gray-100">
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {['Veterinary Clinic', 'Animal Hospital'].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => handleFilterChange('clinicType', type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                        currentFilters.clinicType === type
+                          ? 'bg-blue-100 text-blue-800 border-2 border-blue-300' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
       
       {/* Animal Type Filter */}
       <div className="border-b border-gray-200">
@@ -415,6 +490,61 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
           </div>
         )}
       </div>
+
+      {/* Veterinary Expertise Filter - Sadece Veterinarians seçiliyse göster */}
+      {currentFilters.veterinarian && (
+        <div className="border-b border-gray-200">
+          <button
+            onClick={() => toggleSection('expertise')}
+            className="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50"
+          >
+            <span className="font-medium text-gray-800">Veterinary Expertise</span>
+            <svg
+              className={`h-5 w-5 text-gray-500 transform ${expanded.expertise ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {expanded.expertise && (
+            <div className="px-4 py-3 border-t border-gray-100">
+              {loadingExpertise ? (
+                <div className="flex justify-center py-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {expertiseAreas.length > 0 ? (
+                    expertiseAreas.map(expertise => (
+                      <button
+                        key={expertise.expertise_area}
+                        onClick={() => handleFilterChange('expertise', expertise.expertise_area)}
+                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-blue-50 transition-colors ${
+                          currentFilters.expertise === expertise.expertise_area
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span>{expertise.expertise_area}</span>
+                          <span className="text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5">
+                            {expertise.count}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-2">No expertise areas available</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
