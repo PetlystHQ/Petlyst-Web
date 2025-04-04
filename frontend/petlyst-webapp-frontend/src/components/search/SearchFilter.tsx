@@ -516,26 +516,30 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
                   {expertiseAreas.length > 0 ? (
-                    expertiseAreas.map(expertise => (
-                      <button
-                        key={expertise.expertise_area}
-                        onClick={() => handleFilterChange('expertise', expertise.expertise_area)}
-                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-blue-50 transition-colors ${
-                          currentFilters.expertise === expertise.expertise_area
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'text-gray-700'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span>{expertise.expertise_area}</span>
-                          <span className="text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5">
-                            {expertise.count}
-                          </span>
-                        </div>
-                      </button>
-                    ))
+                    expertiseAreas.map(expertise => {
+                      // Format expertise area - replace underscores with spaces and capitalize first letter of each word
+                      const formattedExpertise = expertise.expertise_area
+                        .replace(/_/g, ' ')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                      
+                      return (
+                        <button
+                          key={expertise.expertise_area}
+                          onClick={() => handleFilterChange('expertise', expertise.expertise_area)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                            currentFilters.expertise === expertise.expertise_area
+                              ? 'bg-indigo-100 text-indigo-800 border-2 border-indigo-300' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {formattedExpertise} ({expertise.count})
+                        </button>
+                      )
+                    })
                   ) : (
                     <p className="text-sm text-gray-500 text-center py-2">No expertise areas available</p>
                   )}

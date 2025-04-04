@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ClinicCard from '../components/search/ClinicCard';
 import SearchFilter from '../components/search/SearchFilter';
@@ -68,6 +68,7 @@ interface VeterinarianSearchResponse {
 const SearchResult: React.FC = () => {
   // Get and manage URL parameters
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   // State for search results and UI state
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -324,47 +325,42 @@ const SearchResult: React.FC = () => {
 
   // Render veterinarian card
   const renderVeterinarianCard = (vet: Veterinarian) => {
+    const handleCardClick = () => {
+      navigate(`/veterinarian/${vet.slug || vet.veterinarian_id}`);
+    };
+
     return (
-      <div key={vet.veterinarian_id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <div 
+        key={vet.veterinarian_id} 
+        className="rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1 bg-white cursor-pointer h-full flex flex-col"
+        onClick={handleCardClick}
+      >
         {/* Veterinarian Info */}
-        <div className="p-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-2">
+        <div className="px-4 py-3 flex-grow flex flex-col justify-center">
+          <h3 className="text-lg font-bold text-gray-900 mb-2 truncate">
             Dr. {vet.user_name} {vet.user_surname}
           </h3>
           
           {/* Clinic Info */}
           {vet.clinic && (
             <div className="mb-2 flex items-center text-gray-600">
-              <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 mr-1.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              <span className="text-sm">{vet.clinic.clinic_name}</span>
+              <span className="text-sm truncate">{vet.clinic.clinic_name}</span>
             </div>
           )}
           
           {/* Location */}
           {vet.clinic && (
-            <div className="mb-2 flex items-center text-gray-600">
-              <svg className="w-4 h-4 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center text-gray-600">
+              <svg className="w-4 h-4 mr-1.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="text-sm">{vet.clinic.province}, {vet.clinic.district}</span>
+              <span className="text-sm truncate">{vet.clinic.province}, {vet.clinic.district}</span>
             </div>
           )}
-                        
-          {/* View Profile Button */}
-          <div className="mt-3">
-            <a 
-              href={`/veterinarian/${vet.slug || vet.veterinarian_id}`}
-              className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
-            >
-              View Profile
-              <svg className="ml-1 -mr-0.5 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
         </div>
       </div>
     );
