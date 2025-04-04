@@ -6,7 +6,7 @@ import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../compon
 
 interface SearchSuggestion {
   text: string;
-  type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city';
+  type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
 }
 
 // Common Turkish cities to suggest
@@ -129,6 +129,9 @@ const PetOwnerHomePage: React.FC = () => {
     const params = new URLSearchParams();
     params.set('query', searchQuery);
     
+    // Normal aramada her zaman "All" seçeneği seçili olmalı
+    params.set('veterinarian', 'all');
+    
     // Add emergency parameter if enabled
     if (isEmergency) {
       params.set('emergency', 'true');
@@ -151,17 +154,38 @@ const PetOwnerHomePage: React.FC = () => {
     
     // Navigate to search results with appropriate parameters
     const params = new URLSearchParams();
-    params.set('query', suggestion.text);
     
     // Add type-specific parameter if applicable
     if (suggestion.type === 'animal_type') {
       params.set('animalType', suggestion.text);
+      params.set('query', suggestion.text); // Include query for general search
+      params.set('veterinarian', 'all'); // Show results from all categories
     } else if (suggestion.type === 'medical_service') {
       params.set('medicalService', suggestion.text);
+      params.set('query', suggestion.text); // Include query for general search
+      params.set('veterinarian', 'all'); // Show results from all categories
     } else if (suggestion.type === 'additional_service') {
       params.set('additionalService', suggestion.text);
+      params.set('query', suggestion.text); // Include query for general search
+      params.set('veterinarian', 'all'); // Show results from all categories
     } else if (suggestion.type === 'city') {
       params.set('province', suggestion.text);
+      params.set('query', suggestion.text); // Include query for general search
+      params.set('veterinarian', 'all'); // Show results from all categories
+    } else if (suggestion.type === 'veterinarian') {
+      // Set veterinarian parameter to 'any' to indicate we're searching for veterinarians
+      params.set('veterinarian', 'any');
+      // Use a dedicated parameter for veterinarian name rather than query
+      params.set('veterinarianName', suggestion.text);
+      // Do NOT include query parameter for veterinarian searches
+    } else if (suggestion.type === 'clinic') {
+      // For clinic type, set veterinarian to empty string to show only clinics
+      params.set('veterinarian', '');
+      params.set('query', suggestion.text);
+    } else {
+      // For other types or if no specific type, just use query with All selected
+      params.set('query', suggestion.text);
+      params.set('veterinarian', 'all');
     }
     
     navigate(`/search?${params.toString()}`);
@@ -171,8 +195,13 @@ const PetOwnerHomePage: React.FC = () => {
   const handlePopularSearchClick = (term: string) => {
     setSearchQuery(term);
     
-    // Navigate to search results
-    navigate(`/search?query=${encodeURIComponent(term)}`);
+    // Prepare URL parameters with veterinarian=all
+    const params = new URLSearchParams();
+    params.set('query', term);
+    params.set('veterinarian', 'all');
+    
+    // Navigate to search results with "All" selected by default
+    navigate(`/search?${params.toString()}`);
   };
 
   // Handle keyboard navigation
@@ -306,6 +335,11 @@ const PetOwnerHomePage: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                               </svg>
                             )}
+                            {suggestion.type === 'veterinarian' && (
+                              <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                              </svg>
+                            )}
                           </span>
                           <div className="flex-1 min-w-0 text-left">
                             <p className="font-medium text-gray-900 truncate">{suggestion.text}</p>
@@ -315,6 +349,7 @@ const PetOwnerHomePage: React.FC = () => {
                               {suggestion.type === 'medical_service' && 'Medical Service'}
                               {suggestion.type === 'additional_service' && 'Additional Service'}
                               {suggestion.type === 'city' && 'City'}
+                              {suggestion.type === 'veterinarian' && 'Veterinarian'}
                             </p>
                           </div>
                         </li>

@@ -536,19 +536,33 @@ router.get('/search-suggestions', async (req, res) => {
     ) AS additional_services
 `;
     
+    // Get veterinarian suggestions
+    const veterinarianQuery = `
+      SELECT 
+        CONCAT(u.user_name, ' ', u.user_surname) AS text, 
+        'veterinarian' AS type
+      FROM users u
+      JOIN veterinarians v ON u.user_id = v.veterinarian_id
+      WHERE v.is_profile_public = true
+      AND CONCAT(u.user_name, ' ', u.user_surname) ILIKE $1
+      LIMIT 3
+    `;
+    
     const likePattern = `%${query}%`;
     
-    const [clinicResults, animalTypeResults, serviceResults] = await Promise.all([
+    const [clinicResults, animalTypeResults, serviceResults, veterinarianResults] = await Promise.all([
       pool.query(clinicQuery, [likePattern]),
       pool.query(animalTypeQuery, [likePattern]),
-      pool.query(serviceQuery, [likePattern])
+      pool.query(serviceQuery, [likePattern]),
+      pool.query(veterinarianQuery, [likePattern])
     ]);
     
     // Combine all suggestions
     const suggestions = [
       ...clinicResults.rows,
       ...animalTypeResults.rows,
-      ...serviceResults.rows
+      ...serviceResults.rows,
+      ...veterinarianResults.rows
     ];
     
     res.status(200).json({
@@ -560,6 +574,248 @@ router.get('/search-suggestions', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
+    });
+  }
+});
+
+// Search for veterinarians
+router.get('/search-veterinarians', async (req, res) => {
+  try {
+    // Extract query parameters
+    const {
+      query,
+      province,
+      expertise,
+      page = 1,
+      limit = 10,
+      veterinarian,
+      veterinarianName
+    } = req.query;
+    
+    // Convert page and limit to integers
+    const pageInt = parseInt(page);
+    const limitInt = parseInt(limit);
+    
+    // Calculate offset
+    const offset = (pageInt - 1) * limitInt;
+    
+    // Base query
+    let sql = `
+      SELECT 
+        v.veterinarian_id,
+        u.user_id,
+        u.user_name,
+        u.user_surname,
+        u.user_email,
+        u.user_profile_photo,
+        v.slug,
+        v.biography,
+        v.preferred_languages,
+        ve.expertise_area,
+        c.clinic_id,
+        c.clinic_name,
+        cl.province,
+        cl.district
+      FROM veterinarians v
+      JOIN users u ON v.veterinarian_id = u.user_id
+      LEFT JOIN veterinarian_expertise ve ON v.veterinarian_id = ve.veterinarian_id
+      LEFT JOIN clinic_veterinarians cv ON v.veterinarian_id = cv.veterinarian_id
+      LEFT JOIN clinics c ON cv.clinic_id = c.clinic_id
+      LEFT JOIN clinic_locations cl ON c.clinic_id = cl.clinic_id
+      WHERE v.is_profile_public = true
+    `;
+    
+    const queryParams = [];
+    const conditions = [];
+    
+    // Add query conditions
+    if (query) {
+      queryParams.push(`%${query}%`);
+      conditions.push(`(u.user_name ILIKE $${queryParams.length} OR u.user_surname ILIKE $${queryParams.length})`);
+    }
+    
+    // Specific veterinarian search
+    if (veterinarianName) {
+      queryParams.push(`%${veterinarianName}%`);
+      conditions.push(`CONCAT(u.user_name, ' ', u.user_surname) ILIKE $${queryParams.length}`);
+    }
+    else if (veterinarian && veterinarian.toLowerCase() !== 'any') {
+      queryParams.push(`%${veterinarian}%`);
+      conditions.push(`CONCAT(u.user_name, ' ', u.user_surname) ILIKE $${queryParams.length}`);
+    }
+    
+    // Filter by province
+    if (province) {
+      queryParams.push(`%${province}%`);
+      conditions.push(`cl.province ILIKE $${queryParams.length}`);
+    }
+    
+    // Filter by expertise
+    if (expertise) {
+      queryParams.push(`%${expertise}%`);
+      conditions.push(`ve.expertise_area ILIKE $${queryParams.length}`);
+    }
+    
+    // Add conditions to query
+    if (conditions.length > 0) {
+      sql += ` AND ${conditions.join(' AND ')}`;
+    }
+    
+    // Group by to avoid duplicates
+    sql += ` GROUP BY v.veterinarian_id, u.user_id, u.user_name, u.user_surname, u.user_email, u.user_profile_photo, v.slug, v.biography, v.preferred_languages, ve.expertise_area, c.clinic_id, c.clinic_name, cl.province, cl.district`;
+    
+    // Get total count
+    let countQuery = `
+      SELECT COUNT(DISTINCT veterinarian_id) as total 
+      FROM veterinarians
+      WHERE is_profile_public = true
+    `;
+    
+    let total = 0;
+    
+    // Add expertise condition separately if needed
+    if (expertise) {
+      countQuery = `
+        SELECT COUNT(DISTINCT v.veterinarian_id) as total 
+        FROM veterinarians v
+        JOIN veterinarian_expertise ve ON v.veterinarian_id = ve.veterinarian_id
+        WHERE v.is_profile_public = true AND ve.expertise_area ILIKE $1
+      `;
+      // If only expertise filter is used
+      if (conditions.length === 1) {
+        const countResult = await pool.query(countQuery, [`%${expertise}%`]);
+        total = parseInt(countResult.rows[0]?.total || '0');
+      } else {
+        // Use the more complex count query with all conditions
+        countQuery = `
+          SELECT COUNT(DISTINCT v.veterinarian_id) as total 
+          FROM veterinarians v
+          JOIN users u ON v.veterinarian_id = u.user_id
+          JOIN veterinarian_expertise ve ON v.veterinarian_id = ve.veterinarian_id
+          LEFT JOIN clinic_veterinarians cv ON v.veterinarian_id = cv.veterinarian_id
+          LEFT JOIN clinics c ON cv.clinic_id = c.clinic_id
+          LEFT JOIN clinic_locations cl ON c.clinic_id = cl.clinic_id
+          WHERE v.is_profile_public = true AND ${conditions.join(' AND ')}
+        `;
+        const countResult = await pool.query(countQuery, queryParams);
+        total = parseInt(countResult.rows[0]?.total || '0');
+      }
+    } else if (conditions.length > 0) {
+      // Handle other conditions without expertise
+      countQuery = `
+        SELECT COUNT(DISTINCT v.veterinarian_id) as total 
+        FROM veterinarians v
+        JOIN users u ON v.veterinarian_id = u.user_id
+        LEFT JOIN clinic_veterinarians cv ON v.veterinarian_id = cv.veterinarian_id
+        LEFT JOIN clinics c ON cv.clinic_id = c.clinic_id
+        LEFT JOIN clinic_locations cl ON c.clinic_id = cl.clinic_id
+        WHERE v.is_profile_public = true AND ${conditions.join(' AND ')}
+      `;
+      const countResult = await pool.query(countQuery, queryParams);
+      total = parseInt(countResult.rows[0]?.total || '0');
+    } else {
+      // Basic count query without any conditions
+      const countResult = await pool.query(countQuery);
+      total = parseInt(countResult.rows[0]?.total || '0');
+    }
+    
+    // Add order by and pagination
+    sql += ` ORDER BY u.user_name, u.user_surname LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+    queryParams.push(limitInt, offset);
+    
+    // Add useful debug logging
+    console.log('Executing SQL query for veterinarians:');
+    console.log('SQL:', sql);
+    console.log('Parameters:', queryParams);
+    
+    // Execute query
+    const result = await pool.query(sql, queryParams);
+    
+    // Format results - group expertise for each veterinarian
+    const veterinariansMap = new Map();
+    
+    result.rows.forEach(row => {
+      const veterinarianId = row.veterinarian_id;
+      
+      if (!veterinariansMap.has(veterinarianId)) {
+        veterinariansMap.set(veterinarianId, {
+          veterinarian_id: row.veterinarian_id,
+          user_id: row.user_id,
+          user_name: row.user_name,
+          user_surname: row.user_surname,
+          user_email: row.user_email,
+          user_profile_photo: row.user_profile_photo,
+          slug: row.slug,
+          biography: row.biography,
+          preferred_languages: row.preferred_languages,
+          clinic: row.clinic_id ? {
+            clinic_id: row.clinic_id,
+            clinic_name: row.clinic_name,
+            province: row.province,
+            district: row.district
+          } : null,
+          expertise: []
+        });
+      }
+      
+      // Add expertise if it exists and isn't already in the array
+      if (row.expertise_area && !veterinariansMap.get(veterinarianId).expertise.includes(row.expertise_area)) {
+        veterinariansMap.get(veterinarianId).expertise.push(row.expertise_area);
+      }
+    });
+    
+    // Convert map to array
+    const veterinarians = Array.from(veterinariansMap.values());
+    
+    // Calculate total pages
+    const totalPages = Math.ceil(total / limitInt);
+    
+    res.status(200).json({
+      success: true,
+      veterinarians,
+      pagination: {
+        total,
+        page: pageInt,
+        limit: limitInt,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error searching veterinarians:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get veterinarian expertise areas
+router.get('/veterinarian-expertise-areas', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        ve.expertise_area,
+        COUNT(DISTINCT v.veterinarian_id) as count
+      FROM veterinarian_expertise ve
+      JOIN veterinarians v ON ve.veterinarian_id = v.veterinarian_id
+      WHERE v.is_profile_public = true
+      GROUP BY ve.expertise_area
+      ORDER BY count DESC
+      LIMIT 20
+    `;
+    
+    const result = await pool.query(query);
+    
+    res.status(200).json({
+      success: true,
+      expertiseAreas: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching veterinarian expertise areas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
