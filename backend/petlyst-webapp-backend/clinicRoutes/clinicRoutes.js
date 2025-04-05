@@ -384,6 +384,55 @@ async function saveAdditionalServices(client, clinicId, additionalServices) {
   }
 }
 
+// Slug oluşturma fonksiyonu
+const generateClinicSlug = async (client, clinicName) => {
+  // İlk slug oluşturma (klinik adından)
+  let baseSlug = clinicName
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Sadece harfler, rakamlar, boşluklar ve tire bırak
+    .replace(/[\s_-]+/g, '-')  // Boşlukları ve alt çizgileri tireye dönüştür
+    .replace(/^-+|-+$/g, '')   // Baştaki ve sondaki tireleri kaldır
+    .trim();
+  
+  // Türkçe karakterleri İngilizce karakterlere dönüştür
+  baseSlug = baseSlug
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c');
+  
+  // Slug uzunluğunu sınırla
+  if (baseSlug.length > 50) {
+    baseSlug = baseSlug.substring(0, 50);
+  }
+  
+  // İlk slug'ı kontrol et (çakışma var mı)
+  let slug = baseSlug;
+  let suffix = 1;
+  
+  while (true) {
+    // Veritabanında slug kontrolü yap
+    const checkQuery = 'SELECT clinic_id FROM clinics WHERE slug = $1';
+    const result = await client.query(checkQuery, [slug]);
+    
+    // Eğer bu slug kullanılmıyorsa, benzersizdir
+    if (result.rows.length === 0) {
+      return slug;
+    }
+    
+    // Çakışma var, suffix ekleyip tekrar dene
+    slug = `${baseSlug}-${suffix}`;
+    suffix++;
+    
+    // Sonsuz döngü olmaması için limit koy
+    if (suffix > 1000) {
+      throw new Error('Could not generate a unique slug after multiple attempts');
+    }
+  }
+};
+
 // Add a new clinic (requires verified veterinarian)
 router.post('/add', authenticateToken, checkVerificationStatus, async (req, res) => {
   try {
@@ -489,6 +538,9 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
     try {
       await client.query('BEGIN');
       
+      // Generate a unique slug for the clinic
+      const slug = await generateClinicSlug(client, clinic_name);
+      
       // Create a new clinic
       const newClinicQuery = `
         INSERT INTO clinics (
@@ -512,9 +564,10 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
           tax_identification_number,
           veterinary_license_number,
           clinic_time_slots,
-          is_open_24_7
+          is_open_24_7,
+          slug
         ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) 
         RETURNING *
       `;
       
@@ -539,7 +592,8 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         clinicData.tax_identification_number,
         clinicData.veterinary_license_number,
         clinicData.slot_duration,
-        clinicData.is_open_24_7
+        clinicData.is_open_24_7,
+        slug
       ]);
       
       const newClinic = clinicResult.rows[0];
@@ -811,6 +865,22 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
       }
       
       console.log('Processed clinic_time_slots value:', updateData.clinic_time_slots);
+    }
+
+    // Check if the clinic name has changed. If it has, regenerate the slug
+    if (updateData.clinic_name && updateData.clinic_name !== clinic.clinic_name) {
+      const client = await pool.connect();
+      try {
+        // Generate a new unique slug for the clinic
+        const newSlug = await generateClinicSlug(client, updateData.clinic_name);
+        // Add the slug to the update data
+        updateData.slug = newSlug;
+      } catch (error) {
+        console.error('Error generating slug:', error);
+        // Continue with the update even if slug generation fails
+      } finally {
+        client.release();
+      }
     }
 
     // Update clinic
@@ -1663,6 +1733,293 @@ router.delete('/:clinicId/veterinarian/:id', authenticateToken, checkVerificatio
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
+    });
+  }
+});
+
+// Get clinic by slug (authenticated route)
+router.get('/by-slug/:slug', authenticateToken, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    if (!slug) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Slug is required' 
+      });
+    }
+    
+    // Query to get clinic by slug
+    const query = {
+      text: 'SELECT * FROM clinics WHERE slug = $1',
+      values: [slug]
+    };
+    
+    const result = await pool.query(query);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Clinic not found' 
+      });
+    }
+    
+    const clinic = result.rows[0];
+    
+    // Get additional clinic data like location, services, etc.
+    // Get clinic location data
+    const locationQuery = {
+      text: `
+        SELECT province, district, clinic_address, latitude, longitude
+        FROM clinic_locations
+        WHERE clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const locationResult = await pool.query(locationQuery);
+    const locationData = locationResult.rows.length > 0 ? locationResult.rows[0] : null;
+    
+    // Get animal types
+    const animalTypesQuery = {
+      text: `
+        SELECT at.animal_type_name 
+        FROM animal_types at
+        JOIN clinic_animal_types cat ON at.animal_type_id = cat.animal_type_id
+        WHERE cat.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const animalTypesResult = await pool.query(animalTypesQuery);
+    const animalTypes = animalTypesResult.rows.map(row => row.animal_type_name);
+    
+    // Get medical services
+    const medicalServicesQuery = {
+      text: `
+        SELECT ms.service_name
+        FROM medical_services ms
+        JOIN clinic_medical_services cms ON ms.medical_service_id = cms.medical_service_id
+        WHERE cms.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const medicalServicesResult = await pool.query(medicalServicesQuery);
+    const medicalServices = medicalServicesResult.rows.map(row => row.service_name);
+    
+    // Get additional services
+    const additionalServicesQuery = {
+      text: `
+        SELECT ads.service_name
+        FROM additional_services ads
+        JOIN clinic_additional_services cas ON ads.additional_service_id = cas.additional_service_id
+        WHERE cas.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const additionalServicesResult = await pool.query(additionalServicesQuery);
+    const additionalServices = additionalServicesResult.rows.map(row => row.service_name);
+    
+    // Get operator details
+    const operatorQuery = {
+      text: `
+        SELECT user_name, user_surname, user_email
+        FROM users
+        WHERE user_id = $1
+      `,
+      values: [clinic.clinic_operator_id]
+    };
+    
+    const operatorResult = await pool.query(operatorQuery);
+    
+    // Build complete clinic data
+    const completeClinicData = {
+      ...clinic,
+      operator_name: operatorResult.rows[0]?.user_name || null,
+      operator_surname: operatorResult.rows[0]?.user_surname || null,
+      operator_email: operatorResult.rows[0]?.user_email || null,
+      // Add location data
+      ...(locationData && {
+        province: locationData.province,
+        district: locationData.district,
+        clinic_address: locationData.clinic_address,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude
+      }),
+      // Add services data
+      animal_types: animalTypes,
+      medical_services: medicalServices,
+      additional_services: additionalServices
+    };
+    
+    res.status(200).json({
+      success: true,
+      clinic: completeClinicData
+    });
+  } catch (error) {
+    console.error('Error fetching clinic by slug:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get clinic by slug (public route, no authentication required)
+router.get('/public/by-slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    if (!slug) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Slug is required' 
+      });
+    }
+    
+    // Query to get clinic by slug (only verified clinics for public access)
+    const query = {
+      text: 'SELECT * FROM clinics WHERE slug = $1 AND clinic_verification_status = $2',
+      values: [slug, 'verified']
+    };
+    
+    const result = await pool.query(query);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Clinic not found' 
+      });
+    }
+    
+    const clinic = result.rows[0];
+    
+    // Get clinic location data
+    const locationQuery = {
+      text: `
+        SELECT province, district, clinic_address, latitude, longitude
+        FROM clinic_locations
+        WHERE clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const locationResult = await pool.query(locationQuery);
+    const locationData = locationResult.rows.length > 0 ? locationResult.rows[0] : null;
+    
+    // Get animal types
+    const animalTypesQuery = {
+      text: `
+        SELECT at.animal_type_name 
+        FROM animal_types at
+        JOIN clinic_animal_types cat ON at.animal_type_id = cat.animal_type_id
+        WHERE cat.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const animalTypesResult = await pool.query(animalTypesQuery);
+    const animalTypes = animalTypesResult.rows.map(row => row.animal_type_name);
+    
+    // Get medical services
+    const medicalServicesQuery = {
+      text: `
+        SELECT ms.service_name
+        FROM medical_services ms
+        JOIN clinic_medical_services cms ON ms.medical_service_id = cms.medical_service_id
+        WHERE cms.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const medicalServicesResult = await pool.query(medicalServicesQuery);
+    const medicalServices = medicalServicesResult.rows.map(row => row.service_name);
+    
+    // Get additional services
+    const additionalServicesQuery = {
+      text: `
+        SELECT ads.service_name
+        FROM additional_services ads
+        JOIN clinic_additional_services cas ON ads.additional_service_id = cas.additional_service_id
+        WHERE cas.clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const additionalServicesResult = await pool.query(additionalServicesQuery);
+    const additionalServices = additionalServicesResult.rows.map(row => row.service_name);
+    
+    // Build public clinic data (excluding sensitive information)
+    const publicClinicData = {
+      clinic_id: clinic.clinic_id,
+      clinic_name: clinic.clinic_name,
+      clinic_description: clinic.clinic_description,
+      clinic_type: clinic.clinic_type,
+      opening_time: clinic.opening_time,
+      closing_time: clinic.closing_time,
+      establishment_year: clinic.establishment_year,
+      establishment_month: clinic.establishment_month,
+      available_days: clinic.available_days,
+      emergency_available_days: clinic.emergency_available_days,
+      clinic_time_slots: clinic.clinic_time_slots,
+      is_open_24_7: clinic.is_open_24_7,
+      slug: clinic.slug,
+      // Add location data if settings allow
+      ...(locationData && {
+        province: locationData.province,
+        district: locationData.district,
+        clinic_address: locationData.clinic_address,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude
+      }),
+      // Add services data
+      animal_types: animalTypes,
+      medical_services: medicalServices,
+      additional_services: additionalServices,
+      // Conditionally include contact information based on clinic settings
+      ...(clinic.show_mail_address && { clinic_email: clinic.clinic_email })
+    };
+    
+    // Include phone numbers if clinic allows
+    if (clinic.show_phone_number) {
+      const phoneNumbersQuery = {
+        text: `
+          SELECT phone_number, phone_type
+          FROM clinic_phone_numbers
+          WHERE clinic_id = $1
+        `,
+        values: [clinic.clinic_id]
+      };
+      
+      const phoneNumbersResult = await pool.query(phoneNumbersQuery);
+      publicClinicData.phone_numbers = phoneNumbersResult.rows;
+    }
+    
+    // Get social media links
+    const socialMediaQuery = {
+      text: `
+        SELECT platform, url
+        FROM clinic_social_media
+        WHERE clinic_id = $1
+      `,
+      values: [clinic.clinic_id]
+    };
+    
+    const socialMediaResult = await pool.query(socialMediaQuery);
+    publicClinicData.social_media = socialMediaResult.rows;
+    
+    res.status(200).json({
+      success: true,
+      clinic: publicClinicData
+    });
+  } catch (error) {
+    console.error('Error fetching public clinic by slug:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
