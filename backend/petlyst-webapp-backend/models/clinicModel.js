@@ -358,7 +358,8 @@ class Clinic {
                 veterinary_license_number: 'veterinary_license_number',
                 allow_online_meetings: 'allow_online_meetings',
                 clinic_time_slots: 'clinic_time_slots',
-                is_open_24_7: 'is_open_24_7'
+                is_open_24_7: 'is_open_24_7',
+                slug: 'slug'
             };
 
             // Build update fields and values arrays
