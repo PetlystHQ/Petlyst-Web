@@ -11,6 +11,7 @@ export interface Clinic {
   clinic_verification_status: VerificationStatus;
   clinic_address: string | null;
   clinic_phone_number: string | null;
+  slug?: string;
 }
 
 export interface Appointment {

@@ -329,7 +329,15 @@ export const Overview: React.FC<OverviewProps> = ({
               <button
                 onClick={() => {
                   const clinicId = firstClinic.clinic_id;
-                  navigate(`/clinics/${clinicId}`);
+                  const slug = firstClinic.slug;
+                  
+                  // Eğer klinik pending durumundaysa, kullanıcıyı klinik önizleme sayfasına yönlendir
+                  if (firstClinic.clinic_verification_status === 'pending') {
+                    navigate(`/clinic-preview/${clinicId}`);
+                  } else {
+                    // Verified veya diğer durumlar için normal klinik sayfasına yönlendir
+                    navigate(slug ? `/clinics/${slug}` : `/clinics/id/${clinicId}`);
+                  }
                 }}
                 className="flex items-center justify-center text-sm font-medium px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
               >
@@ -337,7 +345,7 @@ export const Overview: React.FC<OverviewProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                View Clinic Page
+                {firstClinic.clinic_verification_status === 'pending' ? 'Preview Clinic' : 'View Clinic Page'}
               </button>
             </div>
           </div>

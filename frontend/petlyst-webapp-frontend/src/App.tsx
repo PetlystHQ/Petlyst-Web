@@ -41,7 +41,8 @@ const AppContent: React.FC = () => {
         <Route path="/veterinarians" element={<VeterinariansListPage />} />
         <Route path="/veterinarians/:id" element={<SingleVeterinarianPage />} />
         <Route path="/veterinarians/profile/:slug" element={<SingleVeterinarianPage />} />
-        <Route path="/clinics/:clinicId" element={<SingleClinicPage />} />
+        <Route path="/clinics/id/:clinicId" element={<SingleClinicPage />} />
+        <Route path="/clinics/:slug" element={<SingleClinicPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
