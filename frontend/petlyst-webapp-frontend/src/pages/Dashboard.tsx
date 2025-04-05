@@ -8,9 +8,8 @@ import VerificationModal from '../components/modals/VerificationModal';
 import { Overview } from '../components/dashboard/views/Overview';
 import { Clinics } from '../components/dashboard/views/Clinics';
 import VeterinarianProfile from '../components/veterinarian/VeterinarianProfile';
-import { DashboardView } from '../types/dashboard';
+import { DashboardView, Clinic } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES, API_ENDPOINTS } from '../constants/dashboard';
-import { Clinic } from '../types/dashboard';
 import { RootState } from '../store';
 import { useAppSelector } from '../hooks/useAppSelector';
 
@@ -38,6 +37,9 @@ const Dashboard: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const redirectState = location.state as { pendingRequest?: boolean } | null;
   const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+
+  // Clinics durumunu tutacak state ekleyelim
+  const [clinics, setClinics] = useState<Clinic[]>([]);
 
   // Check if veterinarian has approved clinic association
   useEffect(() => {
@@ -87,6 +89,7 @@ const Dashboard: React.FC = () => {
         });
         
         if (response.data && Array.isArray(response.data.clinics)) {
+          setClinics(response.data.clinics);
           setHasSubmittedClinics(response.data.clinics.length > 0);
         }
       } catch (error) {
@@ -241,7 +244,10 @@ const Dashboard: React.FC = () => {
 
     switch (currentView) {
       case DASHBOARD_VIEWS.overview:
-        return <Overview {...commonProps} />;
+        return <Overview 
+          {...commonProps} 
+          firstClinic={clinics && clinics.length > 0 ? clinics[0] : null}
+        />;
       case DASHBOARD_VIEWS.clinics:
         return (
           <Clinics
