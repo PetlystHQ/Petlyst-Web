@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 // Clinic interface
 interface Clinic {
@@ -22,6 +24,11 @@ interface Clinic {
   social_media?: { platform: string; url: string }[];
   clinic_verification_status: string;
   is_open_24_7?: string;
+  slug?: string;
+  // Add these fields as they might be returned directly from the by-slug endpoint
+  animal_types?: string[];
+  medical_services?: string[];
+  additional_services?: string[];
 }
 
 // Services interface
@@ -52,8 +59,17 @@ interface Veterinarian {
 }
 
 const SingleClinicPage: React.FC = () => {
-  const { clinicId } = useParams<{ clinicId: string }>();
+  const params = useParams<{ clinicId?: string, slug?: string }>();
   const navigate = useNavigate();
+  // Redux'tan token'ı al
+  const token = useSelector((state: RootState) => state.auth.token) || localStorage.getItem('token');
+  
+  // Determine if we're using ID or slug
+  const isUsingId = !!params.clinicId;
+  const paramValue = isUsingId ? params.clinicId : params.slug;
+  
+  console.log("Route params:", params);
+  console.log("Using ID?", isUsingId, "Param value:", paramValue);
   
   // States
   const [clinic, setClinic] = useState<Clinic | null>(null);
@@ -63,41 +79,109 @@ const SingleClinicPage: React.FC = () => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   
   // Fetch clinic data on component mount
   useEffect(() => {
     const fetchClinicData = async () => {
-      if (!clinicId) return;
+      if (!paramValue) return;
       
       setLoading(true);
       setError(null);
       
       try {
-        // Fetch clinic details
-        const response = await axios.get(`/api/pet-owners/clinics/${clinicId}`);
-        if (response.data.success) {
-          setClinic(response.data.clinic);
+        let clinicData: Clinic;
+        
+        // Fetch clinic details by ID or slug
+        if (isUsingId) {
+          // Fetch by ID
+          console.log("Fetching clinic by ID:", paramValue);
+          const response = await axios.get(`/api/pet-owners/clinics/${paramValue}`);
+          console.log("Clinic by ID response:", response.data);
+          if (response.data.success) {
+            clinicData = response.data.clinic;
+            
+            // If we're using ID, we can fetch additional data
+            try {
+              // Fetch clinic photos - FIX: Using the correct endpoint with authorization header
+              console.log("Fetching clinic photos...");
+              const photosResponse = await axios.get(`/api/clinics/${paramValue}/photos`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              console.log("Photos response:", photosResponse.data);
+              if (photosResponse.data.success) {
+                setPhotos(photosResponse.data.photos || []);
+              }
+              
+              // Fetch clinic services
+              const servicesResponse = await axios.get(`/api/pet-owners/clinics/${paramValue}/services`);
+              if (servicesResponse.data.success) {
+                setServices(servicesResponse.data.services);
+              }
+              
+              // Fetch clinic veterinarians (public endpoint)
+              const vetsResponse = await axios.get(`/api/pet-owners/clinics/${paramValue}/public-veterinarians`);
+              if (vetsResponse.data.success) {
+                setVeterinarians(vetsResponse.data.veterinarians || []);
+              }
+            } catch (additionalError) {
+              console.warn("Could not fetch some additional clinic data:", additionalError);
+              // Continue showing the clinic with incomplete data
+            }
+          } else {
+            throw new Error('Failed to fetch clinic details');
+          }
         } else {
-          setError('Failed to fetch clinic details');
+          // Fetch by slug - use the correct API endpoint
+          console.log("Fetching clinic by slug:", paramValue);
+          try {
+            const response = await axios.get(`/api/clinics/public/by-slug/${paramValue}`);
+            console.log("Clinic by slug response:", response.data);
+            if (response.data.success) {
+              clinicData = response.data.clinic;
+              
+              // For slug-based requests, we need to fetch additional data
+              try {
+                // Fetch clinic photos using the clinic_id from the response
+                if (clinicData.clinic_id) {
+                  console.log("Fetching photos for clinic ID:", clinicData.clinic_id);
+                  const photosResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/photos`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  console.log("Photos response:", photosResponse.data);
+                  if (photosResponse.data.success) {
+                    setPhotos(photosResponse.data.photos || []);
+                  }
+                }
+                
+                // If we need to, we can extract services directly from the clinic data
+                if (clinicData.animal_types || clinicData.medical_services || clinicData.additional_services) {
+                  setServices({
+                    animalTypes: clinicData.animal_types || [],
+                    medicalServices: clinicData.medical_services || [],
+                    additionalServices: clinicData.additional_services || []
+                  });
+                }
+              } catch (additionalError) {
+                console.warn("Could not fetch some additional clinic data:", additionalError);
+                // Continue showing the clinic with incomplete data
+              }
+            } else {
+              throw new Error('Failed to fetch clinic details');
+            }
+          } catch (err) {
+            console.error("Error fetching by slug:", err);
+            throw err;
+          }
         }
         
-        // Fetch clinic photos
-        const photosResponse = await axios.get(`/api/pet-owners/clinics/${clinicId}/photos`);
-        if (photosResponse.data.success) {
-          setPhotos(photosResponse.data.photos || []);
-        }
-        
-        // Fetch clinic services
-        const servicesResponse = await axios.get(`/api/pet-owners/clinics/${clinicId}/services`);
-        if (servicesResponse.data.success) {
-          setServices(servicesResponse.data.services);
-        }
-        
-        // Fetch clinic veterinarians (public endpoint)
-        const vetsResponse = await axios.get(`/api/pet-owners/clinics/${clinicId}/public-veterinarians`);
-        if (vetsResponse.data.success) {
-          setVeterinarians(vetsResponse.data.veterinarians || []);
-        }
+        // Set clinic data
+        setClinic(clinicData);
         
       } catch (err: any) {
         console.error('Error fetching clinic data:', err);
@@ -108,11 +192,12 @@ const SingleClinicPage: React.FC = () => {
     };
     
     fetchClinicData();
-  }, [clinicId]);
+  }, [paramValue, isUsingId, token]);
   
   // Format day names
   const getDayName = (index: number): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    // Days starting from Monday, index 0 = Monday
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     return days[index];
   };
   
@@ -170,17 +255,57 @@ const SingleClinicPage: React.FC = () => {
     return currentTotalMinutes >= openingTotalMinutes && currentTotalMinutes <= closingTotalMinutes;
   };
   
-  // Navigate to next photo in carousel
+  // Open photo modal with specific index
+  const openPhotoModal = (index: number) => {
+    setCurrentPhotoIndex(index);
+    setImageLoading(true);
+    setShowPhotoModal(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Close photo modal
+  const closePhotoModal = () => {
+    setShowPhotoModal(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  // Navigate to next photo in modal
   const nextPhoto = () => {
     if (photos.length === 0) return;
+    setImageLoading(true);
     setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);
   };
   
-  // Navigate to previous photo in carousel
+  // Navigate to previous photo in modal
   const prevPhoto = () => {
     if (photos.length === 0) return;
+    setImageLoading(true);
     setCurrentPhotoIndex((prevIndex) => (prevIndex - 1 + photos.length) % photos.length);
   };
+
+  // Handle keyboard navigation in modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!showPhotoModal) return;
+      
+      switch (e.key) {
+        case 'ArrowRight':
+          nextPhoto();
+          break;
+        case 'ArrowLeft':
+          prevPhoto();
+          break;
+        case 'Escape':
+          closePhotoModal();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPhotoModal]);
   
   // Handle booking appointment
   const handleBookAppointment = () => {
@@ -236,161 +361,259 @@ const SingleClinicPage: React.FC = () => {
         </button>
       </div>
       
-      {/* Clinic Photos Carousel */}
-      <div className="relative h-80 md:h-96 bg-gray-900">
+      {/* Content Container */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {/* Photo Gallery - As a separate card with rounded corners */}
         {photos.length > 0 ? (
-          <>
-            <img 
-              src={photos[currentPhotoIndex]?.clinic_album_photo_url} 
-              alt={`${clinic.clinic_name}`}
-              className="w-full h-full object-cover"
-            />
-            {/* Carousel Navigation */}
-            {photos.length > 1 && (
-              <div className="absolute inset-0 flex items-center justify-between p-4">
-                <button 
-                  onClick={prevPhoto}
-                  className="bg-white/30 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/50 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={nextPhoto}
-                  className="bg-white/30 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/50 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+          <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+            <div className="relative h-96 p-2">
+              <div className="grid grid-cols-4 h-full gap-2">
+                {/* Main photo */}
+                <div className="col-span-2 row-span-1 h-full relative" onClick={() => openPhotoModal(0)}>
+                  <img 
+                    src={photos[0]?.clinic_album_photo_url} 
+                    alt={`${clinic?.clinic_name}`}
+                    className="w-full h-full object-cover cursor-pointer rounded-lg"
+                  />
+                </div>
+                
+                {/* Side photos */}
+                <div className="col-span-2 grid grid-cols-2 gap-2 h-full">
+                  {photos.slice(1, 5).map((photo, index) => (
+                    <div key={index} className="relative h-full" onClick={() => openPhotoModal(index + 1)}>
+                      <img 
+                        src={photo.clinic_album_photo_url} 
+                        alt={`${clinic?.clinic_name}`}
+                        className="w-full h-full object-cover cursor-pointer rounded-lg"
+                      />
+                      
+                      {/* "See all photos" overlay on the last visible photo */}
+                      {photos.length > 5 && index === 3 && (
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center cursor-pointer rounded-lg">
+                          <div className="text-white text-center">
+                            <p className="font-semibold">+{photos.length - 5}</p>
+                            <p className="text-xs">View All</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-            {/* Photo Counter */}
-            <div className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-white text-sm">
-              {currentPhotoIndex + 1} / {photos.length}
             </div>
-          </>
+          </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200">
-            <div className="text-center text-gray-500">
-              <svg className="w-16 h-16 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p>No photos available</p>
+          <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+            <div className="h-72 flex items-center justify-center bg-gray-200">
+              <div className="text-center text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p>No photos available</p>
+              </div>
             </div>
           </div>
         )}
-      </div>
-      
-      {/* Clinic Title and Type */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-10">
-        <div className="bg-white shadow-lg rounded-lg p-6 md:p-8 mb-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{clinic.clinic_name}</h1>
-              <div className="flex items-center mt-2">
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  {formatClinicType(clinic.clinic_type)}
-                </span>
-                <span className={`ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${isOpenNow() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${isOpenNow() ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                  {isOpenNow() ? 'Open Now' : 'Closed'}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={handleBookAppointment}
-              className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-md shadow-sm flex items-center transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Book Appointment
-            </button>
-          </div>
           
-          {/* Clinic Description */}
-          {clinic.clinic_description && (
-            <div className="mt-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">About the Clinic</h2>
-              <p className="text-gray-600 whitespace-pre-line">{clinic.clinic_description}</p>
-            </div>
-          )}
-          
-          {/* Hours and Location Quick Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {/* Working Hours */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-              <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Working Hours
-              </h3>
-              
-              {clinic.is_open_24_7 === 'Yes' ? (
-                <p className="text-green-600 font-medium">Open 24/7</p>
-              ) : (
-                <>
-                  <p className="text-gray-600 mb-2">
-                    <span className="font-medium">Hours:</span> {formatTime(clinic.opening_time)} - {formatTime(clinic.closing_time)}
-                  </p>
-                  <div className="grid grid-cols-7 gap-1 mt-3">
-                    {clinic.available_days.map((isOpen, idx) => (
-                      <div key={idx} className={`text-center py-1 px-1 rounded text-xs ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                        {getDayName(idx).substring(0, 3)}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              
-              {/* Emergency Service */}
-              {clinic.emergency_available_days && clinic.emergency_available_days.some(day => day) && (
-                <div className="mt-4 border-t border-gray-200 pt-3">
-                  <p className="text-sm font-medium text-orange-600 flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Emergency Service Available
-                  </p>
+        {/* Clinic Information - As a separate card */}
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{clinic?.clinic_name}</h1>
+                <div className="flex items-center mt-2">
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    {formatClinicType(clinic?.clinic_type || '')}
+                  </span>
+                  <span className={`ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${isOpenNow() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${isOpenNow() ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    {isOpenNow() ? 'Open Now' : 'Closed'}
+                  </span>
                 </div>
-              )}
+              </div>
+              <button
+                onClick={handleBookAppointment}
+                className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-md shadow-sm flex items-center transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Book Appointment
+              </button>
             </div>
             
-            {/* Location Info */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-              <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Location
-              </h3>
-              <p className="text-gray-600 mb-1">
-                <span className="font-medium">Address:</span> {clinic.clinic_address}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-medium">Area:</span> {clinic.district}, {clinic.province}
-              </p>
+            {/* Clinic Description */}
+            {clinic?.clinic_description && (
+              <div className="mt-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">About the Clinic</h2>
+                <p className="text-gray-600 whitespace-pre-line">{clinic.clinic_description}</p>
+              </div>
+            )}
+            
+            {/* Hours and Location Quick Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              {/* Working Hours */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Working Hours
+                </h3>
+                
+                {clinic.is_open_24_7 === 'Yes' ? (
+                  <p className="text-green-600 font-medium">Open 24/7</p>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-2">
+                      <span className="font-medium">Hours:</span> {formatTime(clinic.opening_time)} - {formatTime(clinic.closing_time)}
+                    </p>
+                    <div className="grid grid-cols-7 gap-1 mt-3">
+                      {/* Rearrange days to start from Monday (index 1) to Sunday (index 0) */}
+                      {[...clinic.available_days.slice(1), clinic.available_days[0]].map((isOpen, idx) => (
+                        <div key={idx} className={`text-center py-1 px-1 rounded text-xs ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                          {getDayName(idx).substring(0, 3)}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                
+                {/* Emergency Service */}
+                {clinic.emergency_available_days && clinic.emergency_available_days.some(day => day) && (
+                  <div className="mt-4 border-t border-gray-200 pt-3">
+                    <p className="text-sm font-medium text-orange-600 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Emergency Service Available
+                    </p>
+                  </div>
+                )}
+              </div>
               
-              {/* Contact Information */}
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                {clinic.phone_numbers && clinic.phone_numbers.length > 0 && (
-                  <div className="text-gray-600 mb-1">
-                    <span className="font-medium">Phone:</span> {clinic.phone_numbers[0].number}
-                  </div>
-                )}
-                {clinic.clinic_email && (
-                  <div className="text-gray-600">
-                    <span className="font-medium">Email:</span> {clinic.clinic_email}
-                  </div>
-                )}
+              {/* Location Info */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Location
+                </h3>
+                <p className="text-gray-600 mb-1">
+                  <span className="font-medium">Address:</span> {clinic.clinic_address}
+                </p>
+                <p className="text-gray-600">
+                  <span className="font-medium">Area:</span> {clinic.district}, {clinic.province}
+                </p>
+                
+                {/* Contact Information */}
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  {clinic.phone_numbers && clinic.phone_numbers.length > 0 && (
+                    <div className="text-gray-600 mb-1">
+                      <span className="font-medium">Phone:</span> {clinic.phone_numbers[0].number}
+                    </div>
+                  )}
+                  {clinic.clinic_email && (
+                    <div className="text-gray-600">
+                      <span className="font-medium">Email:</span> {clinic.clinic_email}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
+        
+        {/* Veterinarians Section - Add this before Services section */}
+        {veterinarians.length > 0 && (
+          <div className="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Our Veterinarians</h2>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {veterinarians.slice(0, 6).map((vet) => (
+                  <div 
+                    key={vet.veterinarian_id} 
+                    className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/veterinarians/profile/${vet.id}`)}
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center mb-3">
+                        {vet.user_profile_photo ? (
+                          <img 
+                            src={vet.user_profile_photo} 
+                            alt={`Dr. ${vet.user_name} ${vet.user_surname}`}
+                            className="w-12 h-12 rounded-full object-cover mr-3"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-gray-800">Dr. {vet.user_name} {vet.user_surname}</h3>
+                          <p className="text-sm text-gray-500">Veterinarian</p>
+                        </div>
+                      </div>
+                      
+                      {vet.expertise && vet.expertise.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-1">Specialties:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {vet.expertise.slice(0, 2).map((exp, idx) => (
+                              <span key={idx} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                                {exp.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                            {vet.expertise.length > 2 && (
+                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                                +{vet.expertise.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/veterinarians/profile/${vet.id}`);
+                        }}
+                        className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                      >
+                        View Profile
+                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {veterinarians.length > 6 && (
+                <div className="mt-4 text-center">
+                  <button 
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center"
+                    onClick={() => {
+                      // Scroll to the veterinarians full section
+                      document.getElementById('veterinarians-full-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    View All Veterinarians
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Services and Specialties */}
         {services && (
@@ -398,11 +621,11 @@ const SingleClinicPage: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Services & Specialties</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Animal Types */}
+              {/* Animals Treated - Fixed Icon */}
               <div>
                 <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905C11 4.51 10.09 5 9 5H7a2 2 0 00-2 2v3m7 10v-5" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Animals Treated
                 </h3>
@@ -452,76 +675,6 @@ const SingleClinicPage: React.FC = () => {
           </div>
         )}
         
-        {/* Veterinarians */}
-        {veterinarians.length > 0 && (
-          <div className="bg-white shadow-lg rounded-lg p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Our Veterinarians</h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {veterinarians.map((vet) => (
-                <div 
-                  key={vet.id} 
-                  className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow"
-                  onClick={() => navigate(`/veterinarians/profile/${vet.id}`)}
-                >
-                  <div className="p-5">
-                    <div className="flex items-center mb-3">
-                      {vet.user_profile_photo ? (
-                        <img 
-                          src={vet.user_profile_photo} 
-                          alt={`Dr. ${vet.user_name} ${vet.user_surname}`}
-                          className="w-12 h-12 rounded-full object-cover mr-3"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="font-semibold text-gray-800">Dr. {vet.user_name} {vet.user_surname}</h3>
-                        <p className="text-sm text-gray-500">Veterinarian</p>
-                      </div>
-                    </div>
-                    
-                    {vet.expertise && vet.expertise.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-500 mb-1">Specialties:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {vet.expertise.slice(0, 2).map((exp, idx) => (
-                            <span key={idx} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                              {exp.replace(/_/g, ' ')}
-                            </span>
-                          ))}
-                          {vet.expertise.length > 2 && (
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                              +{vet.expertise.length - 2} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/veterinarians/profile/${vet.id}`);
-                      }}
-                      className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
-                    >
-                      View Profile
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
         {/* Map */}
         {(clinic.latitude && clinic.longitude) && (
           <div className="bg-white shadow-lg rounded-lg p-6 md:p-8 mb-6">
@@ -558,6 +711,58 @@ const SingleClinicPage: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Photo Modal */}
+      {showPhotoModal && photos.length > 0 && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" onClick={closePhotoModal}>
+          <button className="absolute top-4 right-4 text-white bg-black bg-opacity-50 p-2 rounded-full">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <div className="max-w-4xl max-h-[80vh] relative" onClick={e => e.stopPropagation()}>
+            {/* Loading Spinner */}
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+              </div>
+            )}
+            
+            <img 
+              src={photos[currentPhotoIndex]?.clinic_album_photo_url} 
+              alt={`${clinic?.clinic_name}`}
+              className={`max-h-[80vh] max-w-full ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+              onLoad={() => setImageLoading(false)}
+              onError={() => setImageLoading(false)}
+            />
+            
+            <div className="absolute inset-x-0 bottom-0 p-4 flex justify-between">
+              <button 
+                className="bg-black bg-opacity-50 p-2 rounded-full text-white"
+                onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <div className="bg-black bg-opacity-50 h-10 flex items-center justify-center px-4 rounded-full text-white text-sm">
+                {currentPhotoIndex + 1} / {photos.length}
+              </div>
+              
+              <button 
+                className="bg-black bg-opacity-50 p-2 rounded-full text-white"
+                onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

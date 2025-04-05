@@ -1193,7 +1193,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
       // Insert photo URL into clinicalbum table instead of clinic_photos
       const insertPhotoQuery = `
-        INSERT INTO clinicalbum (clinic_id, clinic_album_photo_url, clinic_type)
+        INSERT INTO clinic_albums (clinic_id, clinic_album_photo_url, clinic_type)
         VALUES ($1, $2, $3)
         RETURNING *
       `;
@@ -1268,12 +1268,12 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
     // Convert database clinic_type to display format for S3 folder path
     const formattedClinicType = clinic.clinic_type === 'animal_hospital' ? 'Animal Hospital' : 'Veterinary Clinic';
     
-    // Get photos from clinicalbum table
+    // Get photos from clinic_albums table
     let photosResult = { rows: [] };
     try {
       const getPhotosQuery = `
         SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
-        FROM "clinic_albums"
+        FROM clinic_albums
         WHERE clinic_id = $1
         ORDER BY clinic_album_photo_url_created_at DESC
       `;
