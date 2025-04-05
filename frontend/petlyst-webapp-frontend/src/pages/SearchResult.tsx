@@ -326,7 +326,7 @@ const SearchResult: React.FC = () => {
   // Render veterinarian card
   const renderVeterinarianCard = (vet: Veterinarian) => {
     const handleCardClick = () => {
-      navigate(`/veterinarian/${vet.slug || vet.veterinarian_id}`);
+      navigate(`/veterinarians/profile/${vet.slug || vet.veterinarian_id}`);
     };
 
     return (
