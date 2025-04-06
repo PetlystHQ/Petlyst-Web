@@ -28,6 +28,7 @@ interface ApprovedClinic {
   clinic_id: number;
   clinic_name: string;
   association_status: string;
+  slug: string;
 }
 
 interface Education {
@@ -408,7 +409,7 @@ const SingleVeterinarianPage: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-800">{approvedClinic.clinic_name}</h3>
                       </div>
                       <a
-                        href={`/search?clinic=${approvedClinic.clinic_id}`}
+                        href={approvedClinic.slug ? `/clinics/${approvedClinic.slug}` : `/search?clinic=${approvedClinic.clinic_id}`}
                         className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors"
                       >
                         <svg className="mr-1 -ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

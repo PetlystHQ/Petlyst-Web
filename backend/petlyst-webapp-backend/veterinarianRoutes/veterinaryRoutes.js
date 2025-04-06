@@ -1901,6 +1901,7 @@ router.get('/approved-clinic/:veterinarianId', async (req, res) => {
       SELECT 
         c.clinic_id, 
         c.clinic_name,
+        c.slug,
         cv.status as association_status
       FROM 
         clinic_veterinarians cv
