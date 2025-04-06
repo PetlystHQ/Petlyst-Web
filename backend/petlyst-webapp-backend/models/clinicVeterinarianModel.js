@@ -52,6 +52,73 @@ class ClinicVeterinarian {
     }
   }
   
+  // Kullanıcının veteriner kaydının var olduğundan emin ol
+  static async ensureVeterinarianRecord(userId) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // First check if the user exists and is a veterinarian
+      const checkUserQuery = `
+        SELECT user_id, user_type FROM users WHERE user_id = $1
+      `;
+      const userResult = await client.query(checkUserQuery, [userId]);
+      
+      if (userResult.rows.length === 0) {
+        throw new Error(`User with ID ${userId} does not exist`);
+      }
+      
+      const user = userResult.rows[0];
+      if (user.user_type !== 'veterinarian') {
+        throw new Error(`User with ID ${userId} is not a veterinarian (type: ${user.user_type})`);
+      }
+      
+      // Now check if there's a veterinarian record
+      const checkVetQuery = `
+        SELECT veterinarian_id FROM veterinarians WHERE veterinarian_id = $1
+      `;
+      const vetResult = await client.query(checkVetQuery, [userId]);
+      
+      if (vetResult.rows.length === 0) {
+        // No record exists, so create one
+        const insertVetQuery = `
+          INSERT INTO veterinarians (
+            veterinarian_id, 
+            veterinary_license_number, 
+            veterinarian_verification_status
+          ) VALUES ($1, NULL, 'verified')
+          RETURNING veterinarian_id
+        `;
+        
+        const insertResult = await client.query(insertVetQuery, [userId]);
+        
+        if (insertResult.rows.length === 0) {
+          throw new Error(`Failed to create veterinarian record for user ${userId}`);
+        }
+        
+        await client.query('COMMIT');
+        return { 
+          veterinarian_id: insertResult.rows[0].veterinarian_id, 
+          created: true 
+        };
+      }
+      
+      // Record already exists
+      await client.query('COMMIT');
+      return { 
+        veterinarian_id: vetResult.rows[0].veterinarian_id, 
+        created: false 
+      };
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+  
   // Klinik oluşturulduğunda veteriner otomatik olarak eklenecek
   static async addClinicCreator(veterinarianId, clinicId) {
     const client = await pool.connect();
@@ -59,6 +126,58 @@ class ClinicVeterinarian {
     try {
       await client.query('BEGIN');
       
+      // Ensure the veterinarian record exists
+      try {
+        await this.ensureVeterinarianRecord(veterinarianId);
+      } catch (vetError) {
+        console.error(`Error ensuring veterinarian record: ${vetError.message}`);
+        // Continue anyway and try to create the relation
+      }
+      
+      // First, check if the veterinarian exists in the veterinarians table
+      const checkVetQuery = `
+        SELECT veterinarian_id FROM veterinarians WHERE veterinarian_id = $1
+      `;
+      const vetResult = await client.query(checkVetQuery, [veterinarianId]);
+      
+      if (vetResult.rows.length === 0) {
+        // If the veterinarian doesn't exist in the veterinarians table, try to insert them
+        try {
+          const insertVetQuery = `
+            INSERT INTO veterinarians (veterinarian_id, veterinary_license_number, veterinarian_verification_status)
+            SELECT $1, NULL, 'verified'
+            FROM users 
+            WHERE user_id = $1 AND user_type = 'veterinarian'
+          `;
+          await client.query(insertVetQuery, [veterinarianId]);
+          console.log(`Created veterinarian record for user ${veterinarianId}`);
+        } catch (vetInsertError) {
+          console.error(`Failed to create veterinarian record: ${vetInsertError.message}`);
+          // We'll continue and attempt to create the clinic-veterinarian relation anyway
+        }
+      }
+      
+      // Check if relation already exists
+      const checkExistingQuery = `
+        SELECT id FROM clinic_veterinarians
+        WHERE clinic_id = $1 AND veterinarian_id = $2
+      `;
+      const existingResult = await client.query(checkExistingQuery, [clinicId, veterinarianId]);
+      
+      if (existingResult.rows.length > 0) {
+        // Relation already exists, update it instead
+        const updateQuery = `
+          UPDATE clinic_veterinarians
+          SET status = 'approved', is_clinic_creator = true, updated_at = CURRENT_TIMESTAMP
+          WHERE clinic_id = $1 AND veterinarian_id = $2
+          RETURNING *
+        `;
+        const result = await client.query(updateQuery, [clinicId, veterinarianId]);
+        await client.query('COMMIT');
+        return result.rows[0];
+      }
+      
+      // If no existing relation, insert a new one
       const insertQuery = `
         INSERT INTO clinic_veterinarians (
           clinic_id, veterinarian_id, status, is_clinic_creator, created_at, updated_at
@@ -71,6 +190,7 @@ class ClinicVeterinarian {
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
+      console.error(`Error in addClinicCreator: ${error.message}`);
       throw error;
     } finally {
       client.release();

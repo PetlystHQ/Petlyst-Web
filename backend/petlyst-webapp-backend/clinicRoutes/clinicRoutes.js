@@ -697,7 +697,61 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         console.log(`Added clinic creator for new clinic ${newClinic.clinic_id}`);
       } catch (creatorError) {
         console.error('Error adding clinic creator:', creatorError);
-        // Klinik oluşturma işlemine devam et, hata olsa bile
+        // Log additional details to help with troubleshooting
+        console.error('Error details:', {
+          operatorId: clinicData.clinic_operator_id,
+          clinicId: newClinic.clinic_id,
+          errorMessage: creatorError.message,
+          errorStack: creatorError.stack
+        });
+        
+        // Attempt a fallback method if the primary method fails
+        try {
+          // First check if a record already exists
+          const checkExistingQuery = `
+            SELECT id FROM clinic_veterinarians 
+            WHERE clinic_id = $1 AND veterinarian_id = $2
+          `;
+          const existingResult = await client.query(checkExistingQuery, [
+            newClinic.clinic_id,
+            clinicData.clinic_operator_id
+          ]);
+          
+          if (existingResult.rows.length > 0) {
+            // Update existing record
+            const updateQuery = `
+              UPDATE clinic_veterinarians
+              SET status = 'approved', is_clinic_creator = true, updated_at = CURRENT_TIMESTAMP
+              WHERE clinic_id = $1 AND veterinarian_id = $2
+              RETURNING id
+            `;
+            
+            const updateResult = await client.query(updateQuery, [
+              newClinic.clinic_id,
+              clinicData.clinic_operator_id
+            ]);
+            
+            console.log(`Successfully updated existing clinic creator relation: ${updateResult.rows[0].id}`);
+          } else {
+            // Insert new record
+            const insertQuery = `
+              INSERT INTO clinic_veterinarians (
+                clinic_id, veterinarian_id, status, is_clinic_creator, created_at, updated_at
+              ) VALUES ($1, $2, 'approved', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              RETURNING id
+            `;
+            
+            const insertResult = await client.query(insertQuery, [
+              newClinic.clinic_id,
+              clinicData.clinic_operator_id
+            ]);
+            
+            console.log(`Successfully added clinic creator using fallback method: ${insertResult.rows[0].id}`);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback method also failed:', fallbackError.message);
+          // Continue with clinic creation, but this clinic won't have a proper veterinarian association
+        }
       }
       
       // Commit the transaction
