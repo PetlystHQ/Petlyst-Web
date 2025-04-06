@@ -230,10 +230,18 @@ const SingleClinicPage: React.FC = () => {
     if (clinic.is_open_24_7 === 'Yes') return true;
     
     const now = new Date();
-    const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const jsDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    // JavaScript getDay() --> SQL array indeks dönüşümü
+    // 0 (Pazar) -> 6
+    // 1 (Pazartesi) -> 0
+    // 2 (Salı) -> 1
+    // ...
+    // 6 (Cumartesi) -> 5
+    const sqlArrayIndex = jsDay === 0 ? 6 : jsDay - 1;
     
     // Check if clinic is open today
-    if (!clinic.available_days[day]) return false;
+    if (!clinic.available_days[sqlArrayIndex]) return false;
     
     // Check current time against opening and closing times
     const currentHour = now.getHours();
@@ -462,47 +470,85 @@ const SingleClinicPage: React.FC = () => {
             
             {/* Hours and Location Quick Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              {/* Working Hours */}
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Working Hours
-                </h3>
+              {/* Working Hours ve Emergency Service - Dikey olarak (Sol sütun) */}
+              <div>
+                {/* Working Hours Section */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Working Hours
+                  </h3>
+                  
+                  {clinic.is_open_24_7 === 'Yes' ? (
+                    <p className="text-green-600 font-medium">Open 24/7</p>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 mb-2">
+                        <span className="font-medium">Hours:</span> {formatTime(clinic.opening_time)} - {formatTime(clinic.closing_time)}
+                      </p>
+                      <div className="grid grid-cols-7 gap-1 mt-3">
+                        {/* SQL array sıralaması: 0=Pazartesi, 1=Salı, 2=Çarşamba, ... 6=Pazar */}
+                        {[
+                          clinic.available_days[0], // Pazartesi (index 0)
+                          clinic.available_days[1], // Salı (index 1)
+                          clinic.available_days[2], // Çarşamba (index 2)
+                          clinic.available_days[3], // Perşembe (index 3)
+                          clinic.available_days[4], // Cuma (index 4)
+                          clinic.available_days[5], // Cumartesi (index 5)
+                          clinic.available_days[6], // Pazar (index 6)
+                        ].map((isOpen, idx) => (
+                          <div key={idx} className={`text-center py-1 px-1 rounded text-xs ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 
-                {clinic.is_open_24_7 === 'Yes' ? (
-                  <p className="text-green-600 font-medium">Open 24/7</p>
-                ) : (
-                  <>
-                    <p className="text-gray-600 mb-2">
-                      <span className="font-medium">Hours:</span> {formatTime(clinic.opening_time)} - {formatTime(clinic.closing_time)}
-                    </p>
-                    <div className="grid grid-cols-7 gap-1 mt-3">
-                      {/* Rearrange days to start from Monday (index 1) to Sunday (index 0) */}
-                      {[...clinic.available_days.slice(1), clinic.available_days[0]].map((isOpen, idx) => (
-                        <div key={idx} className={`text-center py-1 px-1 rounded text-xs ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                          {getDayName(idx).substring(0, 3)}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-                
-                {/* Emergency Service */}
+                {/* Emergency Service Section */}
                 {clinic.emergency_available_days && clinic.emergency_available_days.some(day => day) && (
-                  <div className="mt-4 border-t border-gray-200 pt-3">
-                    <p className="text-sm font-medium text-orange-600 flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 mt-6">
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      Emergency Service Available
-                    </p>
+                      Emergency Service
+                    </h3>
+                    
+                    {/* Tüm günler açıksa 24/7 olarak göster */}
+                    {clinic.emergency_available_days.every(day => day) ? (
+                      <p className="text-orange-600 font-medium">24/7 Emergency Service Available</p>
+                    ) : (
+                      <>
+                        <p className="text-gray-600 mb-2">
+                          <span className="font-medium">Available on:</span>
+                        </p>
+                        <div className="grid grid-cols-7 gap-1 mt-3">
+                          {/* SQL array sıralaması: 0=Pazartesi, 1=Salı, 2=Çarşamba, ... 6=Pazar */}
+                          {[
+                            clinic.emergency_available_days[0], // Pazartesi (index 0)
+                            clinic.emergency_available_days[1], // Salı (index 1)
+                            clinic.emergency_available_days[2], // Çarşamba (index 2)
+                            clinic.emergency_available_days[3], // Perşembe (index 3)
+                            clinic.emergency_available_days[4], // Cuma (index 4)
+                            clinic.emergency_available_days[5], // Cumartesi (index 5)
+                            clinic.emergency_available_days[6], // Pazar (index 6)
+                          ].map((isOpen, idx) => (
+                            <div key={idx} className={`text-center py-1 px-1 rounded text-xs ${isOpen ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'}`}>
+                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
               
-              {/* Location Info */}
+              {/* Location Info - Sağ sütun */}
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
                 <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
