@@ -26,7 +26,7 @@ router.get('/search-clinics', async (req, res) => {
     // Build the query dynamically
     let queryText = `
       SELECT DISTINCT c.clinic_id, c.clinic_name, c.clinic_type, c.clinic_description, 
-             c.opening_time, c.closing_time, c.available_days, 
+             c.opening_time, c.closing_time, c.available_days, c.slug,
              cl.province, cl.district, cl.clinic_address, cl.latitude, cl.longitude
       FROM clinics c
       LEFT JOIN clinic_locations cl ON c.clinic_id = cl.clinic_id
@@ -782,6 +782,104 @@ router.get('/search-veterinarians', async (req, res) => {
     });
   } catch (error) {
     console.error('Error searching veterinarians:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get veterinarians working at a specific clinic
+router.get('/clinics/:clinicId/public-veterinarians', async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+
+    // Validate clinicId
+    if (!clinicId || isNaN(parseInt(clinicId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid clinic ID'
+      });
+    }
+
+    // Check if clinic exists and is verified
+    const clinicQuery = `
+      SELECT clinic_id FROM clinics 
+      WHERE clinic_id = $1 AND clinic_verification_status = 'verified'
+    `;
+    const clinicResult = await pool.query(clinicQuery, [clinicId]);
+
+    if (clinicResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or not verified'
+      });
+    }
+
+    // Get approved veterinarians for this clinic, ordered by is_clinic_creator
+    const veterinariansQuery = `
+      SELECT 
+        cv.veterinarian_id,
+        cv.is_clinic_creator,
+        u.user_id,
+        u.user_name,
+        u.user_surname,
+        u.user_email,
+        u.user_profile_photo,
+        v.slug
+      FROM clinic_veterinarians cv
+      JOIN users u ON cv.veterinarian_id = u.user_id
+      JOIN veterinarians v ON cv.veterinarian_id = v.veterinarian_id
+      WHERE cv.clinic_id = $1 
+        AND cv.status = 'approved'
+        AND v.is_profile_public = true
+      ORDER BY cv.is_clinic_creator DESC, u.user_name ASC
+    `;
+
+    const veterinariansResult = await pool.query(veterinariansQuery, [clinicId]);
+    
+    if (veterinariansResult.rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No veterinarians found for this clinic',
+        veterinarians: []
+      });
+    }
+
+    // Process veterinarians and get expertise for each
+    const veterinarians = [];
+    for (const vet of veterinariansResult.rows) {
+      // Get expertise areas for this veterinarian
+      const expertiseQuery = `
+        SELECT expertise_area 
+        FROM veterinarian_expertise 
+        WHERE veterinarian_id = $1
+      `;
+      const expertiseResult = await pool.query(expertiseQuery, [vet.veterinarian_id]);
+      
+      // Format veterinarian object
+      veterinarians.push({
+        id: vet.veterinarian_id,
+        veterinarian_id: vet.veterinarian_id,
+        user_id: vet.user_id,
+        user_name: vet.user_name,
+        user_surname: vet.user_surname,
+        user_email: vet.user_email,
+        user_profile_photo: vet.user_profile_photo,
+        is_clinic_creator: vet.is_clinic_creator,
+        status: 'approved', // We're only returning approved vets
+        expertise: expertiseResult.rows.map(exp => exp.expertise_area),
+        slug: vet.slug
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      veterinarians: veterinarians
+    });
+  } catch (error) {
+    console.error('Error fetching clinic veterinarians:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',

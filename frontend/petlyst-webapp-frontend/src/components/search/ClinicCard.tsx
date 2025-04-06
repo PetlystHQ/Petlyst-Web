@@ -16,6 +16,7 @@ interface Clinic {
   latitude: number;
   longitude: number;
   photos: string[]; // This is an array of S3 URL strings, not objects
+  slug?: string; // Optional slug field for SEO-friendly URLs
 }
 
 interface ClinicCardProps {
@@ -69,7 +70,13 @@ const ClinicCard: React.FC<ClinicCardProps> = ({ clinic }) => {
   
   // Handle click on the entire card
   const handleCardClick = () => {
-    navigate(`/clinics/${clinic.clinic_id}`);
+    // Sadece slug ile yönlendirme yapılacak
+    if (clinic.slug) {
+      navigate(`/clinics/${clinic.slug}`);
+    } else {
+      console.warn("Clinic has no slug:", clinic.clinic_id);
+      // Slug yoksa yönlendirme yapmayacağız
+    }
   };
 
   return (
@@ -112,13 +119,25 @@ const ClinicCard: React.FC<ClinicCardProps> = ({ clinic }) => {
       
       {/* Quick Actions */}
       <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 flex justify-between items-center">
-        <Link 
-          to={`/clinics/${clinic.clinic_id}`} 
-          className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Book Now
-        </Link>
+        {clinic.slug ? (
+          <Link 
+            to={`/clinics/${clinic.slug}`}
+            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Book Now
+          </Link>
+        ) : (
+          <button
+            className="text-white bg-gray-400 px-4 py-1.5 rounded-md text-sm font-medium cursor-not-allowed"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.warn("Cannot book: Clinic has no slug", clinic.clinic_id);
+            }}
+          >
+            Book Now
+          </button>
+        )}
         <div className="flex space-x-2">
           <button 
             className="text-gray-700 hover:bg-gray-100 p-1.5 rounded-full transition-colors duration-150"
