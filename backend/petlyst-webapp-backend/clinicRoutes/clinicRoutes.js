@@ -2024,4 +2024,66 @@ router.get('/public/by-slug/:slug', async (req, res) => {
   }
 });
 
+// Get clinic photos - PUBLIC ENDPOINT (no authentication required)
+router.get('/public/:clinicId/photos', async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+
+    // Check if clinic exists and is verified
+    const checkQuery = `
+      SELECT clinic_id, clinic_name, clinic_type, clinic_verification_status
+      FROM clinics 
+      WHERE clinic_id = $1 AND clinic_verification_status = 'verified'
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or not verified'
+      });
+    }
+
+    const clinic = checkResult.rows[0];
+    
+    // Get photos from clinic_albums table
+    let photosResult = { rows: [] };
+    try {
+      const getPhotosQuery = `
+        SELECT clinic_album_photo_id, clinic_album_photo_url, clinic_album_photo_url_created_at
+        FROM clinic_albums
+        WHERE clinic_id = $1
+        ORDER BY clinic_album_photo_url_created_at DESC
+      `;
+      
+      photosResult = await pool.query(getPhotosQuery, [clinicId]);
+    } catch (photoError) {
+      console.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
+      // Continue with empty photos array
+    }
+    
+    // Log information about the clinic and photos
+    console.log('Fetching public photos for clinic:', {
+      clinicId: clinic.clinic_id,
+      clinicName: clinic.clinic_name,
+      clinicType: clinic.clinic_type,
+      photoCount: photosResult.rows.length
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Photos fetched successfully',
+      photos: photosResult.rows
+    });
+
+  } catch (error) {
+    console.error('Error fetching public clinic photos:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = router;

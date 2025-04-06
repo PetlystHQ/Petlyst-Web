@@ -20,6 +20,7 @@ interface Clinic {
   latitude: number;
   longitude: number;
   photos: string[];
+  slug?: string; // Klinik için SEO-dostu URL'ler için slug
 }
 
 // Define the Veterinarian interface

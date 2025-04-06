@@ -56,6 +56,7 @@ interface Veterinarian {
   user_profile_photo?: string;
   status: string; // approved, pending, rejected
   expertise: string[];
+  slug?: string;
 }
 
 const SingleClinicPage: React.FC = () => {
@@ -93,91 +94,90 @@ const SingleClinicPage: React.FC = () => {
       try {
         let clinicData: Clinic;
         
-        // Fetch clinic details by ID or slug
-        if (isUsingId) {
-          // Fetch by ID
-          console.log("Fetching clinic by ID:", paramValue);
-          const response = await axios.get(`/api/pet-owners/clinics/${paramValue}`);
-          console.log("Clinic by ID response:", response.data);
-          if (response.data.success) {
-            clinicData = response.data.clinic;
-            
-            // If we're using ID, we can fetch additional data
-            try {
-              // Fetch clinic photos - FIX: Using the correct endpoint with authorization header
-              console.log("Fetching clinic photos...");
-              const photosResponse = await axios.get(`/api/clinics/${paramValue}/photos`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
-              });
-              console.log("Photos response:", photosResponse.data);
-              if (photosResponse.data.success) {
-                setPhotos(photosResponse.data.photos || []);
-              }
-              
-              // Fetch clinic services
-              const servicesResponse = await axios.get(`/api/pet-owners/clinics/${paramValue}/services`);
-              if (servicesResponse.data.success) {
-                setServices(servicesResponse.data.services);
-              }
-              
-              // Fetch clinic veterinarians (public endpoint)
-              const vetsResponse = await axios.get(`/api/pet-owners/clinics/${paramValue}/public-veterinarians`);
-              if (vetsResponse.data.success) {
-                setVeterinarians(vetsResponse.data.veterinarians || []);
-              }
-            } catch (additionalError) {
-              console.warn("Could not fetch some additional clinic data:", additionalError);
-              // Continue showing the clinic with incomplete data
-            }
-          } else {
-            throw new Error('Failed to fetch clinic details');
-          }
-        } else {
-          // Fetch by slug - use the correct API endpoint
-          console.log("Fetching clinic by slug:", paramValue);
+        // Always fetch by slug, regardless of the path format
+        console.log("Fetching clinic by slug:", paramValue);
+        const response = await axios.get(`/api/clinics/public/by-slug/${paramValue}`);
+        console.log("Clinic response:", response.data);
+        
+        if (response.data.success) {
+          clinicData = response.data.clinic;
+          
+          // Fetch additional data
           try {
-            const response = await axios.get(`/api/clinics/public/by-slug/${paramValue}`);
-            console.log("Clinic by slug response:", response.data);
-            if (response.data.success) {
-              clinicData = response.data.clinic;
+            if (clinicData.clinic_id) {
+              console.log("Fetching additional data for clinic ID:", clinicData.clinic_id);
               
-              // For slug-based requests, we need to fetch additional data
+              // Fetch clinic photos
               try {
-                // Fetch clinic photos using the clinic_id from the response
-                if (clinicData.clinic_id) {
-                  console.log("Fetching photos for clinic ID:", clinicData.clinic_id);
-                  const photosResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/photos`, {
-                    headers: {
-                      'Authorization': `Bearer ${token}`
-                    }
-                  });
-                  console.log("Photos response:", photosResponse.data);
-                  if (photosResponse.data.success) {
-                    setPhotos(photosResponse.data.photos || []);
+                let photosResponse;
+                
+                // Önce token varsa özel endpoint'i kullan
+                if (token) {
+                  try {
+                    photosResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/photos`, {
+                      headers: {
+                        'Authorization': `Bearer ${token}`
+                      }
+                    });
+                    console.log("Photos response from private endpoint:", photosResponse.data);
+                  } catch (privateError) {
+                    console.log("Private endpoint failed, trying public endpoint");
+                    // Private endpoint başarısız olursa public endpoint'i dene
+                    photosResponse = null;
                   }
                 }
                 
-                // If we need to, we can extract services directly from the clinic data
-                if (clinicData.animal_types || clinicData.medical_services || clinicData.additional_services) {
-                  setServices({
-                    animalTypes: clinicData.animal_types || [],
-                    medicalServices: clinicData.medical_services || [],
-                    additionalServices: clinicData.additional_services || []
-                  });
+                // Token yoksa veya private endpoint başarısız olduysa public endpoint'i kullan
+                if (!photosResponse) {
+                  photosResponse = await axios.get(`/api/clinics/public/${clinicData.clinic_id}/photos`);
+                  console.log("Photos response from public endpoint:", photosResponse.data);
                 }
-              } catch (additionalError) {
-                console.warn("Could not fetch some additional clinic data:", additionalError);
-                // Continue showing the clinic with incomplete data
+                
+                // Fotoğrafları set et
+                if (photosResponse && photosResponse.data.success) {
+                  setPhotos(photosResponse.data.photos || []);
+                }
+              } catch (photosError) {
+                console.warn("Could not fetch photos:", photosError);
+                // Fotoğraf çekme hatası olsa bile diğer işlevlere devam et
               }
-            } else {
-              throw new Error('Failed to fetch clinic details');
+              
+              // Fetch veterinarians
+              try {
+                const vetsResponse = await axios.get(`/api/pet-owners/clinics/${clinicData.clinic_id}/public-veterinarians`);
+                console.log("Veterinarians response:", vetsResponse.data);
+                if (vetsResponse.data.success) {
+                  setVeterinarians(vetsResponse.data.veterinarians || []);
+                }
+              } catch (vetsError) {
+                console.warn("Could not fetch veterinarians:", vetsError);
+              }
+              
+              // If we need to, we can extract services directly from the clinic data
+              if (clinicData.animal_types || clinicData.medical_services || clinicData.additional_services) {
+                setServices({
+                  animalTypes: clinicData.animal_types || [],
+                  medicalServices: clinicData.medical_services || [],
+                  additionalServices: clinicData.additional_services || []
+                });
+              } else {
+                // Fetch clinic services if not already in the clinic data
+                try {
+                  const servicesResponse = await axios.get(`/api/pet-owners/clinics/${clinicData.clinic_id}/services`);
+                  if (servicesResponse.data.success) {
+                    setServices(servicesResponse.data.services);
+                  }
+                } catch (servicesError) {
+                  console.warn("Could not fetch services:", servicesError);
+                }
+              }
             }
-          } catch (err) {
-            console.error("Error fetching by slug:", err);
-            throw err;
+          } catch (additionalError) {
+            console.warn("Could not fetch some additional clinic data:", additionalError);
+            // Continue showing the clinic with incomplete data
           }
+        } else {
+          throw new Error('Failed to fetch clinic details');
         }
         
         // Set clinic data
@@ -192,7 +192,7 @@ const SingleClinicPage: React.FC = () => {
     };
     
     fetchClinicData();
-  }, [paramValue, isUsingId, token]);
+  }, [paramValue, token]);
   
   // Format day names
   const getDayName = (index: number): string => {
@@ -311,6 +311,16 @@ const SingleClinicPage: React.FC = () => {
   const handleBookAppointment = () => {
     if (!clinic) return;
     navigate(`/booking/${clinic.clinic_id}`);
+  };
+  
+  // Function to generate slug
+  const generateSlug = (name: string, surname: string): string => {
+    return `dr-${name.toLowerCase()}-${surname.toLowerCase()}`
+      .replace(/\s+/g, '-')      // Replace spaces with hyphens
+      .replace(/[^\w\-]+/g, '')  // Remove non-word chars
+      .replace(/\-\-+/g, '-')    // Replace multiple hyphens with single
+      .replace(/^-+/, '')        // Trim hyphens from start
+      .replace(/-+$/, '');       // Trim hyphens from end
   };
   
   // Render loading state
@@ -537,10 +547,17 @@ const SingleClinicPage: React.FC = () => {
                   <div 
                     key={vet.veterinarian_id} 
                     className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/veterinarians/profile/${vet.id}`)}
+                    onClick={() => {
+                      if (vet.slug) {
+                        navigate(`/veterinarians/profile/${vet.slug}`);
+                      } else {
+                        // Slug yoksa profil sayfasına yönlendirme yapmıyoruz
+                        console.warn("Veterinarian has no slug:", vet.veterinarian_id);
+                      }
+                    }}
                   >
-                    <div className="p-4">
-                      <div className="flex items-center mb-3">
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center">
                         {vet.user_profile_photo ? (
                           <img 
                             src={vet.user_profile_photo} 
@@ -560,35 +577,18 @@ const SingleClinicPage: React.FC = () => {
                         </div>
                       </div>
                       
-                      {vet.expertise && vet.expertise.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-xs text-gray-500 mb-1">Specialties:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {vet.expertise.slice(0, 2).map((exp, idx) => (
-                              <span key={idx} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                                {exp.replace(/_/g, ' ')}
-                              </span>
-                            ))}
-                            {vet.expertise.length > 2 && (
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                                +{vet.expertise.length - 2} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/veterinarians/profile/${vet.id}`);
+                          if (vet.slug) {
+                            navigate(`/veterinarians/profile/${vet.slug}`);
+                          } else {
+                            console.warn("Veterinarian has no slug:", vet.veterinarian_id);
+                          }
                         }}
-                        className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium inline-flex items-center"
+                        className="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-full font-medium transition-colors"
                       >
-                        View Profile
-                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
+                        Profile
                       </button>
                     </div>
                   </div>
