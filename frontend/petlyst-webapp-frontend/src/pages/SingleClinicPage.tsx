@@ -20,7 +20,7 @@ interface Clinic {
   latitude: number;
   longitude: number;
   clinic_email?: string;
-  phone_numbers?: { type: string; number: string }[];
+  phone_numbers?: { type: string; number: string; phone_type: string }[];
   social_media?: { platform: string; url: string }[];
   clinic_verification_status: string;
   is_open_24_7?: string;
@@ -31,6 +31,7 @@ interface Clinic {
   additional_services?: string[];
   establishment_year: number;
   establishment_month: number;
+  allow_direct_messages: boolean;
 }
 
 // Services interface
@@ -61,6 +62,15 @@ interface Veterinarian {
   slug?: string;
 }
 
+// Update User interface
+interface User {
+  id: number;  // This is the user ID we'll use
+  email: string;
+  name: string;
+  surname: string;
+  // Remove user_id as it's not needed
+}
+
 const SingleClinicPage: React.FC = () => {
   const params = useParams<{ clinicId?: string, slug?: string }>();
   const navigate = useNavigate();
@@ -85,6 +95,13 @@ const SingleClinicPage: React.FC = () => {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [serviceDuration, setServiceDuration] = useState<{ years: number; months: number } | null>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
+  const [messageStatus, setMessageStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [isSaved, setIsSaved] = useState(false);
+  
+  // Get user from Redux instead of making a separate API call
+  const user = useSelector((state: RootState) => state.auth.user);
   
   // Fetch clinic data on component mount
   useEffect(() => {
@@ -344,6 +361,27 @@ const SingleClinicPage: React.FC = () => {
       .replace(/-+$/, '');       // Trim hyphens from end
   };
   
+  // Add save clinic function
+  const handleSaveClinic = async () => {
+    try {
+      const response = await axios.post(
+        `http://localhost:3000/api/pet-owners/saved-clinics/${clinic?.clinic_id}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error('Error saving clinic:', error);
+    }
+  };
+  
   // Render loading state
   if (loading) {
     return (
@@ -377,21 +415,85 @@ const SingleClinicPage: React.FC = () => {
     );
   }
   
+  // Add the message modal component
+  const MessageModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Send Message</h3>
+          <button 
+            onClick={() => {
+              setShowMessageModal(false);
+              setMessageContent('');
+              setMessageStatus({ type: null, message: '' });
+            }}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <textarea
+          value={messageContent}
+          onChange={(e) => setMessageContent(e.target.value)}
+          placeholder="Type your message here..."
+          className="w-full h-32 p-2 border rounded-md mb-4"
+        />
+        
+        {messageStatus.type && (
+          <div className={`mb-4 p-2 rounded-md ${
+            messageStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
+            {messageStatus.message}
+          </div>
+        )}
+        
+        <div className="flex justify-end">
+          <button
+            onClick={async () => {
+              if (!messageContent.trim()) {
+                setMessageStatus({ type: 'error', message: 'Please enter a message' });
+                return;
+              }
+              
+              try {
+                const response = await axios.post(`http://localhost:3000/api/clinics/${clinic?.clinic_id}/send-message`, {
+                  message: messageContent,
+                  senderId: user?.id // Use id instead of user_id
+                }, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                
+                if (response.data.success) {
+                  setMessageStatus({ type: 'success', message: 'Message sent successfully' });
+                  setTimeout(() => {
+                    setShowMessageModal(false);
+                    setMessageContent('');
+                    setMessageStatus({ type: null, message: '' });
+                  }, 2000);
+                }
+              } catch (error: any) {
+                setMessageStatus({ 
+                  type: 'error', 
+                  message: error.response?.data?.message || 'Failed to send message' 
+                });
+              }
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Send Message
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Fixed CTA button */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <button
-          onClick={handleBookAppointment}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-full shadow-lg flex items-center transition-all transform hover:scale-105"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Book Appointment
-        </button>
-      </div>
-      
       {/* Content Container */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* Photo Gallery - As a separate card with rounded corners */}
@@ -462,15 +564,59 @@ const SingleClinicPage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={handleBookAppointment}
-                className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-md shadow-sm flex items-center transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Book Appointment
-              </button>
+              
+              {/* Action Buttons Group */}
+              <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 sm:items-center">
+                {/* Primary Action */}
+                <button
+                  onClick={handleBookAppointment}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Book Appointment
+                </button>
+                
+                {/* Secondary Actions Group */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveClinic}
+                    className={`${
+                      isSaved 
+                        ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    } font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors min-w-[44px]`}
+                  >
+                    <svg 
+                      className="w-5 h-5" 
+                      fill={isSaved ? "currentColor" : "none"} 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth="2" 
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                    <span className="ml-2 hidden sm:inline">
+                      {isSaved ? 'Favorited' : 'Favorite'}
+                    </span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowMessageModal(true)}
+                    className="bg-gray-50 text-gray-700 hover:bg-gray-100 font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <span className="ml-2 hidden sm:inline">Message</span>
+                  </button>
+                </div>
+              </div>
             </div>
             
             {/* Clinic Description */}
@@ -573,37 +719,64 @@ const SingleClinicPage: React.FC = () => {
               
               {/* Location Info - Sağ sütun */}
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Location
-                </h3>
-                <p className="text-gray-600 mb-1">
-                  <span className="font-medium">Address:</span> {clinic.clinic_address}
-                </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Area:</span> {clinic.district}, {clinic.province}
-                </p>
+                {/* Service Duration - Enhanced Design */}
+                {serviceDuration && (
+                  <div className="mb-4 bg-blue-50 border border-blue-100 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h4 className="text-sm font-semibold text-blue-800">Active Service Time</h4>
+                          <p className="text-blue-600 font-medium">
+                            {serviceDuration.years > 0 ? `${serviceDuration.years} years, ` : ''}{serviceDuration.months} months
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Contact Information */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  {serviceDuration && (
-                    <div className="text-gray-600 mb-1">
-                      <span className="font-medium">Service Duration:</span> {serviceDuration.years} years, {serviceDuration.months} months
-                    </div>
-                  )}
-                  {clinic.phone_numbers && clinic.phone_numbers.length > 0 && (
-                    <div className="text-gray-600 mb-1">
-                      <span className="font-medium">Phone:</span> {clinic.phone_numbers[0].number}
-                    </div>
-                  )}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {clinic.phone_numbers && clinic.phone_numbers.map((phone, index) => (
+                      <div key={index} className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-center">
+                        {phone.phone_type === 'fixed_line' ? (
+                          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   {clinic.clinic_email && (
-                    <div className="text-gray-600">
-                      <span className="font-medium">Email:</span> {clinic.clinic_email}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-center w-full">
+                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
                     </div>
                   )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {clinic.social_media && clinic.social_media.map((social, index) => (
+                      <a 
+                        key={index} 
+                        href={social.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="text-gray-700 font-medium text-sm">
+                          {social.platform.charAt(0).toUpperCase() + social.platform.slice(1).toLowerCase()}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -749,16 +922,53 @@ const SingleClinicPage: React.FC = () => {
           </div>
         )}
         
-        {/* Map */}
+        {/* Map and Location Section */}
         {(clinic.latitude && clinic.longitude) && (
           <div className="bg-white shadow-lg rounded-lg p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Location</h2>
-            <div className="h-80 bg-gray-200 rounded-lg">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Location</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Area Section */}
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-500 mb-2 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Area
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        {clinic.province}
+                      </span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        {clinic.district}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Address Section */}
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-500 mb-2 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Address
+                    </h3>
+                    <p className="text-gray-800">{clinic.clinic_address}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="h-80 bg-gray-200 rounded-lg overflow-hidden">
               <iframe
                 width="100%"
                 height="100%"
                 frameBorder="0"
-                style={{ border: 0, borderRadius: '0.5rem' }}
+                style={{ border: 0 }}
                 src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${clinic.latitude},${clinic.longitude}`}
                 allowFullScreen
               ></iframe>
@@ -837,6 +1047,7 @@ const SingleClinicPage: React.FC = () => {
           </div>
         </div>
       )}
+      {showMessageModal && <MessageModal />}
     </div>
   );
 };
