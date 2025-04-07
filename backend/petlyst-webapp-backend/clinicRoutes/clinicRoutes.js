@@ -2140,4 +2140,58 @@ router.get('/public/:clinicId/photos', async (req, res) => {
   }
 });
 
+// Calculate clinic service duration
+router.get('/:clinicId/service-duration', async (req, res) => {
+    const { clinicId } = req.params;
+    
+    try {
+        const client = await pool.connect();
+        
+        const result = await client.query(
+            `SELECT establishment_year, establishment_month 
+             FROM clinics 
+             WHERE clinic_id = $1`,
+            [clinicId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Clinic not found' 
+            });
+        }
+        
+        const { establishment_year, establishment_month } = result.rows[0];
+        
+        // Calculate service duration
+        const currentDate = new Date();
+        const establishmentDate = new Date(establishment_year, establishment_month - 1);
+        
+        let years = currentDate.getFullYear() - establishmentDate.getFullYear();
+        let months = currentDate.getMonth() - establishmentDate.getMonth();
+        
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        
+        client.release();
+        
+        res.json({
+            success: true,
+            serviceDuration: {
+                years,
+                months
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error calculating service duration:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error calculating service duration' 
+        });
+    }
+});
+
 module.exports = router;

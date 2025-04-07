@@ -29,6 +29,8 @@ interface Clinic {
   animal_types?: string[];
   medical_services?: string[];
   additional_services?: string[];
+  establishment_year: number;
+  establishment_month: number;
 }
 
 // Services interface
@@ -82,6 +84,7 @@ const SingleClinicPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [serviceDuration, setServiceDuration] = useState<{ years: number; months: number } | null>(null);
   
   // Fetch clinic data on component mount
   useEffect(() => {
@@ -178,6 +181,16 @@ const SingleClinicPage: React.FC = () => {
           }
         } else {
           throw new Error('Failed to fetch clinic details');
+        }
+        
+        // Fetch service duration
+        try {
+          const durationResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/service-duration`);
+          if (durationResponse.data.success) {
+            setServiceDuration(durationResponse.data.serviceDuration);
+          }
+        } catch (error) {
+          console.error('Error fetching service duration:', error);
         }
         
         // Set clinic data
@@ -576,6 +589,11 @@ const SingleClinicPage: React.FC = () => {
                 
                 {/* Contact Information */}
                 <div className="mt-3 pt-3 border-t border-gray-200">
+                  {serviceDuration && (
+                    <div className="text-gray-600 mb-1">
+                      <span className="font-medium">Service Duration:</span> {serviceDuration.years} years, {serviceDuration.months} months
+                    </div>
+                  )}
                   {clinic.phone_numbers && clinic.phone_numbers.length > 0 && (
                     <div className="text-gray-600 mb-1">
                       <span className="font-medium">Phone:</span> {clinic.phone_numbers[0].number}
