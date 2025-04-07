@@ -2194,4 +2194,118 @@ router.get('/:clinicId/service-duration', async (req, res) => {
     }
 });
 
+// Update clinic phone numbers
+router.put('/:clinicId/phone-numbers', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const { phone_numbers } = req.body;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const clinic = await Clinic.getClinicById(clinicId);
+
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to update this clinic'
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Delete existing phone numbers
+      await client.query('DELETE FROM clinic_phone_numbers WHERE clinic_id = $1', [clinicId]);
+
+      // Insert new phone numbers
+      if (phone_numbers && Array.isArray(phone_numbers)) {
+        for (const phone of phone_numbers) {
+          if (phone.type && phone.number) {
+            await client.query(
+              'INSERT INTO clinic_phone_numbers (clinic_id, phone_number, phone_type) VALUES ($1, $2, $3)',
+              [clinicId, phone.number, phone.type]
+            );
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+
+      res.status(200).json({
+        success: true,
+        message: 'Phone numbers updated successfully'
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error updating phone numbers:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
+// Update clinic social media links
+router.put('/:clinicId/social-media', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const { social_media_links } = req.body;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const clinic = await Clinic.getClinicById(clinicId);
+
+    if (!clinic || clinic.clinic_operator_id !== operator_id) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to update this clinic'
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Delete existing social media links
+      await client.query('DELETE FROM clinic_social_media WHERE clinic_id = $1', [clinicId]);
+
+      // Insert new social media links
+      if (social_media_links && Array.isArray(social_media_links)) {
+        for (const link of social_media_links) {
+          if (link.platform && link.url) {
+            await client.query(
+              'INSERT INTO clinic_social_media (clinic_id, platform, url) VALUES ($1, $2, $3)',
+              [clinicId, link.platform, link.url]
+            );
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+
+      res.status(200).json({
+        success: true,
+        message: 'Social media links updated successfully'
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error updating social media links:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;

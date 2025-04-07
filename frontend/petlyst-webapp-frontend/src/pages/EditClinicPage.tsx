@@ -303,8 +303,6 @@ const EditClinicPage: React.FC = () => {
         // Include establishment year and month instead of date
         establishment_year,
         establishment_month,
-        phone_numbers: formData.phone_numbers,
-        social_media_links: formData.social_media_links,
         tax_identification_number: formData.taxIdentificationNumber,
         veterinary_license_number: formData.veterinaryLicenseNumber,
         // Format days correctly for backend
@@ -325,6 +323,7 @@ const EditClinicPage: React.FC = () => {
         valueType: typeof requestData.clinic_time_slots
       });
       
+      // First update the main clinic data
       const response = await axios.put(`${apiUrl}/api/clinics/${clinicId}`, requestData, {
         headers: {
           'Authorization': `Bearer ${token || localStorage.getItem('token')}`
@@ -332,6 +331,31 @@ const EditClinicPage: React.FC = () => {
       });
       
       if (response.status === 200) {
+        // If we're on the contact tab, update phone numbers and social media links
+        if (activeTab === 'contact') {
+          // Update phone numbers
+          if (formData.phone_numbers) {
+            await axios.put(`${apiUrl}/api/clinics/${clinicId}/phone-numbers`, {
+              phone_numbers: formData.phone_numbers
+            }, {
+              headers: {
+                'Authorization': `Bearer ${token || localStorage.getItem('token')}`
+              }
+            });
+          }
+          
+          // Update social media links
+          if (formData.social_media_links) {
+            await axios.put(`${apiUrl}/api/clinics/${clinicId}/social-media`, {
+              social_media_links: formData.social_media_links
+            }, {
+              headers: {
+                'Authorization': `Bearer ${token || localStorage.getItem('token')}`
+              }
+            });
+          }
+        }
+        
         // Yanıtı detaylı olarak inceleyelim
         console.log('Clinic update response:', {
           status: response.status,
