@@ -512,9 +512,9 @@ async function createUserTypeProfile(userId, userType) {
         let result = null;
         
         if (userType === 'pet_owner') {
-            // Insert into petowners table
+            // Insert into pet_owners table (doğru tablo adı)
             const petOwnerQuery = {
-                text: `INSERT INTO "petowners" (pet_owner_id) 
+                text: `INSERT INTO "pet_owners" (pet_owner_id) 
                       VALUES ($1) 
                       RETURNING pet_owner_id`,
                 values: [userId]
@@ -579,7 +579,7 @@ router.post('/create-profile', authenticateToken, async (req, res) => {
         // Check if profile already exists
         if (userType === 'pet_owner') {
             const checkQuery = {
-                text: 'SELECT pet_owner_id FROM "petowners" WHERE pet_owner_id = $1',
+                text: 'SELECT pet_owner_id FROM "pet_owners" WHERE pet_owner_id = $1',
                 values: [userId]
             };
             const checkResult = await pool.query(checkQuery);

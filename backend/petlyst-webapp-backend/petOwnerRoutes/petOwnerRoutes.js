@@ -918,4 +918,402 @@ router.get('/veterinarian-expertise-areas', async (req, res) => {
   }
 });
 
+// Pet Owner Favorite Clinics Routes
+
+// Add a clinic to favorites
+router.post('/saved-clinics/:clinicId', authenticateToken, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    // Use userId from token, with fallback to id
+    const userId = req.user.userId || req.user.id;
+    console.log('Token user data:', req.user); // Debug log to see what's in the token
+
+    // Check if user is a pet_owner
+    const userTypeQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userTypeQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can favorite clinics'
+      });
+    }
+
+    // Check if the clinic exists
+    const clinicQuery = `
+      SELECT clinic_id FROM clinics WHERE clinic_id = $1
+    `;
+    const clinicResult = await pool.query(clinicQuery, [clinicId]);
+    
+    if (clinicResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+
+    // Get pet_owner_id for the user - Check if entry exists
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, create one
+    let petOwnerId;
+    if (petOwnerResult.rows.length === 0) {
+      // Create a new pet_owner record for this user
+      const createPetOwnerQuery = `
+        INSERT INTO pet_owners (pet_owner_id)
+        VALUES ($1)
+        RETURNING pet_owner_id
+      `;
+      const createResult = await pool.query(createPetOwnerQuery, [userId]);
+      petOwnerId = createResult.rows[0].pet_owner_id;
+      
+      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+    } else {
+      petOwnerId = petOwnerResult.rows[0].pet_owner_id;
+    }
+
+    // Check if already favorited
+    const checkQuery = `
+      SELECT favorite_id FROM pet_owner_favorite_clinics 
+      WHERE pet_owner_id = $1 AND clinic_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [petOwnerId, clinicId]);
+    
+    if (checkResult.rows.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Clinic is already in favorites',
+        isFavorite: true
+      });
+    }
+
+    // Add to favorites
+    const insertQuery = `
+      INSERT INTO pet_owner_favorite_clinics (pet_owner_id, clinic_id)
+      VALUES ($1, $2)
+      RETURNING favorite_id
+    `;
+    const insertResult = await pool.query(insertQuery, [petOwnerId, clinicId]);
+
+    res.status(201).json({
+      success: true,
+      message: 'Clinic added to favorites',
+      favoriteId: insertResult.rows[0].favorite_id,
+      isFavorite: true
+    });
+  } catch (error) {
+    console.error('Error adding clinic to favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while adding clinic to favorites'
+    });
+  }
+});
+
+// Remove a clinic from favorites
+router.delete('/saved-clinics/:clinicId', authenticateToken, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    // Use userId from token, with fallback to id
+    const userId = req.user.userId || req.user.id;
+    console.log('Token user data:', req.user); // Debug log to see what's in the token
+
+    // Check if user is a pet_owner
+    const userTypeQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userTypeQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can manage favorites'
+      });
+    }
+
+    // Get pet_owner_id for the user - Check if entry exists
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, this means they have no favorites
+    if (petOwnerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No favorites found for this user',
+        isFavorite: false
+      });
+    }
+    
+    const petOwnerId = petOwnerResult.rows[0].pet_owner_id;
+
+    // Delete from favorites
+    const deleteQuery = `
+      DELETE FROM pet_owner_favorite_clinics
+      WHERE pet_owner_id = $1 AND clinic_id = $2
+      RETURNING favorite_id
+    `;
+    const deleteResult = await pool.query(deleteQuery, [petOwnerId, clinicId]);
+
+    if (deleteResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found in favorites',
+        isFavorite: false
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Clinic removed from favorites',
+      isFavorite: false
+    });
+  } catch (error) {
+    console.error('Error removing clinic from favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while removing clinic from favorites'
+    });
+  }
+});
+
+// Get all favorite clinics for the authenticated pet owner
+router.get('/saved-clinics', authenticateToken, async (req, res) => {
+  try {
+    // Use userId from token, with fallback to id
+    const userId = req.user.userId || req.user.id;
+    console.log('Token user data:', req.user); // Debug log to see what's in the token
+
+    // Check if user is a pet_owner
+    const userTypeQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userTypeQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can view favorites'
+      });
+    }
+
+    // Get pet_owner_id for the user
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, create one
+    let petOwnerId;
+    if (petOwnerResult.rows.length === 0) {
+      // Create a new pet_owner record for this user
+      const createPetOwnerQuery = `
+        INSERT INTO pet_owners (pet_owner_id)
+        VALUES ($1)
+        RETURNING pet_owner_id
+      `;
+      const createResult = await pool.query(createPetOwnerQuery, [userId]);
+      petOwnerId = createResult.rows[0].pet_owner_id;
+      
+      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+      
+      // New user, so no favorites yet
+      return res.status(200).json({
+        success: true,
+        favorites: [],
+        count: 0
+      });
+    } else {
+      petOwnerId = petOwnerResult.rows[0].pet_owner_id;
+    }
+
+    // Get all favorite clinics with detailed info
+    const clinicsQuery = `
+      SELECT c.clinic_id, c.clinic_name, c.clinic_type, c.clinic_description, 
+             c.opening_time, c.closing_time, c.available_days, c.slug,
+             cl.province, cl.district, cl.clinic_address, cl.latitude, cl.longitude,
+             pfc.created_at as favorited_at
+      FROM clinics c
+      JOIN pet_owner_favorite_clinics pfc ON c.clinic_id = pfc.clinic_id
+      LEFT JOIN clinic_locations cl ON c.clinic_id = cl.clinic_id
+      WHERE pfc.pet_owner_id = $1
+      ORDER BY pfc.created_at DESC
+    `;
+    const clinicsResult = await pool.query(clinicsQuery, [petOwnerId]);
+
+    // Process clinic photos for each clinic
+    const clinics = clinicsResult.rows;
+    for (const clinic of clinics) {
+      try {
+        // Fetch photos for this clinic
+        const photosQuery = `
+          SELECT clinic_album_photo_url
+          FROM "clinic_albums"
+          WHERE clinic_id = $1
+          LIMIT 1
+        `;
+        const photosResult = await pool.query(photosQuery, [clinic.clinic_id]);
+        clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
+      } catch (error) {
+        console.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
+        clinic.photos = []; // Set empty photos array
+      }
+      
+      // Parse available_days if it's in PostgreSQL array format
+      if (clinic.available_days && typeof clinic.available_days === 'string' && 
+          clinic.available_days.startsWith('{') && clinic.available_days.endsWith('}')) {
+        clinic.available_days = clinic.available_days
+          .replace('{', '')
+          .replace('}', '')
+          .split(',')
+          .map(val => val.trim() === 't' || val.trim() === 'true');
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      favorites: clinics,
+      count: clinics.length
+    });
+  } catch (error) {
+    console.error('Error getting favorite clinics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while retrieving favorite clinics'
+    });
+  }
+});
+
+// Saved Clinics Check Endpoint
+router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    
+    // Token bilgilerini loglayalım
+    console.log('TOKEN DATA:', req.user);
+    
+    // userId kontrolünü güçlendirelim, token içinde kesin olarak userId olduğundan emin olalım
+    const userId = req.user.userId || req.user.id;
+    
+    // Kullanıcı kimliği ile ilgili bir sorun varsa erken dönüş yapalım
+    if (!userId) {
+      console.error('User ID not found in token!', req.user);
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed - no user ID',
+        isFavorite: false
+      });
+    }
+
+    // Debug: Bu kullanıcının var olup olmadığını kontrol edelim
+    const userExistsQuery = `SELECT COUNT(*) as count FROM users WHERE user_id = $1`;
+    const userExistsResult = await pool.query(userExistsQuery, [userId]);
+    
+    const userExists = parseInt(userExistsResult.rows[0].count) > 0;
+    
+    if (!userExists) {
+      console.error(`User with ID ${userId} does not exist in database`);
+      // Hemen hata dönmek yerine geçici bir çözüm olarak favorilenmemiş kabul edelim
+      return res.status(200).json({
+        success: true,
+        message: 'User does not exist in database, treated as not favorited',
+        isFavorite: false
+      });
+    }
+
+    // Check if user is a pet_owner
+    const userTypeQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userTypeQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        isFavorite: false
+      });
+    }
+    
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can check favorites',
+        isFavorite: false
+      });
+    }
+
+    // Get pet_owner_id for the user - Check if entry exists
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, create one
+    let petOwnerId;
+    if (petOwnerResult.rows.length === 0) {
+      // Create a new pet_owner record for this user
+      const createPetOwnerQuery = `
+        INSERT INTO pet_owners (pet_owner_id)
+        VALUES ($1)
+        RETURNING pet_owner_id
+      `;
+      const createResult = await pool.query(createPetOwnerQuery, [userId]);
+      petOwnerId = createResult.rows[0].pet_owner_id;
+      
+      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+    } else {
+      petOwnerId = petOwnerResult.rows[0].pet_owner_id;
+    }
+
+    // Check if clinic is in favorites
+    const checkQuery = `
+      SELECT favorite_id FROM pet_owner_favorite_clinics 
+      WHERE pet_owner_id = $1 AND clinic_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [petOwnerId, clinicId]);
+    
+    const isFavorite = checkResult.rows.length > 0;
+
+    res.status(200).json({
+      success: true,
+      isFavorite: isFavorite
+    });
+  } catch (error) {
+    console.error('Error checking favorite status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while checking favorite status',
+      isFavorite: false
+    });
+  }
+});
+
 module.exports = router;

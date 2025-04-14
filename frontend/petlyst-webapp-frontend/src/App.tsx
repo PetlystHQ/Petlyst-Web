@@ -19,6 +19,7 @@ import SearchResult from './pages/SearchResult';
 import VeterinariansListPage from './pages/VeterinariansListPage';
 import SingleVeterinarianPage from './pages/SingleVeterinarianPage';
 import SingleClinicPage from './pages/SingleClinicPage';
+import SavedClinicsPage from './pages/SavedClinicsPage';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
@@ -43,6 +44,11 @@ const AppContent: React.FC = () => {
         <Route path="/veterinarians/profile/:slug" element={<SingleVeterinarianPage />} />
         <Route path="/clinics/id/:clinicId" element={<SingleClinicPage />} />
         <Route path="/clinics/:slug" element={<SingleClinicPage />} />
+        <Route path="/saved-clinics" element={
+          <ProtectedRoute allowedUserType="pet_owner">
+            <SavedClinicsPage />
+          </ProtectedRoute>
+        } />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
