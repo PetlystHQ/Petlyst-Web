@@ -4,7 +4,7 @@ class PetOwner {
     static async createPetOwner(userId) {
         try {
             const query = {
-                text: `INSERT INTO "petowners" (pet_owner_id) 
+                text: `INSERT INTO "pet_owners" (pet_owner_id) 
                        VALUES ($1) 
                        RETURNING pet_owner_id`,
                 values: [userId]
@@ -29,7 +29,7 @@ class PetOwner {
     static async findByUserId(userId) {
         try {
             const query = {
-                text: 'SELECT * FROM "petowners" WHERE pet_owner_id = $1',
+                text: 'SELECT * FROM "pet_owners" WHERE pet_owner_id = $1',
                 values: [userId]
             };
             const result = await pool.query(query);

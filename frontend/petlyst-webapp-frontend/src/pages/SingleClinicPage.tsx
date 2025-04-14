@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import AuthModal from '../components/modals/AuthModal';
+import ResetPasswordModal from '../components/modals/ResetPasswordModal';
 
 // Clinic interface
 interface Clinic {
@@ -99,6 +101,10 @@ const SingleClinicPage: React.FC = () => {
   const [messageContent, setMessageContent] = useState('');
   const [messageStatus, setMessageStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [isSaved, setIsSaved] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteAnimation, setFavoriteAnimation] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
@@ -116,7 +122,7 @@ const SingleClinicPage: React.FC = () => {
         
         // Always fetch by slug, regardless of the path format
         console.log("Fetching clinic by slug:", paramValue);
-        const response = await axios.get(`/api/clinics/public/by-slug/${paramValue}`);
+        const response = await axiosInstance.get(`/clinics/public/by-slug/${paramValue}`);
         console.log("Clinic response:", response.data);
         
         if (response.data.success) {
@@ -134,7 +140,7 @@ const SingleClinicPage: React.FC = () => {
                 // Önce token varsa özel endpoint'i kullan
                 if (token) {
                   try {
-                    photosResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/photos`, {
+                    photosResponse = await axiosInstance.get(`/clinics/${clinicData.clinic_id}/photos`, {
                       headers: {
                         'Authorization': `Bearer ${token}`
                       }
@@ -149,7 +155,7 @@ const SingleClinicPage: React.FC = () => {
                 
                 // Token yoksa veya private endpoint başarısız olduysa public endpoint'i kullan
                 if (!photosResponse) {
-                  photosResponse = await axios.get(`/api/clinics/public/${clinicData.clinic_id}/photos`);
+                  photosResponse = await axiosInstance.get(`/clinics/public/${clinicData.clinic_id}/photos`);
                   console.log("Photos response from public endpoint:", photosResponse.data);
                 }
                 
@@ -164,7 +170,7 @@ const SingleClinicPage: React.FC = () => {
               
               // Fetch veterinarians
               try {
-                const vetsResponse = await axios.get(`/api/pet-owners/clinics/${clinicData.clinic_id}/public-veterinarians`);
+                const vetsResponse = await axiosInstance.get(`/pet-owners/clinics/${clinicData.clinic_id}/public-veterinarians`);
                 console.log("Veterinarians response:", vetsResponse.data);
                 if (vetsResponse.data.success) {
                   setVeterinarians(vetsResponse.data.veterinarians || []);
@@ -183,7 +189,7 @@ const SingleClinicPage: React.FC = () => {
               } else {
                 // Fetch clinic services if not already in the clinic data
                 try {
-                  const servicesResponse = await axios.get(`/api/pet-owners/clinics/${clinicData.clinic_id}/services`);
+                  const servicesResponse = await axiosInstance.get(`/pet-owners/clinics/${clinicData.clinic_id}/services`);
                   if (servicesResponse.data.success) {
                     setServices(servicesResponse.data.services);
                   }
@@ -202,7 +208,7 @@ const SingleClinicPage: React.FC = () => {
         
         // Fetch service duration
         try {
-          const durationResponse = await axios.get(`/api/clinics/${clinicData.clinic_id}/service-duration`);
+          const durationResponse = await axiosInstance.get(`/clinics/${clinicData.clinic_id}/service-duration`);
           if (durationResponse.data.success) {
             setServiceDuration(durationResponse.data.serviceDuration);
           }
@@ -223,6 +229,45 @@ const SingleClinicPage: React.FC = () => {
     
     fetchClinicData();
   }, [paramValue, token]);
+  
+  // Separate useEffect to check favorite status when clinic data is loaded
+  useEffect(() => {
+    // Only run this if the clinic is loaded and user is logged in
+    if (clinic && token) {
+      const checkFavoriteStatus = async () => {
+        try {
+          // Add debug logs
+          console.log("Making favorite check request for clinic ID:", clinic.clinic_id);
+          console.log("Using token:", token);
+          console.log("Clinic details:", clinic);
+          
+          // IMPORTANT: Use axiosInstance instead of direct axios calls
+          const favoriteCheckResponse = await axiosInstance.get(`/pet-owners/saved-clinics/${clinic.clinic_id}/check`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (favoriteCheckResponse.data.success) {
+            setIsSaved(favoriteCheckResponse.data.isFavorite);
+          }
+        } catch (favoriteError: any) {
+          console.warn("Could not check favorite status:", favoriteError);
+          // Log more details about the error
+          console.error("Error details:", favoriteError.message);
+          console.error("Error config:", favoriteError.config);
+          console.error("Error response:", favoriteError.response?.data);
+          // Don't show error to user, silently fail and assume not favorited
+          setIsSaved(false);
+        }
+      };
+      
+      checkFavoriteStatus();
+    } else {
+      // If user not logged in, always set to not favorited
+      setIsSaved(false);
+    }
+  }, [clinic, token]);
   
   // Format day names
   const getDayName = (index: number): string => {
@@ -361,24 +406,106 @@ const SingleClinicPage: React.FC = () => {
       .replace(/-+$/, '');       // Trim hyphens from end
   };
   
-  // Add save clinic function
+  // Handle forgot password
+  const handleForgotPassword = () => {
+    setIsAuthModalOpen(false);
+    setIsResetPasswordModalOpen(true);
+  };
+
+  // Handle back to login
+  const handleBackToLogin = () => {
+    setIsResetPasswordModalOpen(false);
+    setIsAuthModalOpen(true);
+  };
+  
+  // Update handleSaveClinic function
   const handleSaveClinic = async () => {
+    if (!clinic) return;
+    
+    // If not logged in, open auth modal instead of redirecting
+    if (!token) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    // Add debug logs
+    console.log("Attempting to save/unsave clinic with ID:", clinic.clinic_id);
+    console.log("Current saved status:", isSaved);
+    console.log("Using token:", token);
+    
+    setFavoriteLoading(true);
+
     try {
-      const response = await axios.post(
-        `http://localhost:3000/api/pet-owners/saved-clinics/${clinic?.clinic_id}`,
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
+      if (isSaved) {
+        // Remove from favorites using axiosInstance
+        const response = await axiosInstance.delete(
+          `/pet-owners/saved-clinics/${clinic.clinic_id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
           }
+        );
+        
+        console.log("Delete favorite response:", response.data);
+        
+        if (response.data.success) {
+          setIsSaved(false);
+          // Trigger animation
+          setFavoriteAnimation(true);
+          setTimeout(() => setFavoriteAnimation(false), 500);
         }
-      );
-      
-      if (response.data.success) {
-        setIsSaved(true);
+      } else {
+        // Add to favorites using axiosInstance
+        const response = await axiosInstance.post(
+          `/pet-owners/saved-clinics/${clinic.clinic_id}`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        console.log("Add favorite response:", response.data);
+        
+        if (response.data.success) {
+          setIsSaved(true);
+          // Trigger animation
+          setFavoriteAnimation(true);
+          setTimeout(() => setFavoriteAnimation(false), 500);
+        }
       }
-    } catch (error) {
-      console.error('Error saving clinic:', error);
+    } catch (error: any) {
+      console.error('Error toggling favorite status:', error);
+      // More detailed error logging
+      console.error("Error details:", error.message);
+      console.error("Error config:", error.config);
+      console.error("Error response:", error.response?.data);
+      
+      // More specific error messages based on the response
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        // Handle different error codes
+        if (status === 403) {
+          alert(data.message || 'Only pet owners can favorite clinics');
+        } else if (status === 404) {
+          alert(data.message || 'Clinic or user not found');
+        } else if (status === 500) {
+          alert('Server error. Please try again later.');
+        } else {
+          alert(data.message || 'An error occurred. Please try again later.');
+        }
+      } else if (error.request) {
+        // Network error - request was made but no response received
+        alert('Network error. Please check your connection and try again.');
+      } else {
+        // Other errors
+        alert('An error occurred. Please try again later.');
+      }
+    } finally {
+      setFavoriteLoading(false);
     }
   };
   
@@ -459,7 +586,8 @@ const SingleClinicPage: React.FC = () => {
               }
               
               try {
-                const response = await axios.post(`http://localhost:3000/api/clinics/${clinic?.clinic_id}/send-message`, {
+                // Use axiosInstance for the message endpoint as well
+                const response = await axiosInstance.post(`/clinics/${clinic?.clinic_id}/send-message`, {
                   message: messageContent,
                   senderId: user?.id // Use id instead of user_id
                 }, {
@@ -582,28 +710,37 @@ const SingleClinicPage: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveClinic}
+                    disabled={favoriteLoading}
                     className={`${
                       isSaved 
                         ? 'bg-red-50 text-red-600 hover:bg-red-100' 
                         : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    } font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors min-w-[44px]`}
+                    } font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors min-w-[44px] ${
+                      favoriteAnimation ? 'animate-pulse' : ''
+                    }`}
                   >
-                    <svg 
-                      className="w-5 h-5" 
-                      fill={isSaved ? "currentColor" : "none"} 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth="2" 
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                    <span className="ml-2 hidden sm:inline">
-                      {isSaved ? 'Favorited' : 'Favorite'}
-                    </span>
+                    {favoriteLoading ? (
+                      <div className="w-5 h-5 border-2 border-t-transparent border-current rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <svg 
+                          className={`w-5 h-5 ${favoriteAnimation ? 'scale-125 transition-transform' : ''}`}
+                          fill={isSaved ? "currentColor" : "none"} 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth="2" 
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                        <span className="ml-2 hidden sm:inline">
+                          {isSaved ? 'Favorited' : 'Favorite'}
+                        </span>
+                      </>
+                    )}
                   </button>
                   
                   <button
@@ -1048,6 +1185,18 @@ const SingleClinicPage: React.FC = () => {
         </div>
       )}
       {showMessageModal && <MessageModal />}
+      
+      {/* Add auth modals at the bottom of the component */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onForgotPassword={handleForgotPassword}
+      />
+      <ResetPasswordModal
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => setIsResetPasswordModalOpen(false)}
+        onBackToLogin={handleBackToLogin}
+      />
     </div>
   );
 };
