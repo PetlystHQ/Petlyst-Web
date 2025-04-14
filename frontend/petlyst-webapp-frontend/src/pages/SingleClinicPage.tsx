@@ -70,6 +70,7 @@ interface User {
   email: string;
   name: string;
   surname: string;
+  user_type?: string; // Add user_type property
   // Remove user_id as it's not needed
 }
 
@@ -108,6 +109,9 @@ const SingleClinicPage: React.FC = () => {
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
+  
+  // Check if user is a veterinarian
+  const isVeterinarian = user?.user_type === 'veterinarian';
   
   // Fetch clinic data on component mount
   useEffect(() => {
@@ -232,8 +236,8 @@ const SingleClinicPage: React.FC = () => {
   
   // Separate useEffect to check favorite status when clinic data is loaded
   useEffect(() => {
-    // Only run this if the clinic is loaded and user is logged in
-    if (clinic && token) {
+    // Only run this if the clinic is loaded and user is logged in and NOT a veterinarian
+    if (clinic && token && !isVeterinarian) {
       const checkFavoriteStatus = async () => {
         try {
           // Add debug logs
@@ -264,10 +268,10 @@ const SingleClinicPage: React.FC = () => {
       
       checkFavoriteStatus();
     } else {
-      // If user not logged in, always set to not favorited
+      // If user not logged in or is a veterinarian, always set to not favorited
       setIsSaved(false);
     }
-  }, [clinic, token]);
+  }, [clinic, token, isVeterinarian]);
   
   // Format day names
   const getDayName = (index: number): string => {
@@ -708,40 +712,43 @@ const SingleClinicPage: React.FC = () => {
                 
                 {/* Secondary Actions Group */}
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveClinic}
-                    disabled={favoriteLoading}
-                    className={`${
-                      isSaved 
-                        ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    } font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors min-w-[44px] ${
-                      favoriteAnimation ? 'animate-pulse' : ''
-                    }`}
-                  >
-                    {favoriteLoading ? (
-                      <div className="w-5 h-5 border-2 border-t-transparent border-current rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <svg 
-                          className={`w-5 h-5 ${favoriteAnimation ? 'scale-125 transition-transform' : ''}`}
-                          fill={isSaved ? "currentColor" : "none"} 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth="2" 
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                        <span className="ml-2 hidden sm:inline">
-                          {isSaved ? 'Favorited' : 'Favorite'}
-                        </span>
-                      </>
-                    )}
-                  </button>
+                  {/* Only show favorite button for pet owners or non-logged-in users */}
+                  {!isVeterinarian && (
+                    <button
+                      onClick={handleSaveClinic}
+                      disabled={favoriteLoading}
+                      className={`${
+                        isSaved 
+                          ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      } font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors min-w-[44px] ${
+                        favoriteAnimation ? 'animate-pulse' : ''
+                      }`}
+                    >
+                      {favoriteLoading ? (
+                        <div className="w-5 h-5 border-2 border-t-transparent border-current rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <svg 
+                            className={`w-5 h-5 ${favoriteAnimation ? 'scale-125 transition-transform' : ''}`}
+                            fill={isSaved ? "currentColor" : "none"} 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth="2" 
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                          <span className="ml-2 hidden sm:inline">
+                            {isSaved ? 'Favorited' : 'Favorite'}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
                   
                   <button
                     onClick={() => setShowMessageModal(true)}
