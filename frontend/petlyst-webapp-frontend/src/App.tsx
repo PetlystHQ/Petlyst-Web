@@ -15,6 +15,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import ClinicPreviewPage from './pages/ClinicPreviewPage';
 import EditClinicPage from './pages/EditClinicPage';
 import ManagementDashboard from './pages/ManagementDashboard';
+import PetOwnerDashboard from './pages/PetOwnerDashboard';
 import SearchResult from './pages/SearchResult';
 import VeterinariansListPage from './pages/VeterinariansListPage';
 import SingleVeterinarianPage from './pages/SingleVeterinarianPage';
@@ -27,7 +28,8 @@ const AppContent: React.FC = () => {
   const isDashboard = location.pathname === '/dashboard' || 
                       location.pathname === '/add-clinic' || 
                       location.pathname.startsWith('/edit-clinic/') ||
-                      location.pathname.startsWith('/management-dashboard');
+                      location.pathname.startsWith('/management-dashboard') ||
+                      location.pathname === '/pet-owner-dashboard';
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isClinicPreview = location.pathname.startsWith('/clinic-preview/');
 
@@ -47,6 +49,11 @@ const AppContent: React.FC = () => {
         <Route path="/saved-clinics" element={
           <ProtectedRoute allowedUserType="pet_owner">
             <SavedClinicsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/pet-owner-dashboard" element={
+          <ProtectedRoute allowedUserType="pet_owner">
+            <PetOwnerDashboard />
           </ProtectedRoute>
         } />
         <Route path="/admin/login" element={<AdminLogin />} />
