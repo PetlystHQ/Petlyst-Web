@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { useAppDispatch } from '../hooks/useAppDispatch';
+import { logout } from '../store/slices/authSlice';
 import { RootState } from '../store';
 import axiosInstance from '../utils/axiosConfig';
 import {
-  HomeIcon,
   UserCircleIcon,
   HeartIcon,
   CalendarIcon,
   EnvelopeIcon,
   PlusCircleIcon,
   ArrowLeftOnRectangleIcon,
-
   ChevronRightIcon,
   ChevronLeftIcon
 } from '@heroicons/react/24/outline';
@@ -75,11 +75,12 @@ interface Message {
 
 const PetOwnerDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const token = useSelector((state: RootState) => state.auth.token);
   
   // States
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [activeTab, setActiveTab] = useState<string>('profile');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [pets, setPets] = useState<Pet[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -90,11 +91,6 @@ const PetOwnerDashboard: React.FC = () => {
   
   // Menu Items
   const menuItems: MenuItem[] = [
-    {
-      name: 'Overview',
-      icon: <HomeIcon className="w-5 h-5" />,
-      onClick: () => setActiveTab('overview')
-    },
     {
       name: 'My Profile',
       icon: <UserCircleIcon className="w-5 h-5" />,
@@ -119,11 +115,6 @@ const PetOwnerDashboard: React.FC = () => {
       name: 'Messages',
       icon: <EnvelopeIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('messages')
-    },
-    {
-      name: 'Logout',
-      icon: <ArrowLeftOnRectangleIcon className="w-5 h-5" />,
-      onClick: () => handleLogout()
     }
   ];
   
@@ -145,14 +136,6 @@ const PetOwnerDashboard: React.FC = () => {
     try {
       // Fetch data based on active tab
       switch (activeTab) {
-        case 'overview':
-          await Promise.all([
-            fetchPets(),
-            fetchAppointments(),
-            fetchSavedClinics(),
-            fetchMessages()
-          ]);
-          break;
         case 'pets':
           await fetchPets();
           break;
@@ -250,8 +233,10 @@ const PetOwnerDashboard: React.FC = () => {
   
   // Handle logout
   const handleLogout = () => {
-    // Implement logout logic
-    navigate('/login');
+    // Dispatch the logout action to clear auth state
+    dispatch(logout());
+    // Navigate to home page instead of login
+    navigate('/');
   };
   
   // Format date
@@ -266,151 +251,6 @@ const PetOwnerDashboard: React.FC = () => {
       month: 'long',
       day: 'numeric'
     });
-  };
-  
-  // Render overview content
-  const renderOverview = () => {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Welcome, {user?.name}!</h2>
-          <p className="text-gray-600 mb-4">Here's a summary of your account:</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600 font-medium">Pets</p>
-                  <p className="text-2xl font-bold text-blue-800">{pets.length}</p>
-                </div>
-                <PlusCircleIcon className="w-10 h-10 text-blue-500" />
-              </div>
-            </div>
-            
-            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600 font-medium">Appointments</p>
-                  <p className="text-2xl font-bold text-green-800">{appointments.length}</p>
-                </div>
-                <CalendarIcon className="w-10 h-10 text-green-500" />
-              </div>
-            </div>
-            
-            <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-600 font-medium">Saved Clinics</p>
-                  <p className="text-2xl font-bold text-red-800">{savedClinics.length}</p>
-                </div>
-                <HeartIcon className="w-10 h-10 text-red-500" />
-              </div>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Messages</p>
-                  <p className="text-2xl font-bold text-purple-800">{messages.length}</p>
-                </div>
-                <EnvelopeIcon className="w-10 h-10 text-purple-500" />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Upcoming Appointments */}
-        {appointments.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Upcoming Appointments</h2>
-            <div className="space-y-4">
-              {appointments
-                .filter(appointment => appointment.appointment_status === 'confirmed')
-                .slice(0, 3)
-                .map(appointment => (
-                  <div key={appointment.appointment_id} className="border-l-4 border-green-500 pl-4 py-2">
-                    <p className="font-semibold text-gray-800">{appointment.clinic_name}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatDate(appointment.appointment_date)} at {appointment.appointment_time}
-                    </p>
-                    {appointment.veterinarian_name && (
-                      <p className="text-sm text-gray-500">
-                        With Dr. {appointment.veterinarian_name} {appointment.veterinarian_surname}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              <button 
-                onClick={() => setActiveTab('appointments')}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                View all appointments
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* Recent Saved Clinics */}
-        {savedClinics.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Recently Saved Clinics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {savedClinics.slice(0, 4).map(clinic => (
-                <div 
-                  key={clinic.clinic_id} 
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer"
-                  onClick={() => navigate(`/clinics/${clinic.slug || clinic.clinic_id}`)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{clinic.clinic_name}</h3>
-                      <p className="text-sm text-gray-600">{clinic.province}, {clinic.district}</p>
-                      {formatDate(clinic.saved_at) && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Saved on {formatDate(clinic.saved_at)}
-                        </p>
-                      )}
-                    </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveFavorite(clinic.clinic_id);
-                      }}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <SolidHeartIcon className="w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-4">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      {clinic.clinic_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </span>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/booking/${clinic.clinic_id}`);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Book Appointment
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {savedClinics.length > 4 && (
-              <button 
-                onClick={() => setActiveTab('savedClinics')}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-4 block"
-              >
-                View all saved clinics
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    );
   };
   
   // Render profile content
@@ -732,8 +572,6 @@ const PetOwnerDashboard: React.FC = () => {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':
-        return renderOverview();
       case 'profile':
         return renderProfile();
       case 'pets':
@@ -745,7 +583,7 @@ const PetOwnerDashboard: React.FC = () => {
       case 'messages':
         return renderMessages();
       default:
-        return renderOverview();
+        return renderProfile();
     }
   };
   
@@ -754,7 +592,7 @@ const PetOwnerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <div className="flex">
         {/* Sidebar */}
-        <div className={`bg-white shadow-md ${sidebarOpen ? 'w-64' : 'w-20'} min-h-screen transition-all duration-300 ease-in-out`}>
+        <div className={`bg-white shadow-md ${sidebarOpen ? 'w-64' : 'w-20'} min-h-screen transition-all duration-300 ease-in-out flex flex-col`}>
           <div className="p-4 flex items-center justify-between border-b border-gray-200">
             <h1 className={`text-xl font-bold text-gray-800 ${!sidebarOpen && 'hidden'}`}>Pet Owner Portal</h1>
             <button 
@@ -769,7 +607,7 @@ const PetOwnerDashboard: React.FC = () => {
             </button>
           </div>
           
-          <nav className="mt-6">
+          <nav className="mt-6 flex-grow">
             <ul className="space-y-2 px-4">
               {menuItems.map((item, index) => (
                 <li key={index}>
@@ -788,6 +626,18 @@ const PetOwnerDashboard: React.FC = () => {
               ))}
             </ul>
           </nav>
+          
+          {/* Logout button at the bottom */}
+          <div className="mt-auto mb-8 px-4">
+            <button
+              onClick={handleLogout}
+              className={`flex items-center w-full px-3 py-2 rounded-md transition-colors
+                bg-red-100 text-red-700 hover:bg-red-200`}
+            >
+              <span className="mr-3"><ArrowLeftOnRectangleIcon className="w-5 h-5" /></span>
+              {sidebarOpen && <span>Logout</span>}
+            </button>
+          </div>
         </div>
         
         {/* Main Content */}
