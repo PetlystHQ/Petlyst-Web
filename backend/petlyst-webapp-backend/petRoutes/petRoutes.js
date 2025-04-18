@@ -15,9 +15,21 @@ router.get('/my-pets', authenticateToken, async (req, res) => {
         const ownerId = req.user.userId;
         const pets = await Pet.getPetsByOwnerId(ownerId);
 
+        // Transform pet data for frontend compatibility if needed
+        const transformedPets = pets.map(pet => ({
+            pet_id: pet.id,
+            pet_name: pet.name,
+            pet_type: pet.species, // Frontend uses pet_type instead of species
+            pet_breed: pet.breed,
+            pet_birth_date: pet.birth_date,
+            pet_gender: pet.gender,
+            pet_owner_id: pet.pet_owner_id,
+            pet_profile_photo: pet.photo // Frontend uses pet_profile_photo
+        }));
+
         res.json({
             success: true,
-            pets: pets
+            pets: transformedPets
         });
     } catch (error) {
         console.error('Error fetching pets:', error);
@@ -53,9 +65,21 @@ router.get('/:petId', authenticateToken, async (req, res) => {
             });
         }
         
+        // Transform pet data for frontend compatibility
+        const transformedPet = {
+            pet_id: pet.id,
+            pet_name: pet.name,
+            pet_type: pet.species, // Frontend uses pet_type instead of species
+            pet_breed: pet.breed,
+            pet_birth_date: pet.birth_date,
+            pet_gender: pet.gender,
+            pet_owner_id: pet.pet_owner_id,
+            pet_profile_photo: pet.photo // Frontend uses pet_profile_photo
+        };
+        
         res.json({
             success: true,
-            pet: pet
+            pet: transformedPet
         });
     } catch (error) {
         console.error('Error fetching pet:', error);
@@ -79,7 +103,7 @@ router.post('/add', authenticateToken, async (req, res) => {
         }
 
         const ownerId = req.user.userId;
-        const { name, species, breed, birth_date, photo } = req.body;
+        const { name, species, breed, birth_date, gender, photo } = req.body;
 
         // Validate required fields
         if (!name || !species || !breed) {
@@ -90,12 +114,24 @@ router.post('/add', authenticateToken, async (req, res) => {
         }
 
         // Create new pet
-        const newPet = await Pet.createPet(ownerId, name, species, breed, birth_date, photo);
+        const newPet = await Pet.createPet(ownerId, name, species, breed, birth_date, gender, photo);
+
+        // Transform for frontend
+        const transformedPet = {
+            pet_id: newPet.id,
+            pet_name: newPet.name,
+            pet_type: newPet.species,
+            pet_breed: newPet.breed,
+            pet_birth_date: newPet.birth_date,
+            pet_gender: newPet.gender,
+            pet_owner_id: newPet.pet_owner_id,
+            pet_profile_photo: newPet.photo
+        };
 
         res.status(201).json({
             success: true,
             message: 'Pet added successfully',
-            pet: newPet
+            pet: transformedPet
         });
     } catch (error) {
         console.error('Error adding pet:', error);
@@ -112,7 +148,16 @@ router.put('/:petId', authenticateToken, async (req, res) => {
     try {
         const { petId } = req.params;
         const userId = req.user.userId;
-        const updateData = req.body;
+        const { name, species, breed, birth_date, gender, photo } = req.body;
+        
+        // Prepare update data
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (species) updateData.species = species;
+        if (breed) updateData.breed = breed;
+        if (birth_date) updateData.birth_date = birth_date;
+        if (gender) updateData.gender = gender;
+        if (photo !== undefined) updateData.photo = photo;
 
         // Check if pet exists and belongs to the user
         const pet = await Pet.getPetById(petId);
@@ -135,10 +180,22 @@ router.put('/:petId', authenticateToken, async (req, res) => {
         // Update pet
         const updatedPet = await Pet.updatePet(petId, updateData);
 
+        // Transform for frontend
+        const transformedPet = {
+            pet_id: updatedPet.id,
+            pet_name: updatedPet.name,
+            pet_type: updatedPet.species,
+            pet_breed: updatedPet.breed,
+            pet_birth_date: updatedPet.birth_date,
+            pet_gender: updatedPet.gender,
+            pet_owner_id: updatedPet.pet_owner_id,
+            pet_profile_photo: updatedPet.photo
+        };
+
         res.json({
             success: true,
             message: 'Pet updated successfully',
-            pet: updatedPet
+            pet: transformedPet
         });
     } catch (error) {
         console.error('Error updating pet:', error);
