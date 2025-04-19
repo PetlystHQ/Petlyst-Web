@@ -3,6 +3,26 @@ const router = express.Router();
 const Pet = require('../models/petModel');
 const authenticateToken = require('../middleware/authenticateToken');
 const pool = require('../config/db');
+// Add new imports for file uploading
+const multer = require('multer');
+const s3Service = require('../aws/s3Service');
+const { uploadPetPhoto, deletePetPhoto } = s3Service;
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
 
 // Get all pets for the authenticated user (pet owner)
 router.get('/my-pets', authenticateToken, async (req, res) => {
@@ -91,8 +111,8 @@ router.get('/:petId', authenticateToken, async (req, res) => {
     }
 });
 
-// Add a new pet
-router.post('/add', authenticateToken, async (req, res) => {
+// Update the add pet route to handle file uploads
+router.post('/add', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
         // Check if the user is a pet owner
         if (req.user.userType !== 'pet_owner') {
@@ -103,7 +123,7 @@ router.post('/add', authenticateToken, async (req, res) => {
         }
 
         const ownerId = req.user.userId;
-        const { name, species, breed, birth_date, gender, photo } = req.body;
+        const { name, species, breed, birth_date, gender } = req.body;
 
         // Validate required fields
         if (!name || !species || !breed) {
@@ -113,8 +133,26 @@ router.post('/add', authenticateToken, async (req, res) => {
             });
         }
 
-        // Create new pet
-        const newPet = await Pet.createPet(ownerId, name, species, breed, birth_date, gender, photo);
+        let photoUrl = null;
+        
+        // Upload photo to S3 if provided
+        if (req.file) {
+            try {
+                const uploadResult = await uploadPetPhoto(req.file, ownerId, name);
+                photoUrl = uploadResult.url;
+                console.log('Pet photo uploaded successfully:', photoUrl);
+            } catch (uploadError) {
+                console.error('Failed to upload pet photo:', uploadError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to upload pet photo. Please try again.',
+                    error: uploadError.message
+                });
+            }
+        }
+
+        // Create new pet with the S3 photo URL
+        const newPet = await Pet.createPet(ownerId, name, species, breed, birth_date, gender, photoUrl);
 
         // Transform for frontend
         const transformedPet = {
@@ -143,22 +181,13 @@ router.post('/add', authenticateToken, async (req, res) => {
     }
 });
 
-// Update a pet
-router.put('/:petId', authenticateToken, async (req, res) => {
+// Update the update pet route to handle file uploads
+router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
         const { petId } = req.params;
         const userId = req.user.userId;
-        const { name, species, breed, birth_date, gender, photo } = req.body;
+        const { name, species, breed, birth_date, gender, removePhoto } = req.body;
         
-        // Prepare update data
-        const updateData = {};
-        if (name) updateData.name = name;
-        if (species) updateData.species = species;
-        if (breed) updateData.breed = breed;
-        if (birth_date) updateData.birth_date = birth_date;
-        if (gender) updateData.gender = gender;
-        if (photo !== undefined) updateData.photo = photo;
-
         // Check if pet exists and belongs to the user
         const pet = await Pet.getPetById(petId);
         
@@ -177,7 +206,59 @@ router.put('/:petId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Update pet
+        // Prepare update data
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (species) updateData.species = species;
+        if (breed) updateData.breed = breed;
+        if (birth_date) updateData.birth_date = birth_date;
+        if (gender) updateData.gender = gender;
+        
+        // Handle photo update logic
+        if (req.file) {
+            try {
+                // Delete old photo if exists
+                if (pet.photo) {
+                    try {
+                        // Extract key from URL
+                        const key = pet.photo.split('.com/')[1];
+                        await deletePetPhoto(key).catch(err => {
+                            console.warn('Failed to delete old pet photo:', err);
+                            // Continue even if delete fails
+                        });
+                    } catch (deleteError) {
+                        console.warn('Error processing photo URL:', deleteError);
+                    }
+                }
+                
+                // Upload new photo (use the updated name if it exists, otherwise use existing name)
+                const petName = name || pet.name;
+                const uploadResult = await uploadPetPhoto(req.file, pet.pet_owner_id, petName);
+                updateData.photo = uploadResult.url;
+                console.log('Pet photo updated successfully:', updateData.photo);
+            } catch (uploadError) {
+                console.error('Failed to upload pet photo:', uploadError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to upload pet photo. Please try again.',
+                    error: uploadError.message
+                });
+            }
+        } else if (removePhoto === 'true' && pet.photo) {
+            // Handle photo removal if explicitly requested
+            try {
+                // Extract key from URL
+                const key = pet.photo.split('.com/')[1];
+                await deletePetPhoto(key).catch(err => {
+                    console.warn('Failed to delete pet photo:', err);
+                });
+                updateData.photo = null;
+            } catch (deleteError) {
+                console.warn('Error processing photo URL for deletion:', deleteError);
+            }
+        }
+
+        // Update pet with all the changes
         const updatedPet = await Pet.updatePet(petId, updateData);
 
         // Transform for frontend
@@ -231,7 +312,25 @@ router.delete('/:petId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Delete pet
+        // Delete the pet photo from S3 if exists
+        if (pet.photo) {
+            try {
+                console.log('Deleting pet photo from S3:', pet.photo);
+                // Extract key from URL
+                const key = pet.photo.split('.com/')[1];
+                if (key) {
+                    await deletePetPhoto(key).catch(err => {
+                        console.warn('Failed to delete pet photo from S3:', err);
+                        // Continue even if photo deletion fails
+                    });
+                }
+            } catch (deleteError) {
+                console.warn('Error processing photo URL for deletion:', deleteError);
+                // Continue with pet deletion even if photo deletion fails
+            }
+        }
+
+        // Delete pet from database
         await Pet.deletePet(petId);
 
         res.json({

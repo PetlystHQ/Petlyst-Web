@@ -685,6 +685,200 @@ class S3Service {
       throw new Error(`Failed to delete veterinarian folder: ${error.message}`);
     }
   }
+
+  /**
+   * Generate a folder path for pet photos
+   * @param {string} petOwnerId - The ID of the pet owner
+   * @param {string} petName - The name of the pet
+   * @returns {string} - The folder path
+   */
+  getPetPhotoPath(petOwnerId, petName) {
+    // Create folder path in the specified format: pet-photos/petowner-{id}/{pet_name}
+    const ownerFolder = `petowner-${petOwnerId}`;
+    
+    // Sanitize pet name to be used in URL path
+    const sanitizedPetName = petName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    console.log('Final pet photo path:', `pet-photos/${ownerFolder}/${sanitizedPetName}`);
+    return `pet-photos/${ownerFolder}/${sanitizedPetName}`;
+  }
+
+  /**
+   * Upload a pet photo to S3
+   * @param {object} file - The file object containing buffer, mimetype, and original name
+   * @param {string} petOwnerId - The ID of the pet owner
+   * @param {string} petName - The name of the pet
+   * @returns {Promise<object>} - Object containing the URL and key of the uploaded file
+   */
+  async uploadPetPhoto(file, petOwnerId, petName) {
+    try {
+      console.log('=========== STARTING PET PHOTO S3 UPLOAD PROCESS ===========');
+      console.log('Upload parameters:', { 
+        fileName: file.originalname, 
+        contentType: file.mimetype, 
+        petOwnerId, 
+        petName 
+      });
+      console.log('File buffer length:', file.buffer ? file.buffer.length : 'undefined');
+      
+      if (!file.buffer || file.buffer.length === 0) {
+        throw new Error('Empty file buffer provided');
+      }
+      
+      if (!file.originalname) {
+        throw new Error('No filename provided');
+      }
+      
+      if (!petOwnerId || !petName) {
+        throw new Error('Missing pet or owner information');
+      }
+      
+      // Get the file extension
+      const fileExtension = file.originalname.split('.').pop() || 'jpg';
+      
+      // Generate the path for the pet photo
+      const folderPath = this.getPetPhotoPath(petOwnerId, petName);
+      
+      // For pet photos, we'll use the pet name directly with file extension
+      const uniqueFileName = `${petName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${fileExtension}`;
+      const fullPath = `${folderPath}.${fileExtension}`;
+      
+      console.log('IMPORTANT - Full path for S3 object:', fullPath);
+      console.log('Folder structure:', {
+        bucket: s3Config.bucket,
+        mainFolder: 'pet-photos',
+        ownerFolder: `petowner-${petOwnerId}`,
+        filename: uniqueFileName
+      });
+
+      const params = {
+        Bucket: s3Config.bucket,
+        Key: fullPath,
+        Body: file.buffer,
+        ContentType: file.mimetype
+      };
+
+      try {
+        console.log('Initiating S3 upload...');
+        const result = await s3.upload(params).promise();
+        console.log('S3 upload completed successfully:', {
+          ETag: result.ETag,
+          Location: result.Location,
+          Key: result.Key,
+          Bucket: result.Bucket
+        });
+        
+        // Manually construct URL for consistency
+        const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
+        console.log('Manually constructed URL:', manualUrl);
+        
+        return {
+          url: manualUrl,
+          key: fullPath,
+          s3Location: result.Location // For debugging
+        };
+      } catch (uploadError) {
+        console.error('S3 upload error:', {
+          message: uploadError.message,
+          code: uploadError.code,
+          region: s3Config.region,
+          bucket: s3Config.bucket
+        });
+        throw uploadError;
+      }
+    } catch (error) {
+      console.error('Error uploading pet photo to S3:', {
+        error: error.message,
+        code: error.code,
+        statusCode: error.statusCode,
+        requestId: error.requestId,
+        stack: error.stack
+      });
+      throw new Error(`Failed to upload pet photo to S3: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete a pet photo from S3
+   * @param {string} key - The key of the file to delete
+   * @returns {Promise<void>}
+   */
+  async deletePetPhoto(key) {
+    try {
+      const params = {
+        Bucket: s3Config.bucket,
+        Key: key
+      };
+
+      await s3.deleteObject(params).promise();
+      console.log(`Successfully deleted pet photo with key: ${key}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting pet photo from S3:', error);
+      throw new Error('Failed to delete pet photo from S3');
+    }
+  }
+
+  /**
+   * Delete all photos for a specific pet owner
+   * @param {string} petOwnerId - The ID of the pet owner
+   * @returns {Promise<object>} - Result of the deletion operation
+   */
+  async deletePetOwnerPhotos(petOwnerId) {
+    try {
+      console.log(`Starting deletion of all photos for pet owner ID: ${petOwnerId}`);
+      const folderPath = `pet-photos/petowner-${petOwnerId}`;
+      
+      // List all objects in the folder
+      const listParams = {
+        Bucket: s3Config.bucket,
+        Prefix: folderPath + '/'
+      };
+
+      console.log('Listing objects with params:', listParams);
+      const listedObjects = await s3.listObjectsV2(listParams).promise();
+      
+      if (listedObjects.Contents && listedObjects.Contents.length > 0) {
+        console.log(`Found ${listedObjects.Contents.length} objects to delete`);
+        
+        // Delete all objects in a single operation
+        const deleteParams = {
+          Bucket: s3Config.bucket,
+          Delete: {
+            Objects: listedObjects.Contents.map(obj => ({ Key: obj.Key })),
+            Quiet: false
+          }
+        };
+        
+        console.log(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
+        const deleteResult = await s3.deleteObjects(deleteParams).promise();
+        
+        if (deleteResult.Errors && deleteResult.Errors.length > 0) {
+          console.error('Error deleting some objects:', deleteResult.Errors);
+          throw new Error(`Failed to delete some pet photos: ${deleteResult.Errors.length} errors occurred`);
+        }
+        
+        return {
+          success: true,
+          deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0
+        };
+      } else {
+        console.log(`No objects found in folder ${folderPath}`);
+        return {
+          success: true,
+          deletedCount: 0,
+          message: "No objects found to delete"
+        };
+      }
+    } catch (error) {
+      console.error('Error deleting pet owner photos:', error);
+      throw new Error(`Failed to delete pet owner photos: ${error.message}`);
+    }
+  }
 }
 
 // Export both the class and an instance
@@ -702,3 +896,7 @@ module.exports.getVeterinarianPhotoPath = s3ServiceInstance.getVeterinarianPhoto
 module.exports.uploadVeterinarianPhoto = s3ServiceInstance.uploadVeterinarianPhoto.bind(s3ServiceInstance);
 module.exports.deleteVeterinarianPhoto = s3ServiceInstance.deleteVeterinarianPhoto.bind(s3ServiceInstance);
 module.exports.deleteVeterinarianFolder = s3ServiceInstance.deleteVeterinarianFolder.bind(s3ServiceInstance);
+module.exports.getPetPhotoPath = s3ServiceInstance.getPetPhotoPath.bind(s3ServiceInstance);
+module.exports.uploadPetPhoto = s3ServiceInstance.uploadPetPhoto.bind(s3ServiceInstance);
+module.exports.deletePetPhoto = s3ServiceInstance.deletePetPhoto.bind(s3ServiceInstance);
+module.exports.deletePetOwnerPhotos = s3ServiceInstance.deletePetOwnerPhotos.bind(s3ServiceInstance);
