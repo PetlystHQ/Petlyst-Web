@@ -15,24 +15,10 @@ interface PetFormData {
   photo?: string | File;
 }
 
-interface AddEditPetModalProps {
+interface AddPetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPetAdded: () => void;
-  petToEdit?: {
-    pet_id: string;
-    pet_name: string;
-    pet_type: string;
-    pet_breed: string;
-    pet_birth_date?: string;
-    pet_birth_day?: number;
-    pet_birth_month?: number;
-    pet_birth_year?: number;
-    pet_gender: string;
-    pet_owner_id: string;
-    pet_profile_photo?: string;
-  };
-  mode: 'add' | 'edit';
 }
 
 // Searchable dropdown component
@@ -240,12 +226,10 @@ const generateYearOptions = () => {
   return years;
 };
 
-const AddEditPetModal: React.FC<AddEditPetModalProps> = ({ 
+const AddPetModal: React.FC<AddPetModalProps> = ({ 
   isOpen, 
   onClose, 
-  onPetAdded, 
-  petToEdit,
-  mode 
+  onPetAdded
 }) => {
   const [formData, setFormData] = useState<PetFormData>({
     name: '',
@@ -305,57 +289,10 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
     }
   };
 
-  // Parse date string or use individual fields
-  const parseDateToComponents = (dateString?: string, day?: number, month?: number, year?: number) => {
-    if (day && month && year) {
-      return {
-        day: day.toString(),
-        month: month.toString(),
-        year: year.toString()
-      };
-    } else if (dateString) {
-      try {
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-          return {
-            day: date.getDate().toString(),
-            month: (date.getMonth() + 1).toString(),
-            year: date.getFullYear().toString()
-          };
-        }
-      } catch (e) {
-        console.error("Failed to parse date:", e);
-      }
-    }
-    return { day: '', month: '', year: '' };
-  };
-
-  // If editing, populate form with pet data
+  // Reset form when opening
   useEffect(() => {
-    if (mode === 'edit' && petToEdit) {
-      const { day, month, year } = parseDateToComponents(
-        petToEdit.pet_birth_date, 
-        petToEdit.pet_birth_day, 
-        petToEdit.pet_birth_month, 
-        petToEdit.pet_birth_year
-      );
-      
-      setFormData({
-        name: petToEdit.pet_name,
-        species: petToEdit.pet_type,
-        breed: petToEdit.pet_breed,
-        birth_day: day,
-        birth_month: month,
-        birth_year: year,
-        gender: petToEdit.pet_gender,
-        photo: petToEdit.pet_profile_photo
-      });
-
-      if (petToEdit.pet_profile_photo) {
-        setPreviewUrl(petToEdit.pet_profile_photo);
-      }
-    } else {
-      // Reset form when opening in add mode
+    if (isOpen) {
+      // Reset form when opening
       setFormData({
         name: '',
         species: '',
@@ -367,8 +304,9 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
         photo: ''
       });
       setPreviewUrl(null);
+      setFormErrors({});
     }
-  }, [mode, petToEdit, isOpen]);
+  }, [isOpen]);
 
   // When species changes, reset breed
   useEffect(() => {
@@ -436,12 +374,13 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Save the actual file object to formData.photo (not just a string)
       setFormData(prev => ({
         ...prev,
         photo: file
       }));
       
-      // Create a preview URL
+      // Create a preview URL for display purposes only
       const reader = new FileReader();
       reader.onload = () => {
         setPreviewUrl(reader.result as string);
@@ -477,7 +416,7 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
     }
   };
 
-  // Validate form
+  // Enhanced date validation code
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
@@ -486,13 +425,32 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
     if (!formData.breed.trim()) errors.breed = "Breed is required";
     if (!formData.gender) errors.gender = "Gender is required";
     
-    // Date validation - All fields must be filled if any are filled
+    // Enhanced date validation - All fields must be filled if any are filled
     const hasDay = !!formData.birth_day;
     const hasMonth = !!formData.birth_month;
     const hasYear = !!formData.birth_year;
     
     if ((hasDay || hasMonth || hasYear) && (!hasDay || !hasMonth || !hasYear)) {
       errors.birth_date = "Please provide a complete birth date (day, month, and year)";
+    } else if (hasDay && hasMonth && hasYear) {
+      // Only try to parse if all values exist
+      if (formData.birth_day && formData.birth_month && formData.birth_year) {
+        const day = parseInt(formData.birth_day);
+        const month = parseInt(formData.birth_month);
+        const year = parseInt(formData.birth_year);
+        
+        // Check if it's a valid date
+        const date = new Date(year, month - 1, day);
+        const isValidDay = date.getDate() === day;
+        const isValidMonth = date.getMonth() === (month - 1);
+        const isValidYear = date.getFullYear() === year;
+        
+        if (!isValidDay || !isValidMonth || !isValidYear) {
+          errors.birth_date = "Invalid date. Please check the day, month, and year values.";
+        } else if (date > new Date()) {
+          errors.birth_date = "Birth date cannot be in the future";
+        }
+      }
     }
     
     setFormErrors(errors);
@@ -508,28 +466,42 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
     setIsSubmitting(true);
     
     try {
-      // TODO: In the future, implement actual file upload to S3
-      // For now, we'll just use the previewUrl or existing photo URL
+      // Format date fields for consistent API handling
+      const birthDay = formData.birth_day ? parseInt(formData.birth_day) : null;
+      const birthMonth = formData.birth_month ? parseInt(formData.birth_month) : null;
+      const birthYear = formData.birth_year ? parseInt(formData.birth_year) : null;
       
-      // Map from form data to API expected format
-      const petData = {
-        name: formData.name,
-        species: formData.species,
-        breed: formData.breed,
-        birth_day: formData.birth_day ? parseInt(formData.birth_day) : null,
-        birth_month: formData.birth_month ? parseInt(formData.birth_month) : null,
-        birth_year: formData.birth_year ? parseInt(formData.birth_year) : null,
-        gender: formData.gender,
-        photo: typeof formData.photo === 'string' ? formData.photo : previewUrl
-      };
-      
-      let response;
-      
-      if (mode === 'add') {
-        response = await axiosInstance.post('/pets/add', petData);
-      } else if (mode === 'edit' && petToEdit) {
-        response = await axiosInstance.put(`/pets/${petToEdit.pet_id}`, petData);
+      // Construct a proper ISO date string if all fields exist
+      let birthDate = null;
+      if (birthDay !== null && birthMonth !== null && birthYear !== null) {
+        // Format with leading zeros for day and month
+        const formattedMonth = String(birthMonth).padStart(2, '0');
+        const formattedDay = String(birthDay).padStart(2, '0');
+        birthDate = `${birthYear}-${formattedMonth}-${formattedDay}`;
       }
+      
+      // Create FormData object for multipart/form-data (file upload)
+      const formDataObj = new FormData();
+      formDataObj.append('name', formData.name);
+      formDataObj.append('species', formData.species);
+      formDataObj.append('breed', formData.breed);
+      if (birthDate) formDataObj.append('birth_date', birthDate);
+      if (birthDay) formDataObj.append('birth_day', birthDay.toString());
+      if (birthMonth) formDataObj.append('birth_month', birthMonth.toString());
+      if (birthYear) formDataObj.append('birth_year', birthYear.toString());
+      formDataObj.append('gender', formData.gender);
+      
+      // Append photo if it's a File object
+      if (formData.photo && formData.photo instanceof File) {
+        formDataObj.append('photo', formData.photo);
+      }
+      
+      // Make the API request with form data
+      const response = await axiosInstance.post('/pets/add', formDataObj, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
       if (response && response.data.success) {
         // Reset form and close modal
@@ -546,11 +518,30 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
         setPreviewUrl(null);
         onClose();
         onPetAdded();
+      } else {
+        // Handle explicit failure response
+        setFormErrors({
+          submit: response.data.message || "Failed to add pet. Please try again."
+        });
       }
-    } catch (error) {
-      console.error(`Error ${mode === 'add' ? 'adding' : 'editing'} pet:`, error);
+    } catch (error: any) {
+      console.error("Error adding pet:", error);
+      
+      // Enhanced error handling
+      let errorMessage = "Failed to add pet. Please try again.";
+      
+      if (error.response) {
+        // Server returned an error response
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = "No response from server. Please check your internet connection.";
+      }
+      
       setFormErrors({
-        submit: `Failed to ${mode === 'add' ? 'add' : 'edit'} pet. Please try again.`
+        submit: errorMessage
       });
     } finally {
       setIsSubmitting(false);
@@ -578,7 +569,7 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
       >
         <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
           <h3 className="text-xl font-semibold text-gray-800">
-            {mode === 'add' ? 'Add New Pet' : 'Edit Pet Information'}
+            Add New Pet
           </h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -809,7 +800,7 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
                 disabled={isSubmitting}
                 className="px-6 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
-                {isSubmitting ? (mode === 'add' ? 'Adding...' : 'Saving...') : (mode === 'add' ? 'Add Pet' : 'Save Changes')}
+                {isSubmitting ? 'Adding...' : 'Add Pet'}
               </button>
             </div>
           </form>
@@ -820,4 +811,4 @@ const AddEditPetModal: React.FC<AddEditPetModalProps> = ({
   );
 };
 
-export default AddEditPetModal;
+export default AddPetModal;
