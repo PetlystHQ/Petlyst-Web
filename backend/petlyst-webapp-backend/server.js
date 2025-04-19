@@ -27,6 +27,7 @@ const clinicRoutes = require('./clinicRoutes/clinicRoutes');
 const adminRoutes = require('./adminRoutes/adminRoutes');
 const petRoutes = require('./petRoutes/petRoutes');
 const petOwnerRoutes = require('./petOwnerRoutes/petOwnerRoutes');
+const appointmentRoutes = require('./appointmentRoutes/appointmentRoutes');
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -35,6 +36,7 @@ app.use('/api/clinics', clinicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/pet-owners', petOwnerRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Test route
 app.get('/', (req, res) => {
@@ -51,7 +53,8 @@ app.use((req, res) => {
             '/api/clinics',
             '/api/admin',
             '/api/pets',
-            '/api/pet-owners'
+            '/api/pet-owners',
+            '/api/appointments'
         ]
     });
 });
@@ -170,4 +173,5 @@ app.listen(PORT, () => {
     console.log('- /api/admin');
     console.log('- /api/pets');
     console.log('- /api/pet-owners');
+    console.log('- /api/appointments');
 });
