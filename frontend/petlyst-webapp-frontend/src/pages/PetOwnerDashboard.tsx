@@ -6,6 +6,7 @@ import { logout } from '../store/slices/authSlice';
 import { RootState } from '../store';
 import axiosInstance from '../utils/axiosConfig';
 import MyPets from '../components/petowner/MyPets';
+import MyProfile from '../components/petowner/MyProfile';
 import {
   UserCircleIcon,
   HeartIcon,
@@ -257,42 +258,10 @@ const PetOwnerDashboard: React.FC = () => {
   // Render profile content
   const renderProfile = () => {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">My Profile</h2>
-        
-        {/* Profile form would go here - simple placeholder for now */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input 
-              type="text" 
-              value={`${user?.name} ${user?.surname}`} 
-              disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input 
-              type="email" 
-              value={user?.email} 
-              disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-            />
-          </div>
-          
-          <div className="pt-4">
-            <p className="text-sm text-gray-600 mb-4">Profile editing functionality will be available soon.</p>
-            <button 
-              className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-              disabled
-            >
-              Edit Profile
-            </button>
-          </div>
-        </div>
-      </div>
+      <MyProfile 
+        loading={loading && activeTab === 'profile'}
+        error={error && activeTab === 'profile' ? error : null}
+      />
     );
   };
   
