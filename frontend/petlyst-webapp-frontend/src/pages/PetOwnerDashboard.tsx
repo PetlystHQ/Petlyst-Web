@@ -8,22 +8,13 @@ import axiosInstance from '../utils/axiosConfig';
 import MyPets from '../components/petowner/MyPets';
 import MyProfile from '../components/petowner/MyProfile';
 import {
-  UserCircleIcon,
-  HeartIcon,
-  CalendarIcon,
-  EnvelopeIcon,
-  PlusCircleIcon,
   ArrowLeftOnRectangleIcon,
-  ChevronRightIcon,
-  ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as SolidHeartIcon } from '@heroicons/react/24/solid';
 
 // Interfaces
 interface MenuItem {
   name: string;
-  icon: JSX.Element;
-  link?: string;
   onClick?: () => void;
   subItems?: MenuItem[];
   expanded?: boolean;
@@ -83,7 +74,6 @@ const PetOwnerDashboard: React.FC = () => {
   
   // States
   const [activeTab, setActiveTab] = useState<string>('profile');
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [pets, setPets] = useState<Pet[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [savedClinics, setSavedClinics] = useState<SavedClinic[]>([]);
@@ -94,28 +84,27 @@ const PetOwnerDashboard: React.FC = () => {
   // Menu Items
   const menuItems: MenuItem[] = [
     {
+      name: 'Overview',
+      onClick: () => setActiveTab('overview')
+    },
+    {
       name: 'My Profile',
-      icon: <UserCircleIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('profile')
     },
     {
       name: 'My Pets',
-      icon: <PlusCircleIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('pets')
     },
     {
       name: 'Appointments',
-      icon: <CalendarIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('appointments')
     },
     {
       name: 'Saved Clinics',
-      icon: <HeartIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('savedClinics')
     },
     {
       name: 'Messages',
-      icon: <EnvelopeIcon className="w-5 h-5" />,
       onClick: () => setActiveTab('messages')
     }
   ];
@@ -226,11 +215,6 @@ const PetOwnerDashboard: React.FC = () => {
       console.error('Error removing clinic from favorites:', err);
       setError('Failed to remove clinic from favorites. Please try again.');
     }
-  };
-  
-  // Toggle sidebar
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
   };
   
   // Handle logout
@@ -485,6 +469,8 @@ const PetOwnerDashboard: React.FC = () => {
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
+      case 'overview':
+        return renderOverview();
       case 'profile':
         return renderProfile();
       case 'pets':
@@ -496,8 +482,78 @@ const PetOwnerDashboard: React.FC = () => {
       case 'messages':
         return renderMessages();
       default:
-        return renderProfile();
+        return renderOverview();
     }
+  };
+  
+  // Render overview content
+  const renderOverview = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">Dashboard Overview</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">My Pets</h3>
+            <p className="text-3xl font-bold text-blue-600">{pets.length}</p>
+            <button 
+              onClick={() => setActiveTab('pets')}
+              className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              View all pets
+            </button>
+          </div>
+          
+          <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Appointments</h3>
+            <p className="text-3xl font-bold text-green-600">{appointments.length}</p>
+            <button 
+              onClick={() => setActiveTab('appointments')}
+              className="mt-4 text-sm text-green-600 hover:text-green-800 font-medium"
+            >
+              View all appointments
+            </button>
+          </div>
+          
+          <div className="border border-gray-200 rounded-lg p-4 bg-purple-50">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Saved Clinics</h3>
+            <p className="text-3xl font-bold text-purple-600">{savedClinics.length}</p>
+            <button 
+              onClick={() => setActiveTab('savedClinics')}
+              className="mt-4 text-sm text-purple-600 hover:text-purple-800 font-medium"
+            >
+              View saved clinics
+            </button>
+          </div>
+        </div>
+        
+        {appointments.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Upcoming Appointments</h3>
+            <div className="border border-gray-200 rounded-lg divide-y">
+              {appointments.slice(0, 3).map(appointment => (
+                <div key={appointment.appointment_id} className="p-4">
+                  <div className="flex justify-between">
+                    <div>
+                      <p className="font-medium text-gray-800">{appointment.clinic_name}</p>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(appointment.appointment_date)}, {appointment.appointment_time}
+                      </p>
+                    </div>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${appointment.appointment_status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
+                      ${appointment.appointment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                    `}>
+                      {appointment.appointment_status.charAt(0).toUpperCase() + appointment.appointment_status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
   
   // Main component render
@@ -505,35 +561,34 @@ const PetOwnerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <div className="flex">
         {/* Sidebar */}
-        <div className={`bg-white shadow-md ${sidebarOpen ? 'w-64' : 'w-20'} min-h-screen transition-all duration-300 ease-in-out flex flex-col`}>
-          <div className="p-4 flex items-center justify-between border-b border-gray-200">
-            <h1 className={`text-xl font-bold text-gray-800 ${!sidebarOpen && 'hidden'}`}>Pet Owner Portal</h1>
-            <button 
-              onClick={toggleSidebar}
-              className="p-1 rounded-md hover:bg-gray-100"
-            >
-              {sidebarOpen ? (
-                <ChevronLeftIcon className="w-6 h-6 text-gray-500" />
-              ) : (
-                <ChevronRightIcon className="w-6 h-6 text-gray-500" />
-              )}
-            </button>
+        <div className="bg-white shadow-md w-64 min-h-screen flex flex-col">
+          <div className="p-4 flex flex-col items-center justify-center border-b border-gray-200">
+            <img 
+              src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
+              alt="Petlyst Logo" 
+              className="h-10 w-auto mb-3"
+            />
+            <h1 className="text-xl font-bold text-gray-800 mb-1">Pet Owner Dashboard</h1>
+            <div className="bg-blue-50 w-full rounded-md p-2 mt-2 text-center border border-blue-100">
+              <p className="font-medium text-blue-700">
+                Welcome, {user?.name || 'Guest'}!
+              </p>
+            </div>
           </div>
           
-          <nav className="mt-6 flex-grow">
-            <ul className="space-y-2 px-4">
+          <nav className="mt-5 flex-grow">
+            <ul className="space-y-1 px-3">
               {menuItems.map((item, index) => (
                 <li key={index}>
                   <button
                     onClick={item.onClick}
-                    className={`flex items-center w-full px-3 py-2 rounded-md transition-colors
+                    className={`flex items-center w-full px-4 py-2.5 rounded-md transition-colors
                       ${activeTab === item.name.toLowerCase().replace(' ', '') 
-                        ? 'bg-blue-100 text-blue-700' 
+                        ? 'bg-blue-100 text-blue-700 font-medium' 
                         : 'text-gray-700 hover:bg-gray-100'
                       }`}
                   >
-                    <span className="mr-3">{item.icon}</span>
-                    {sidebarOpen && <span>{item.name}</span>}
+                    <span>{item.name}</span>
                   </button>
                 </li>
               ))}
@@ -541,14 +596,15 @@ const PetOwnerDashboard: React.FC = () => {
           </nav>
           
           {/* Logout button at the bottom */}
-          <div className="mt-auto mb-8 px-4">
+          <div className="mt-auto mb-6 px-3">
+            <div className="border-t border-gray-200 pt-4 mb-3"></div>
             <button
               onClick={handleLogout}
-              className={`flex items-center w-full px-3 py-2 rounded-md transition-colors
-                bg-red-100 text-red-700 hover:bg-red-200`}
+              className="flex items-center w-full px-4 py-2.5 rounded-md transition-colors
+                bg-red-50 text-red-700 hover:bg-red-100"
             >
               <span className="mr-3"><ArrowLeftOnRectangleIcon className="w-5 h-5" /></span>
-              {sidebarOpen && <span>Logout</span>}
+              <span className="font-medium">Logout</span>
             </button>
           </div>
         </div>
