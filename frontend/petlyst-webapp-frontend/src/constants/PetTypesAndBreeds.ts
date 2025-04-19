@@ -31,6 +31,7 @@ const PET_TYPES_AND_BREEDS: PetType[] = [
       { id: "doberman", name: "Doberman Pinscher" },
       { id: "border_collie", name: "Border Collie" },
       { id: "pug", name: "Pug" },
+      { id: "cocker_spaniel", name: "Cocker Spaniel" },
       { id: "french_bulldog", name: "French Bulldog" },
       { id: "mixed_breed_dog", name: "Mixed Breed" },
       { id: "other_dog", name: "Other" }

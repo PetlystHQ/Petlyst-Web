@@ -123,7 +123,7 @@ router.post('/add', authenticateToken, upload.single('photo'), async (req, res) 
         }
 
         const ownerId = req.user.userId;
-        const { name, species, breed, birth_date, gender } = req.body;
+        const { name, species, breed, birth_date, birth_day, birth_month, birth_year, gender } = req.body;
 
         // Validate required fields
         if (!name || !species || !breed) {
@@ -151,8 +151,19 @@ router.post('/add', authenticateToken, upload.single('photo'), async (req, res) 
             }
         }
 
-        // Create new pet with the S3 photo URL
-        const newPet = await Pet.createPet(ownerId, name, species, breed, birth_date, gender, photoUrl);
+        // Create new pet with the S3 photo URL and birth date components
+        const newPet = await Pet.createPet(
+            ownerId, 
+            name, 
+            species, 
+            breed, 
+            birth_date, 
+            gender, 
+            photoUrl,
+            birth_day,
+            birth_month,
+            birth_year
+        );
 
         // Transform for frontend
         const transformedPet = {
