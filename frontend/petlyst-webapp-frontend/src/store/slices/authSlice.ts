@@ -11,6 +11,12 @@ interface User {
   profile_photo?: string;  // Maps to user_profile_photo
 }
 
+interface ProfileUpdatePayload {
+  phone?: string;
+  address?: string;
+  profile_photo?: string;
+}
+
 export interface AuthState {
   user: User | null;
   token: string | null;
@@ -65,8 +71,22 @@ const authSlice = createSlice({
     setProfileVisibility: (state, action: PayloadAction<boolean>) => {
       state.profileVisibility = action.payload;
     },
+    updateProfile: (state, action: PayloadAction<ProfileUpdatePayload>) => {
+      if (state.user) {
+        // Update user profile data
+        state.user = {
+          ...state.user,
+          ...action.payload
+        };
+        
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(state.user));
+        
+        console.log('updateProfile - Updated user data:', state.user);
+      }
+    },
   },
 });
 
-export const { setCredentials, logout, setProfileVisibility } = authSlice.actions;
+export const { setCredentials, logout, setProfileVisibility, updateProfile } = authSlice.actions;
 export default authSlice.reducer; 

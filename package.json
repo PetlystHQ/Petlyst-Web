@@ -2,6 +2,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "axios": "^1.7.9",
+    "multer": "^1.4.5-lts.2",
     "react": "^19.0.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.1.1"

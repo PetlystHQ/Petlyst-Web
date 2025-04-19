@@ -2,6 +2,18 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
+const multer = require('multer');
+const PetOwner = require('../models/petOwnerModel');
+const s3Service = require('../aws/s3Service');
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  }
+});
 
 // Base route: /api/pet-owners
 
@@ -1316,4 +1328,258 @@ router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res)
   }
 });
 
+// Get pet owner profile
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    // Get user ID from the token
+    const userId = req.user.userId || req.user.id;
+    
+    // Get user info including profile fields
+    const userQuery = `
+      SELECT 
+        user_id, 
+        user_name, 
+        user_surname, 
+        user_email, 
+        user_phone, 
+        user_address, 
+        user_profile_photo,
+        user_type,
+        user_created_at
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Verify that the user is a pet owner
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can access this information'
+      });
+    }
+    
+    // Format user data
+    const user = {
+      id: userResult.rows[0].user_id,
+      name: userResult.rows[0].user_name,
+      surname: userResult.rows[0].user_surname,
+      email: userResult.rows[0].user_email,
+      phone: userResult.rows[0].user_phone,
+      address: userResult.rows[0].user_address,
+      profile_photo: userResult.rows[0].user_profile_photo,
+      user_type: userResult.rows[0].user_type,
+      created_at: userResult.rows[0].user_created_at
+    };
+    
+    // Get pet owner specific info if needed
+    // For now we just check if they have a pet_owner record
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, create one
+    if (petOwnerResult.rows.length === 0) {
+      const createPetOwnerQuery = `
+        INSERT INTO pet_owners (pet_owner_id)
+        VALUES ($1)
+        RETURNING pet_owner_id
+      `;
+      await pool.query(createPetOwnerQuery, [userId]);
+    }
+    
+    res.status(200).json({
+      success: true,
+      user
+    });
+    
+  } catch (error) {
+    console.error('Error fetching pet owner profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Update pet owner profile
+router.put('/profile', authenticateToken, upload.single('profile_photo'), async (req, res) => {
+  try {
+    // Get user ID from the token
+    const userId = req.user.userId || req.user.id;
+    
+    console.log('Profile update requested for user:', userId);
+    console.log('Form data received:', req.body);
+    
+    if (req.file) {
+      console.log('File received:', {
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype
+      });
+    }
+    
+    // Check if user exists
+    const userQuery = `
+      SELECT user_id, user_type, user_name, user_profile_photo FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Verify that the user is a pet owner
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only pet owners can update their profile'
+      });
+    }
+    
+    // Prepare data for update
+    const userData = {
+      phone: req.body.user_phone || null,
+      address: req.body.user_address || null,
+      profilePhoto: null
+    };
+    
+    // Handle photo upload with S3
+    if (req.file) {
+      try {
+        console.log('Uploading profile photo to S3...');
+        
+        // If there's an existing photo, delete it first
+        const existingPhotoKey = userResult.rows[0].user_profile_photo 
+          ? userResult.rows[0].user_profile_photo.split('amazonaws.com/')[1]
+          : null;
+          
+        if (existingPhotoKey && existingPhotoKey.includes('pet-owner-photos')) {
+          try {
+            console.log('Deleting existing profile photo:', existingPhotoKey);
+            await s3Service.deletePetOwnerProfilePhoto(existingPhotoKey);
+          } catch (deleteError) {
+            console.warn('Error deleting existing profile photo, continuing anyway:', deleteError.message);
+          }
+        }
+        
+        // Upload new photo to S3
+        const uploadResult = await s3Service.uploadPetOwnerProfilePhoto(
+          req.file, 
+          userId, 
+          userResult.rows[0].user_name
+        );
+        
+        console.log('Photo upload successful:', uploadResult);
+        
+        // Set the uploaded photo URL
+        userData.profilePhoto = uploadResult.url;
+      } catch (uploadError) {
+        console.error('S3 upload error:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Error uploading profile photo',
+          error: uploadError.message
+        });
+      }
+    } else if (req.body.remove_photo === 'true') {
+      // Handle photo removal
+      // Check if a specific photo key was provided by the frontend
+      const photoKey = req.body.photo_key || null;
+      const fullPhotoUrl = req.body.full_photo_url || null;
+      const userIdFromForm = req.body.user_id || userId;
+      
+      console.log('Photo removal request received with data:', {
+        photoKey,
+        fullPhotoUrl,
+        userIdFromForm
+      });
+      
+      let existingPhotoKey = null;
+      
+      if (photoKey) {
+        existingPhotoKey = photoKey;
+        console.log('Using provided photo key for deletion:', existingPhotoKey);
+      } else if (userResult.rows[0].user_profile_photo) {
+        existingPhotoKey = userResult.rows[0].user_profile_photo.split('amazonaws.com/')[1];
+        console.log('Extracted photo key from profile URL:', existingPhotoKey);
+      }
+      
+      // First, try to delete the specific file
+      if (existingPhotoKey && existingPhotoKey.includes('pet-owner-photos')) {
+        try {
+          console.log('Removing profile photo:', existingPhotoKey);
+          await s3Service.deletePetOwnerProfilePhoto(existingPhotoKey);
+          console.log('Successfully deleted profile photo from S3');
+        } catch (deleteError) {
+          console.warn('Error deleting specific profile photo, continuing anyway:', deleteError.message);
+        }
+      }
+      
+      // Next, attempt to delete the entire folder to ensure complete cleanup
+      try {
+        console.log(`Cleaning up all profile photos for user ID: ${userIdFromForm}`);
+        const folderDeleteResult = await s3Service.deletePetOwnerProfileFolder(userIdFromForm);
+        console.log('Folder deletion result:', folderDeleteResult);
+      } catch (folderDeleteError) {
+        console.warn('Error deleting profile folder, continuing anyway:', folderDeleteError.message);
+      }
+      
+      // Set profilePhoto to null explicitly to ensure it gets removed in the database
+      userData.profilePhoto = null;
+      console.log('Setting profilePhoto to null in database update');
+    } else if (req.body.user_profile_photo) {
+      // Keep existing photo URL if provided
+      userData.profilePhoto = req.body.user_profile_photo;
+    }
+    
+    // Update profile using the model
+    const updatedUser = await PetOwner.updateProfile(userId, userData);
+    
+    // Check if pet_owner record exists
+    const petOwnerQuery = `
+      SELECT pet_owner_id FROM pet_owners WHERE pet_owner_id = $1
+    `;
+    const petOwnerResult = await pool.query(petOwnerQuery, [userId]);
+    
+    // If no pet_owner record exists yet, create one
+    if (petOwnerResult.rows.length === 0) {
+      const createPetOwnerQuery = `
+        INSERT INTO pet_owners (pet_owner_id)
+        VALUES ($1)
+        RETURNING pet_owner_id
+      `;
+      await pool.query(createPetOwnerQuery, [userId]);
+      console.log(`Created new pet_owner record for user ${userId}`);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+    
+  } catch (error) {
+    console.error('Error updating pet owner profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Export the router
 module.exports = router;
