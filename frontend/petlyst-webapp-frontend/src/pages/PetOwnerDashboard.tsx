@@ -9,6 +9,7 @@ import MyPets from '../components/petowner/MyPets';
 import MyProfile from '../components/petowner/MyProfile';
 import {
   ArrowLeftOnRectangleIcon,
+  HomeIcon
 } from '@heroicons/react/24/outline';
 import { HeartIcon as SolidHeartIcon } from '@heroicons/react/24/solid';
 
@@ -73,7 +74,7 @@ const PetOwnerDashboard: React.FC = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   
   // States
-  const [activeTab, setActiveTab] = useState<string>('profile');
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [pets, setPets] = useState<Pet[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [savedClinics, setSavedClinics] = useState<SavedClinic[]>([]);
@@ -127,6 +128,10 @@ const PetOwnerDashboard: React.FC = () => {
     try {
       // Fetch data based on active tab
       switch (activeTab) {
+        case 'overview':
+          // For overview, only fetch pets which we know works
+          await fetchPets();
+          break;
         case 'pets':
           await fetchPets();
           break;
@@ -222,6 +227,11 @@ const PetOwnerDashboard: React.FC = () => {
     // Dispatch the logout action to clear auth state
     dispatch(logout());
     // Navigate to home page instead of login
+    navigate('/');
+  };
+  
+  // Handle navigation to home
+  const handleGoHome = () => {
     navigate('/');
   };
   
@@ -488,11 +498,23 @@ const PetOwnerDashboard: React.FC = () => {
   
   // Render overview content
   const renderOverview = () => {
+    // Get current time to personalize greeting
+    const currentHour = new Date().getHours();
+    let greeting = "Good Morning";
+    if (currentHour >= 12 && currentHour < 18) {
+      greeting = "Good Afternoon";
+    } else if (currentHour >= 18) {
+      greeting = "Good Evening";
+    }
+    
+    // Get random pet for wellbeing message
+    const randomPet = pets.length > 0 ? pets[Math.floor(Math.random() * pets.length)] : null;
+    
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Dashboard Overview</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
           <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
             <h3 className="text-lg font-medium text-gray-800 mb-2">My Pets</h3>
             <p className="text-3xl font-bold text-blue-600">{pets.length}</p>
@@ -503,52 +525,24 @@ const PetOwnerDashboard: React.FC = () => {
               View all pets
             </button>
           </div>
-          
-          <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
-            <h3 className="text-lg font-medium text-gray-800 mb-2">Appointments</h3>
-            <p className="text-3xl font-bold text-green-600">{appointments.length}</p>
-            <button 
-              onClick={() => setActiveTab('appointments')}
-              className="mt-4 text-sm text-green-600 hover:text-green-800 font-medium"
-            >
-              View all appointments
-            </button>
-          </div>
-          
-          <div className="border border-gray-200 rounded-lg p-4 bg-purple-50">
-            <h3 className="text-lg font-medium text-gray-800 mb-2">Saved Clinics</h3>
-            <p className="text-3xl font-bold text-purple-600">{savedClinics.length}</p>
-            <button 
-              onClick={() => setActiveTab('savedClinics')}
-              className="mt-4 text-sm text-purple-600 hover:text-purple-800 font-medium"
-            >
-              View saved clinics
-            </button>
-          </div>
         </div>
         
-        {appointments.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Upcoming Appointments</h3>
-            <div className="border border-gray-200 rounded-lg divide-y">
-              {appointments.slice(0, 3).map(appointment => (
-                <div key={appointment.appointment_id} className="p-4">
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="font-medium text-gray-800">{appointment.clinic_name}</p>
-                      <p className="text-sm text-gray-600">
-                        {formatDate(appointment.appointment_date)}, {appointment.appointment_time}
-                      </p>
-                    </div>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${appointment.appointment_status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                      ${appointment.appointment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                    `}>
-                      {appointment.appointment_status.charAt(0).toUpperCase() + appointment.appointment_status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+        {/* Pet Wellbeing Message - Simplified Design */}
+        {pets.length > 0 && (
+          <div className="mt-8 border-l-4 border-emerald-400 pl-4 py-2">
+            <div className="bg-gradient-to-r from-emerald-50 to-transparent p-4 rounded-r-lg">
+              <h3 className="text-lg font-medium text-emerald-800 mb-2">{greeting}, {user?.name || 'Friend'}!</h3>
+              
+              <p className="text-emerald-700 mb-3">
+                {randomPet ? 
+                  `${randomPet.pet_name} wants to spend time with you today. Have you checked your furry friend's food and water bowls?` : 
+                  'Your furry friends might be missing you today. Would you like to spend some time with them?'
+                }
+              </p>
+              
+              <p className="text-emerald-600 italic text-sm">
+                "The bond with animals is one of the most beautiful feelings that nourishes the love within us."
+              </p>
             </div>
           </div>
         )}
@@ -595,17 +589,28 @@ const PetOwnerDashboard: React.FC = () => {
             </ul>
           </nav>
           
-          {/* Logout button at the bottom */}
+          {/* Bottom buttons */}
           <div className="mt-auto mb-6 px-3">
             <div className="border-t border-gray-200 pt-4 mb-3"></div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2.5 rounded-md transition-colors
-                bg-red-50 text-red-700 hover:bg-red-100"
-            >
-              <span className="mr-3"><ArrowLeftOnRectangleIcon className="w-5 h-5" /></span>
-              <span className="font-medium">Logout</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleGoHome}
+                className="flex items-center justify-center w-full px-3 py-2.5 rounded-md transition-colors
+                  bg-blue-50 text-blue-700 hover:bg-blue-100"
+              >
+                <span className="mr-2"><HomeIcon className="w-5 h-5" /></span>
+                <span className="font-medium">Home</span>
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center w-full px-3 py-2.5 rounded-md transition-colors
+                  bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                <span className="mr-2"><ArrowLeftOnRectangleIcon className="w-5 h-5" /></span>
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
         

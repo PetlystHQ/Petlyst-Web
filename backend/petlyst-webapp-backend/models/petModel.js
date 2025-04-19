@@ -2,19 +2,21 @@ const pool = require('../config/db');
 
 class Pet {
     // Create a new pet
-    static async createPet(petOwnerId, name, species, breed, birthDate, gender, photoUrl) {
+    static async createPet(petOwnerId, name, species, breed, birthDate, gender, photoUrl, birthDay, birthMonth, birthYear) {
         try {
-            // Parse birth date into day, month, year if provided
-            let birthDay = null;
-            let birthMonth = null;
-            let birthYear = null;
+            // Use directly provided birth day, month, year if available,
+            // otherwise try to parse from birthDate
+            let day = birthDay ? parseInt(birthDay) : null;
+            let month = birthMonth ? parseInt(birthMonth) : null;
+            let year = birthYear ? parseInt(birthYear) : null;
             
-            if (birthDate) {
+            // If individual components aren't provided but birthDate is, try to parse it
+            if ((!day || !month || !year) && birthDate) {
                 const date = new Date(birthDate);
                 if (!isNaN(date.getTime())) {
-                    birthDay = date.getDate();
-                    birthMonth = date.getMonth() + 1; // getMonth returns 0-11
-                    birthYear = date.getFullYear();
+                    day = day || date.getDate();
+                    month = month || date.getMonth() + 1; // getMonth returns 0-11
+                    year = year || date.getFullYear();
                 }
             }
             
@@ -22,7 +24,7 @@ class Pet {
                 text: `INSERT INTO "pets" (pet_owner_id, pet_name, pet_species, pet_breed, pet_gender, pet_photo, pet_birth_day, pet_birth_month, pet_birth_year) 
                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
                        RETURNING pet_id, pet_owner_id, pet_name, pet_species, pet_breed, pet_gender, pet_photo, pet_birth_day, pet_birth_month, pet_birth_year`,
-                values: [petOwnerId, name, species, breed, gender, photoUrl || null, birthDay, birthMonth, birthYear]
+                values: [petOwnerId, name, species, breed, gender, photoUrl || null, day, month, year]
             };
 
             const result = await pool.query(query);
