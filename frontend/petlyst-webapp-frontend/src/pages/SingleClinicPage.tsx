@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import AuthModal from '../components/modals/AuthModal';
 import ResetPasswordModal from '../components/modals/ResetPasswordModal';
+import AppointmentModal from '../components/petowner/petownermodals/AppointmentModal';
 
 // Clinic interface
 interface Clinic {
@@ -34,6 +35,8 @@ interface Clinic {
   establishment_year: number;
   establishment_month: number;
   allow_direct_messages: boolean;
+  allow_online_meetings?: boolean;
+  clinic_time_slots?: number;
 }
 
 // Services interface
@@ -106,6 +109,7 @@ const SingleClinicPage: React.FC = () => {
   const [favoriteAnimation, setFavoriteAnimation] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
@@ -397,7 +401,15 @@ const SingleClinicPage: React.FC = () => {
   // Handle booking appointment
   const handleBookAppointment = () => {
     if (!clinic) return;
-    navigate(`/booking/${clinic.clinic_id}`);
+    
+    // Check if user is logged in
+    if (!token) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    
+    // If user is logged in, open appointment modal
+    setIsAppointmentModalOpen(true);
   };
   
   // Function to generate slug
@@ -694,6 +706,13 @@ const SingleClinicPage: React.FC = () => {
                     <span className={`inline-block w-2 h-2 rounded-full mr-2 ${isOpenNow() ? 'bg-green-500' : 'bg-red-500'}`}></span>
                     {isOpenNow() ? 'Open Now' : 'Closed'}
                   </span>
+                  {/* Add Online Meeting Badge */}
+                  {clinic?.allow_online_meetings && (
+                    <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <span className="inline-block w-2 h-2 rounded-full mr-2 bg-purple-500"></span>
+                      Online Meeting
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -1204,6 +1223,21 @@ const SingleClinicPage: React.FC = () => {
         onClose={() => setIsResetPasswordModalOpen(false)}
         onBackToLogin={handleBackToLogin}
       />
+      
+      {/* Add appointment modal */}
+      {clinic && (
+        <AppointmentModal
+          isOpen={isAppointmentModalOpen}
+          onClose={() => setIsAppointmentModalOpen(false)}
+          clinicId={clinic.clinic_id}
+          clinicName={clinic.clinic_name}
+          availableDays={clinic.available_days}
+          openingTime={clinic.opening_time}
+          closingTime={clinic.closing_time}
+          timeSlotDuration={clinic.clinic_time_slots || 30}
+          allowOnlineMeetings={true}
+        />
+      )}
     </div>
   );
 };

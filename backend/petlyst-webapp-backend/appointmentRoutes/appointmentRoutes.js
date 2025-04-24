@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const appointmentModel = require('../models/appointmentModel');
 const authenticateToken = require('../middleware/authenticateToken');
+const pool = require('../config/db');
 
 // Get all appointments for authenticated pet owner
 router.get('/pet-owner', authenticateToken, async (req, res) => {
@@ -76,10 +77,14 @@ router.post('/', authenticateToken, async (req, res) => {
       appointmentStartHour,
       appointmentEndHour,
       videoMeeting,
-      meetingUrl,
-      meetingPassword,
       notes
     } = req.body;
+
+    console.log("Received appointment data:", { 
+      petId, clinicId, appointmentDate, 
+      appointmentStartHour, appointmentEndHour, 
+      videoMeeting, notes 
+    });
 
     // Validate required fields
     if (!petId || !clinicId || !appointmentDate || !appointmentStartHour || !appointmentEndHour) {
@@ -107,8 +112,8 @@ router.post('/', authenticateToken, async (req, res) => {
       appointmentStartHour,
       appointmentEndHour,
       videoMeeting,
-      meetingUrl,
-      meetingPassword,
+      meetingUrl: null,  // Will be set by clinic later if needed
+      meetingPassword: null, // Will be set by clinic later if needed
       notes
     };
 
@@ -244,14 +249,24 @@ router.get('/available-slots/:clinicId/:date', async (req, res) => {
     
     // Validate date format
     if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid date format. Use YYYY-MM-DD'
+      });
     }
 
     const availableSlots = await appointmentModel.getAvailableTimeSlots(clinicId, date);
-    res.status(200).json(availableSlots);
+    
+    res.status(200).json({
+      success: true,
+      slots: availableSlots
+    });
   } catch (error) {
     console.error('Error fetching available slots:', error);
-    res.status(500).json({ error: 'Failed to fetch available appointment slots' });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch available appointment slots'
+    });
   }
 });
 
@@ -284,6 +299,73 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('Error completing appointment:', error);
     res.status(500).json({ error: 'Failed to mark appointment as completed' });
+  }
+});
+
+// Get available appointment dates for a clinic
+router.get('/available-dates/:clinicId', async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const numberOfDays = req.query.days ? parseInt(req.query.days) : 14;
+    const includeToday = req.query.includeToday === 'true';
+    
+    // Validate numberOfDays
+    if (isNaN(numberOfDays) || numberOfDays < 1 || numberOfDays > 60) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid number of days. Must be between 1 and 60.' 
+      });
+    }
+
+    const availableDates = await appointmentModel.getAvailableDates(clinicId, numberOfDays, includeToday);
+    
+    res.status(200).json({
+      success: true,
+      dates: availableDates
+    });
+  } catch (error) {
+    console.error('Error fetching available dates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch available appointment dates'
+    });
+  }
+});
+
+// Get booked slots for a specific clinic and date
+router.get('/booked-slots/:clinicId/:date', async (req, res) => {
+  try {
+    const { clinicId, date } = req.params;
+    
+    // Validate date format
+    if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid date format. Use YYYY-MM-DD' 
+      });
+    }
+
+    // Get all appointments for the clinic on the specified date
+    const result = await pool.query(
+      `SELECT appointment_start_hour AS start, appointment_end_hour AS end
+       FROM appointments 
+       WHERE clinic_id = $1 
+       AND appointment_date = $2
+       AND appointment_status NOT IN ('canceled')`,
+      [clinicId, date]
+    );
+    
+    res.status(200).json({
+      success: true,
+      bookedSlots: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching booked slots:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch booked slots',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

@@ -1905,7 +1905,9 @@ router.get('/by-slug/:slug', authenticateToken, async (req, res) => {
       // Add services data
       animal_types: animalTypes,
       medical_services: medicalServices,
-      additional_services: additionalServices
+      additional_services: additionalServices,
+      // Conditionally include contact information based on clinic settings
+      ...(clinic.show_mail_address && { clinic_email: clinic.clinic_email })
     };
     
     res.status(200).json({
@@ -2021,6 +2023,8 @@ router.get('/public/by-slug/:slug', async (req, res) => {
       clinic_time_slots: clinic.clinic_time_slots,
       is_open_24_7: clinic.is_open_24_7,
       slug: clinic.slug,
+      allow_online_meetings: clinic.allow_online_meetings,
+      allow_direct_messages: clinic.allow_direct_messages,
       // Add location data if settings allow
       ...(locationData && {
         province: locationData.province,
@@ -2032,9 +2036,7 @@ router.get('/public/by-slug/:slug', async (req, res) => {
       // Add services data
       animal_types: animalTypes,
       medical_services: medicalServices,
-      additional_services: additionalServices,
-      // Conditionally include contact information based on clinic settings
-      ...(clinic.show_mail_address && { clinic_email: clinic.clinic_email })
+      additional_services: additionalServices
     };
     
     // Include phone numbers if clinic allows

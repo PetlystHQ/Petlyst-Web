@@ -77,6 +77,11 @@ const createAppointment = async (appointmentData) => {
     notes
   } = appointmentData;
 
+  console.log("Creating appointment with data:", {
+    petId, clinicId, petOwnerId, appointmentDate,
+    appointmentStartHour, appointmentEndHour, videoMeeting, notes
+  });
+
   try {
     const result = await pool.query(
       `INSERT INTO appointments (
@@ -226,14 +231,98 @@ const deleteAppointment = async (appointmentId) => {
   }
 };
 
+// Get available dates for a clinic
+const getAvailableDates = async (clinicId, numberOfDays = 7, includeToday = false) => {
+  try {
+    // Get clinic's available days
+    const clinicResult = await pool.query(
+      `SELECT available_days, is_open_24_7 FROM clinics WHERE clinic_id = $1`,
+      [clinicId]
+    );
+    
+    if (clinicResult.rows.length === 0) {
+      throw new Error('Clinic not found');
+    }
+    
+    const { available_days } = clinicResult.rows[0];
+    
+    if (!available_days || !Array.isArray(available_days)) {
+      throw new Error('Clinic available days not properly configured');
+    }
+    
+    // Generate dates until we find the required number of available days
+    const availableDates = [];
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    // Determine the starting day offset (0 if including today, 1 if starting tomorrow)
+    const startOffset = includeToday ? 0 : 1;
+    
+    // Start from today/tomorrow
+    let dayCounter = startOffset;
+    
+    // Continue searching until we find the required number of available days
+    // Limit to a reasonable number of days to prevent infinite loop (e.g., 100 days)
+    const maxDaysToCheck = 100;
+    
+    while (availableDates.length < numberOfDays && dayCounter < maxDaysToCheck) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() + dayCounter);
+      
+      // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      let dayOfWeek = date.getDay();
+      
+      // Convert JavaScript day to our array index (0 = Monday, ..., 6 = Sunday)
+      // In JavaScript, Sunday is 0, but in our array, Monday is 0
+      // So we need to convert: JavaScript's 0 (Sunday) becomes our 6, and 1-6 becomes 0-5
+      const arrayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      
+      // Check if clinic is open on this day
+      if (available_days[arrayIndex]) {
+        availableDates.push(date.toISOString().split('T')[0]); // Format as YYYY-MM-DD
+      }
+      
+      dayCounter++;
+    }
+    
+    return availableDates;
+  } catch (error) {
+    console.error('Error getting available dates:', error);
+    throw error;
+  }
+};
+
 // Get available time slots for a clinic on a specific date
 const getAvailableTimeSlots = async (clinicId, date) => {
   try {
-    // Get clinic's working hours (assuming there's a table for this)
-    // For now, using a default 9 AM - 5 PM schedule with 30-minute slots
+    // Check if the clinic is open on this day
+    const clinicResult = await pool.query(
+      `SELECT available_days, opening_time, closing_time, is_open_24_7 FROM clinics WHERE clinic_id = $1`,
+      [clinicId]
+    );
+    
+    if (clinicResult.rows.length === 0) {
+      throw new Error('Clinic not found');
+    }
+    
+    const { available_days, opening_time, closing_time, is_open_24_7 } = clinicResult.rows[0];
+    
+    // Parse the date to check if it's in available days
+    const dateObj = new Date(date);
+    let dayOfWeek = dateObj.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Convert to array index (0 = Monday, ..., 6 = Sunday)
+    const arrayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    // Check if clinic is open on this day
+    if (!available_days[arrayIndex] && is_open_24_7 !== 'Yes') {
+      return []; // Clinic is not open on this day
+    }
+    
+    // Use clinic's actual opening and closing times
     const workingHours = {
-      start: '09:00',
-      end: '17:00',
+      start: is_open_24_7 === 'Yes' ? '00:00' : opening_time || '09:00',
+      end: is_open_24_7 === 'Yes' ? '23:30' : closing_time || '17:00',
       slotDuration: 30 // minutes
     };
     
@@ -271,7 +360,12 @@ const getAvailableTimeSlots = async (clinicId, date) => {
       });
       
       if (isAvailable) {
+        // Format time as HH:MM
+        const startHour = slotStart.getHours().toString().padStart(2, '0');
+        const startMinute = slotStart.getMinutes().toString().padStart(2, '0');
+        
         slots.push({
+          time: `${startHour}:${startMinute}`,
           start: slotStart.toISOString(),
           end: slotEnd.toISOString()
         });
@@ -319,5 +413,6 @@ module.exports = {
   updateAppointment,
   deleteAppointment,
   getAvailableTimeSlots,
-  isAppointmentSlotAvailable
+  isAppointmentSlotAvailable,
+  getAvailableDates
 };
