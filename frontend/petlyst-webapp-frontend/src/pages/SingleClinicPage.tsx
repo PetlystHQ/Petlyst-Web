@@ -106,10 +106,11 @@ const SingleClinicPage: React.FC = () => {
   const [messageStatus, setMessageStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [isSaved, setIsSaved] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
-  const [favoriteAnimation, setFavoriteAnimation] = useState(false);
+  const [favoriteAnimation, setFavoriteAnimation] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [hasPendingAppointment, setHasPendingAppointment] = useState<boolean>(false);
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
@@ -277,6 +278,24 @@ const SingleClinicPage: React.FC = () => {
     }
   }, [clinic, token, isVeterinarian]);
   
+  // Check if user has pending appointments
+  useEffect(() => {
+    const checkPendingAppointments = async () => {
+      if (!token || user?.user_type !== 'pet_owner') return;
+      
+      try {
+        const response = await axiosInstance.get('/pet-owners/has-pending-appointment');
+        if (response.data && response.data.success) {
+          setHasPendingAppointment(response.data.hasPendingAppointment);
+        }
+      } catch (error) {
+        console.error('Error checking pending appointments:', error);
+      }
+    };
+    
+    checkPendingAppointments();
+  }, [token, user]);
+  
   // Format day names
   const getDayName = (index: number): string => {
     // Days starting from Monday, index 0 = Monday
@@ -401,6 +420,11 @@ const SingleClinicPage: React.FC = () => {
   // Handle booking appointment
   const handleBookAppointment = () => {
     if (!clinic) return;
+    
+    // Check if user has pending appointments
+    if (hasPendingAppointment) {
+      return; // Don't do anything if user has pending appointments
+    }
     
     // Check if user is logged in
     if (!token) {
@@ -719,15 +743,34 @@ const SingleClinicPage: React.FC = () => {
               {/* Action Buttons Group */}
               <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 sm:items-center">
                 {/* Primary Action */}
-                <button
-                  onClick={handleBookAppointment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Book Appointment
-                </button>
+                <div className="group relative">
+                  <button
+                    onClick={handleBookAppointment}
+                    disabled={hasPendingAppointment}
+                    className={`${
+                      hasPendingAppointment
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors`}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {hasPendingAppointment ? "Pending" : "Book Appointment"}
+                  </button>
+                  
+                  {/* Tooltip that only shows on hover using group-hover */}
+                  {hasPendingAppointment && (
+                    <div className="absolute left-0 w-80 p-3 bg-white border border-gray-200 rounded-md shadow-md text-sm text-gray-700 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 mt-2">
+                      <div className="absolute -top-2 left-6 w-4 h-4 bg-white transform rotate-45 border-l border-t border-gray-200"></div>
+                      <p className="mb-2">Your new appointment requires veterinarian approval before you can book another one.</p>
+                      <p className="mb-2">If you don't want to wait, you can cancel your pending appointment from:</p>
+                      <div className="bg-blue-50 text-blue-700 font-medium p-2 rounded-md border border-blue-100 text-center">
+                        Dashboard &gt; Appointments
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Secondary Actions Group */}
                 <div className="flex gap-2">
