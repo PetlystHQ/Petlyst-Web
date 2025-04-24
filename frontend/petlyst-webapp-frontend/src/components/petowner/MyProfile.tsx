@@ -4,7 +4,7 @@ import { RootState } from '../../store';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { updateProfile } from '../../store/slices/authSlice';
 import axiosInstance from '../../utils/axiosConfig';
-import { PencilIcon, CheckIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, CheckIcon, ArrowUpTrayIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
 interface MyProfileProps {
   loading?: boolean;
@@ -347,15 +347,14 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
       <div className="relative h-28 bg-gradient-to-r from-blue-500 to-indigo-600">
         <div className="absolute -bottom-12 left-6">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full border-4 border-white bg-white flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 rounded-full border-4 border-white bg-gray-100 flex items-center justify-center overflow-hidden">
               {displayImage ? (
                 <img 
                   src={displayImage} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                 />
-              ) : (
-                isEditing && (
+              ) : isEditing ? (
                   <button 
                     type="button"
                     onClick={handleChoosePhoto}
@@ -364,7 +363,8 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
                     <ArrowUpTrayIcon className="w-5 h-5 mb-1" />
                     <span className="text-xs">Add Photo</span>
                   </button>
-                )
+              ) : (
+                <UserCircleIcon className="w-16 h-16 text-gray-400" />
               )}
               
               {photoLoading && (
