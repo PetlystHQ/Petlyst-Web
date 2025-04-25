@@ -4,19 +4,89 @@ const appointmentModel = require('../models/appointmentModel');
 const authenticateToken = require('../middleware/authenticateToken');
 const pool = require('../config/db');
 
-// Get all appointments for authenticated pet owner
+// Get all appointments for authenticated pet owner with detailed information
 router.get('/pet-owner', authenticateToken, async (req, res) => {
   try {
+    console.log('Pet owner appointments endpoint called');
+    console.log('User info:', { userId: req.user.userId, userType: req.user.userType });
+    
     // Only pet owners can access this route
     if (req.user.userType !== 'pet_owner') {
-      return res.status(403).json({ error: 'Access denied. Pet owner access only.' });
+      console.warn('Access denied: User is not a pet owner');
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Pet owner access only.' 
+      });
     }
 
-    const appointments = await appointmentModel.getAppointmentsByPetOwner(req.user.userId);
-    res.status(200).json(appointments);
+    // Get appointments with detailed information
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.clinic_id,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.meeting_url,
+        a.meeting_password,
+        a.notes,
+        c.clinic_name,
+        p.pet_name,
+        u.user_name as veterinarian_name,
+        u.user_surname as veterinarian_surname
+      FROM 
+        appointments a
+      JOIN 
+        clinics c ON a.clinic_id = c.clinic_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      LEFT JOIN 
+        clinic_veterinarians cv ON a.clinic_id = cv.clinic_id
+      LEFT JOIN 
+        users u ON cv.veterinarian_id = u.user_id AND cv.status = 'approved'
+      WHERE 
+        a.pet_owner_id = $1
+      ORDER BY 
+        CASE
+          WHEN a.appointment_status = 'pending' THEN 1
+          WHEN a.appointment_status = 'confirmed' THEN 2
+          WHEN a.appointment_status = 'completed' THEN 3
+          WHEN a.appointment_status = 'canceled' THEN 4
+          ELSE 5
+        END,
+        a.appointment_date,
+        a.appointment_start_hour
+    `;
+
+    console.log('Executing query for user ID:', req.user.userId);
+    const result = await pool.query(query, [req.user.userId]);
+    console.log('Found appointments:', result.rows.length);
+    
+    // Debug output for first result if any
+    if (result.rows.length > 0) {
+      console.log('First appointment sample:', {
+        id: result.rows[0].appointment_id,
+        status: result.rows[0].appointment_status,
+        clinic: result.rows[0].clinic_name,
+        pet: result.rows[0].pet_name,
+        date: result.rows[0].appointment_date
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
   } catch (error) {
     console.error('Error fetching pet owner appointments:', error);
-    res.status(500).json({ error: 'Failed to fetch appointments' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -239,6 +309,70 @@ router.delete('/:appointmentId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error deleting appointment:', error);
     res.status(500).json({ error: 'Failed to delete appointment' });
+  }
+});
+
+// Delete a canceled appointment by pet owner
+router.delete('/:appointmentId/pet-owner', authenticateToken, async (req, res) => {
+  try {
+    // Only pet owners can use this endpoint
+    if (req.user.userType !== 'pet_owner') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Pet owner access only.' 
+      });
+    }
+
+    const { appointmentId } = req.params;
+    
+    // First, check if the appointment exists and belongs to this pet owner
+    const appointment = await appointmentModel.getAppointmentById(appointmentId);
+    
+    if (!appointment) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Appointment not found' 
+      });
+    }
+    
+    // Verify that the appointment belongs to the authenticated pet owner
+    if (appointment.pet_owner_id !== req.user.userId) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. You can only delete your own appointments.' 
+      });
+    }
+    
+    // Check if the appointment is already canceled
+    if (appointment.appointment_status !== 'canceled') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Only canceled appointments can be deleted. Please cancel the appointment first.' 
+      });
+    }
+    
+    // If all checks pass, delete the appointment
+    const deletedAppointment = await appointmentModel.deleteAppointment(appointmentId);
+
+    if (!deletedAppointment) {
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to delete appointment' 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Appointment successfully deleted',
+      deletedAppointmentId: appointmentId
+    });
+  } catch (error) {
+    console.error('Error deleting pet owner appointment:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to delete appointment',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

@@ -23,9 +23,9 @@ const getAppointmentsByPetOwner = async (petOwnerId) => {
 const getAppointmentsByClinic = async (clinicId) => {
   try {
     const result = await pool.query(
-      `SELECT a.*, po.first_name, po.last_name, p.pet_name, p.animal_type_id
+      `SELECT a.*, u.user_name as first_name, u.user_surname as last_name, p.pet_name, p.animal_type_id
        FROM appointments a
-       JOIN pet_owners po ON a.pet_owner_id = po.pet_owner_id
+       JOIN users u ON a.pet_owner_id = u.user_id
        JOIN pets p ON a.pet_id = p.pet_id
        WHERE a.clinic_id = $1
        ORDER BY a.appointment_date, a.appointment_start_hour`,
@@ -42,10 +42,10 @@ const getAppointmentsByClinic = async (clinicId) => {
 const getAppointmentById = async (appointmentId) => {
   try {
     const result = await pool.query(
-      `SELECT a.*, c.clinic_name, po.first_name, po.last_name, p.pet_name
+      `SELECT a.*, c.clinic_name, u.user_name as first_name, u.user_surname as last_name, p.pet_name
        FROM appointments a
        JOIN clinics c ON a.clinic_id = c.clinic_id
-       JOIN pet_owners po ON a.pet_owner_id = po.pet_owner_id
+       JOIN users u ON a.pet_owner_id = u.user_id
        JOIN pets p ON a.pet_id = p.pet_id
        WHERE a.appointment_id = $1`,
       [appointmentId]
