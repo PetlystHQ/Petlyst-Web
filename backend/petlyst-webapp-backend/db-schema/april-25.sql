@@ -5,7 +5,7 @@
 -- Dumped from database version 16.4
 -- Dumped by pg_dump version 16.4
 
--- Started on 2025-04-17 20:58:26
+-- Started on 2025-04-25 15:45:27
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -863,6 +863,7 @@ CREATE TABLE public.pets (
     pet_birth_day integer,
     pet_birth_month integer,
     pet_birth_year integer,
+    pet_birth_date date,
     CONSTRAINT pet_birth_day_check CHECK (((pet_birth_day >= 1) AND (pet_birth_day <= 31))),
     CONSTRAINT pet_birth_month_check CHECK (((pet_birth_month >= 1) AND (pet_birth_month <= 12)))
 );
@@ -1446,6 +1447,8 @@ COPY public.appointments (appointment_id, video_meeting, pet_id, meeting_url, ap
 13	t	25	\N	2025-04-08 15:00:00	pending	\N	2025-04-08 15:20:00	\N	2025-04-08	74	23
 14	t	25	\N	2025-04-10 13:40:00	pending	selam :)	2025-04-10 14:00:00	\N	2025-04-10	74	23
 15	t	25	\N	2025-04-10 16:00:00	pending	Hdjd	2025-04-10 16:20:00	\N	2025-04-10	74	23
+28	f	59	\N	2025-04-24 16:00:00	pending	Hera - 16:00 - 24 April	2025-04-24 16:30:00	\N	2025-04-24	79	43
+29	f	64	\N	2025-04-26 14:00:00	pending	Regular check	2025-04-26 14:30:00	\N	2025-04-26	75	48
 \.
 
 
@@ -1722,11 +1725,11 @@ COPY public.clinic_veterinarians (id, clinic_id, veterinarian_id, status, is_cli
 --
 
 COPY public.clinics (clinic_id, clinic_name, clinic_email, clinic_operator_id, clinic_description, opening_time, closing_time, clinic_created_at, clinic_updated_at, clinic_verification_status, establishment_year, establishment_month, show_phone_number, allow_direct_messages, clinic_creation_status, tax_identification_number, veterinary_license_number, show_mail_address, allow_online_meetings, available_days, emergency_available_days, clinic_time_slots, is_open_24_7, clinic_type, clinic_address, slug) FROM stdin;
-76	Vetica Veterinary Clinic	vetica@gmail.com	36	baskan sunu bi siliyom ekran gözükmüyo cok uzunlar aq	09:00:00	17:00:00	2025-04-06 16:32:59.232874	2025-04-06 16:32:59.232874	verified	2010	5	t	t	complete	1111111111	1234567890	t	t	{t,t,t,t,t,f,f}	{t,t,t,t,t,t,t}	30	No	veterinary_clinic	\N	vetica-veterinary-clinic
-78	Petworks Veterinary Clinic	petworks@gmail.com	37	Petworks is a forward-thinking veterinary clinic where technology and compassionate care come together. We provide integrated health services for pets with a focus on smart diagnostics, seamless communication, and personalized treatment. At Petworks, we believe every connection matters — between pets, their owners, and the care they receive.	09:40:00	17:40:00	2025-04-06 17:05:17.417878	2025-04-06 17:12:32.833316	verified	2019	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	20	Yes	veterinary_clinic	\N	petworks-veterinary-clinic
-79	Novavet Veterinary Clinic	novavet@gmail.com	38	Novavet is a next-generation veterinary clinic dedicated to redefining pet healthcare. With a focus on innovation, precision, and compassionate service, we offer intelligent solutions for modern pet owners. At Novavet, every visit is powered by trust, care, and cutting-edge veterinary expertise.	10:00:00	18:00:00	2025-04-06 17:26:24.06476	2025-04-06 17:26:24.06476	verified	2023	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	30	Yes	veterinary_clinic	\N	novavet-veterinary-clinic
-75	Eryaman Animal Hospital	eryamanveteriner@gmail.com	27	Eryaman Veterinary Hospital is a state-of-the-art medical facility dedicated to providing comprehensive healthcare for pets, offering a wide range of services including routine check-ups, vaccinations, surgical procedures, emergency care, and specialized treatments. With a team of experienced veterinarians, advanced medical equipment, and a compassionate approach, we are committed to ensuring the highest quality of care for your beloved animal companions, delivering professional and personalized veterinary services that address both preventive health needs and complex medical conditions in a modern, hygienic, and welcoming environment.	09:30:00	17:00:00	2025-03-28 13:55:00.61498	2025-03-28 13:55:00.61498	verified	2023	8	t	t	complete	ERYAMANVET	VETLICENSE	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,f,f}	30	No	animal_hospital	123456719239812	eryaman-animal-hospital
-74	Saraçhane Animal Hospital	umutdncr@gmail.com	25	İmamoğlu	06:20:00	19:20:00	2025-03-23 23:12:46.181559	2025-04-07 14:28:37.874363	verified	2025	3	t	t	complete	2222222222	5555555555	t	t	{f,f,t,t,t,t,t}	{t,t,f,f,f,t,t}	20	No	animal_hospital	Bilkent Tepe Market	sarahane-animal-hospital
+79	Novavet Veterinary Clinic	novavet@gmail.com	38	Novavet is a next-generation veterinary clinic dedicated to redefining pet healthcare. With a focus on innovation, precision, and compassionate service, we offer intelligent solutions for modern pet owners. At Novavet, every visit is powered by trust, care, and cutting-edge veterinary expertise.	10:00:00	18:00:00	2025-04-06 17:26:24.06476	2025-04-06 17:26:24.06476	verified	2023	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	30	Yes	veterinary_clinic	bursa 	novavet-veterinary-clinic
+75	Eryaman Animal Hospital	eryamanveteriner@gmail.com	27	Eryaman Veterinary Hospital is a state-of-the-art medical facility dedicated to providing comprehensive healthcare for pets, offering a wide range of services including routine check-ups, vaccinations, surgical procedures, emergency care, and specialized treatments. With a team of experienced veterinarians, advanced medical equipment, and a compassionate approach, we are committed to ensuring the highest quality of care for your beloved animal companions, delivering professional and personalized veterinary services that address both preventive health needs and complex medical conditions in a modern, hygienic, and welcoming environment.	09:30:00	17:00:00	2025-03-28 13:55:00.61498	2025-03-28 13:55:00.61498	verified	2023	8	t	t	complete	ERYAMANVET	VETLICENSE	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,f,f}	30	No	animal_hospital	ankara nata vega	eryaman-animal-hospital
+76	Vetica Veterinary Clinic	vetica@gmail.com	36	baskan sunu bi siliyom ekran gözükmüyo cok uzunlar aq	09:00:00	17:00:00	2025-04-06 16:32:59.232874	2025-04-06 16:32:59.232874	verified	2010	5	t	t	complete	1111111111	1234567890	t	t	{t,t,t,t,t,f,f}	{t,t,t,t,t,t,t}	30	No	veterinary_clinic	adana	vetica-veterinary-clinic
+74	Saraçhane Animal Hospital	umutdncr@gmail.com	25	İmamoğlu	06:20:00	21:20:00	2025-03-23 23:12:46.181559	2025-04-24 18:31:38.724295	verified	2025	3	t	t	complete	2222222222	5555555555	t	t	{f,t,t,t,t,t,t}	{t,t,f,f,f,t,t}	20	No	animal_hospital	Bilkent Tepe Market	sarahane-animal-hospital
+78	Petworks Veterinary Clinic	petworks@gmail.com	37	Petworks is a forward-thinking veterinary clinic where technology and compassionate care come together. We provide integrated health services for pets with a focus on smart diagnostics, seamless communication, and personalized treatment. At Petworks, we believe every connection matters — between pets, their owners, and the care they receive.	09:40:00	17:40:00	2025-04-06 17:05:17.417878	2025-04-06 17:12:32.833316	verified	2019	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	20	Yes	veterinary_clinic	uşak	petworks-veterinary-clinic
 \.
 
 
@@ -1791,6 +1794,9 @@ COPY public.password_reset_tokens (reset_token_id, user_id, user_email, reset_co
 --
 
 COPY public.pet_owner_favorite_clinics (favorite_id, pet_owner_id, clinic_id, created_at) FROM stdin;
+11	43	74	2025-04-19 22:11:18.420555+00
+12	43	79	2025-04-22 11:46:39.452756+00
+13	48	75	2025-04-25 08:19:58.533676+00
 \.
 
 
@@ -1803,7 +1809,12 @@ COPY public.pet_owner_favorite_clinics (favorite_id, pet_owner_id, clinic_id, cr
 COPY public.pet_owners (pet_owner_id) FROM stdin;
 23
 26
-42
+43
+44
+45
+46
+47
+48
 \.
 
 
@@ -1813,9 +1824,11 @@ COPY public.pet_owners (pet_owner_id) FROM stdin;
 -- Data for Name: pets; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
-COPY public.pets (pet_id, pet_owner_id, pet_name, pet_breed, pet_photo, pet_gender, pet_species, pet_birth_day, pet_birth_month, pet_birth_year) FROM stdin;
-25	23	Rose	American Bully	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/Rose.jpeg	female	Dog	8	4	2021
-54	42	Hera	American Shorthair	\N	female	Cat	\N	\N	\N
+COPY public.pets (pet_id, pet_owner_id, pet_name, pet_breed, pet_photo, pet_gender, pet_species, pet_birth_day, pet_birth_month, pet_birth_year, pet_birth_date) FROM stdin;
+59	43	Hera	Cocker Spaniel	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-43/hera.png	Female	Dog	15	9	2021	\N
+60	23	Djdj	Rjrkfj	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/Djdj.jpeg	\N	cat	\N	\N	\N	2023-04-22
+64	48	Pamuk	Golden Retriever	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-48/pamuk.png	Female	Dog	28	5	2021	\N
+25	23	Rose	American Bully	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/Rose.jpeg	female	Dog	8	4	2021	\N
 \.
 
 
@@ -1852,6 +1865,7 @@ COPY public.users (user_id, user_type, user_name, user_surname, user_email, user
 26	admin	Umut	Yananer	umutdncr@gmail.com	$2b$10$XcGmKKT1Mux5eIGB7BN24.AOWpDRumSSQrG.yxyhtFNXn/hnZa7q2	\N	\N	\N	2025-03-12 15:02:48.836524	2025-03-12 15:02:48.836524
 27	veterinarian	Mehmet	Öztürk	mehmet@gmail.com	$2b$10$ajDuY1isr1.qxguqgXDyfOu47dZ/dTKWLQX14.KwAxPwPNATc98qa	\N	\N	\N	2025-03-27 10:21:52.318334	2025-03-27 10:21:52.318334
 30	veterinarian	Timur	Candaş	timur@gmail.com	$2b$10$D4DmrT77qdJyyGQ6eLYfMuimiTgFI2ZBP0/LUAq.E7rtSTpLTY/V6	\N	\N	\N	2025-04-01 00:21:13.665191	2025-04-01 00:21:13.665191
+45	pet_owner	Auto	Auto	auto@gmail.com	$2a$10$birJc.8sIW3vOM4rY9eFNe/HXz0vtQDVocTPx.bQbd2WuAQhv1LDW	\N	\N	\N	2025-04-21 23:49:27.652258	2025-04-21 23:49:27.652258
 31	admin	Dinçer	Yananer	dincer.yananer@ug.bilkent.edu.tr	$2b$10$l5rFjFeBrvBjDRUDVsJipOAp18FbjhJ1uYRA.fKLXp1A8vOdQ4wbS	\N	\N	\N	2025-04-01 00:34:45.442856	2025-04-01 00:34:45.442856
 33	veterinarian	Eyüp	Eroğlu	eyup@gmail.com	$2b$10$gJXev/3w0ulKmcJMxinlIek2jSJeqZvzhb6EVNXlwQhMU4g.gFb7y	\N	\N	\N	2025-04-01 14:50:29.392596	2025-04-01 14:50:29.392596
 34	veterinarian	Kutlucan	Öztürk	kutlucan@gmail.com	$2b$10$7y6HaSSBc/iJ43w29Z.fXenXINDtFMkApcGqr9v/JfRBgI64PMlXe	\N	\N	\N	2025-04-03 19:21:25.238772	2025-04-03 19:21:25.238772
@@ -1861,7 +1875,12 @@ COPY public.users (user_id, user_type, user_name, user_surname, user_email, user
 38	veterinarian	Egehan	Özkan	egehan@gmail.com	$2b$10$JsaaQz1totLDH80SbJfbmu1hTne//ldGvsQL5pi0sB538VXkfNJBS	\N	\N	\N	2025-04-06 17:23:30.584267	2025-04-06 17:23:30.584267
 39	veterinarian	Tuna	Çöllü	tuna@gmail.com	$2b$10$A7I7hsJ2TVVqJRUf2eeVxuvX8DQkt/o9s7rosOBB3umRW8ysW.V8i	\N	\N	\N	2025-04-08 11:10:26.624827	2025-04-08 11:10:26.624827
 40	veterinarian	Kemal	Eray	kemal@gmail.com	$2b$10$gq3L4JZNq3cm87rFPxtVFOtEsFDGCiwatgh0DJF5xrCBinZbPLSrG	\N	\N	\N	2025-04-08 12:03:48.970294	2025-04-08 12:03:48.970294
-42	pet_owner	Alev	Yananer	alev@gmail.com	$2b$10$FzbF5rrhdVKNdUNQq5RXKuPU4Uzk.j6VUs2d6oWJFeB4WERIWyLp6	\N	\N	\N	2025-04-14 15:10:57.435411	2025-04-14 15:10:57.435411
+43	pet_owner	Alev	Yananer	alev@gmail.com	$2b$10$4e6cHrPf/45QdsjzTH0NteyxRZwNd4t5J0DP0SVrTtw1fr5oJ3Ipa	(545) 290-1525	Şehit Osman Avcı Mah. Selçuklular Cad. İntes Blk. Cumhuriyet Sitesi B7 Blok No:25 Eryaman Etimesgut İstanbul	\N	2025-04-19 17:14:06.845732	2025-04-22 07:42:03.645519
+46	pet_owner	Deneme	Deneme	Deneme@gmail.com	$2a$10$Aa1Gi0GQE0/.bBlcKVqX8.Js6ajwoojn9MV4aDCrH9hU.tQjFywse	\N	\N	\N	2025-04-22 11:52:37.802873	2025-04-22 11:52:37.802873
+44	pet_owner	Trk	Lfc	tarik.lafci@ug.bilkent.edu.tr	$2a$10$1h3xfyhTI26K.ukcMH7HQuj3QD6WwNS1P8goIrnU1dtWbpKbiy43O	\N	\N	\N	2025-04-21 21:32:40.46089	2025-04-21 21:32:40.46089
+47	pet_owner	Tuna	Çöllü	collu@icloud.com	$2b$10$j6hA7DKF6r1xOMd6ukTXt.ME4D6WNrrczReTql6973T.CQ3dRHjLW	\N	\N	\N	2025-04-25 08:18:16.420049	2025-04-25 08:18:16.420049
+48	pet_owner	Petlyst	Petlyst	petlyst@gmail.com	$2b$10$NGqctHwD9RYHR9LKuRaEGuQFlXgu3ZAZRnqcRNembu6B43Q.3K0BK	\N	\N	\N	2025-04-25 08:19:33.314826	2025-04-25 08:19:33.314826
+49	veterinarian	Petlyst	Vet	petlystvet@gmail.com	$2b$10$i0dtRR4Yt3D8a37I87Rv5eT71Z.HAgzHtGmgFWdXUQEpPXZ9gQY5i	\N	\N	\N	2025-04-25 12:24:57.382783	2025-04-25 12:24:57.382783
 \.
 
 
@@ -1964,6 +1983,7 @@ COPY public.veterinarians (veterinarian_id, veterinarian_graduate_barcode, veter
 38	EGEHANBARCODE	verified	0087f302072f271b7a499be7ffa10590:a328e75af49842a568c0563a68b85e71	2025-04-06 17:23:30.638374	2025-04-06 17:23:30.638374	\N	\N	f	dr-egehan-zkan
 24	\N	not_verified	b9ea071404d499044df72f9a49d805f0:23bbf7c1945d0c79bd8415bd28dfb4b8	2025-03-11 16:46:18.769778	2025-03-11 16:46:18.769778	\N	\N	f	dr-veteriner-veteriner
 35	\N	not_verified	\N	2025-04-04 17:10:47.279434	2025-04-04 17:10:47.279434	\N	\N	t	dr-saltuk-emre
+49	123213123213131	verified	e0f5f1744d573831fde604ac5e21e899:3d81292ffe609aa3f393a1afa09e751d	2025-04-25 12:24:57.387543	2025-04-25 12:24:57.387543	\N	\N	f	dr-petlyst-vet
 34	KUTLUCANBARCODE	verified	1a5d0cc11c50acf6bc40f32e216fb54d:52463f23229af9629a23ae86cc40f54f	2025-04-03 19:21:25.297825	2025-04-03 19:21:25.297825	\N	\N	t	dr-kutlucan-ztrk
 36	OSMANBARCODE	verified	2af08d70a0eb385ff0ceca4a1fb38f62:fdb280f49648d1d96fa1e7f5830db22f	2025-04-06 16:24:40.116182	2025-04-06 16:27:04.420483	Dr. Osman İç is a dedicated veterinary specialist in internal medicine, with a deep focus on diagnosing and managing complex diseases in companion animals. Known for his analytical approach and compassionate care, he strives to improve each patient’s quality of life through precise, evidence-based treatments.	{english,turkish}	t	dr-osman-i
 39	TUNABARCODE	verified	624834a136c655af396ba64ff9ad8d5b:9474747b490ecee5952349621a62a79f	2025-04-08 11:10:26.688737	2025-04-08 11:10:26.688737	\N	\N	f	dr-tuna-ll
@@ -1998,7 +2018,7 @@ SELECT pg_catalog.setval('public.animal_types_animal_type_id_seq', 18, true);
 -- Name: appointments_appointment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.appointments_appointment_id_seq', 15, true);
+SELECT pg_catalog.setval('public.appointments_appointment_id_seq', 29, true);
 
 
 --
@@ -2106,7 +2126,7 @@ SELECT pg_catalog.setval('public.medical_services_medical_service_id_seq', 24, t
 -- Name: password_reset_tokens_reset_token_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.password_reset_tokens_reset_token_id_seq', 5, true);
+SELECT pg_catalog.setval('public.password_reset_tokens_reset_token_id_seq', 12, true);
 
 
 --
@@ -2115,7 +2135,7 @@ SELECT pg_catalog.setval('public.password_reset_tokens_reset_token_id_seq', 5, t
 -- Name: pet_owner_favorite_clinics_favorite_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.pet_owner_favorite_clinics_favorite_id_seq', 9, true);
+SELECT pg_catalog.setval('public.pet_owner_favorite_clinics_favorite_id_seq', 13, true);
 
 
 --
@@ -2124,7 +2144,7 @@ SELECT pg_catalog.setval('public.pet_owner_favorite_clinics_favorite_id_seq', 9,
 -- Name: pets_pet_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.pets_pet_id_seq', 54, true);
+SELECT pg_catalog.setval('public.pets_pet_id_seq', 64, true);
 
 
 --
@@ -2142,7 +2162,7 @@ SELECT pg_catalog.setval('public.treatments_treatment_id_seq', 1, false);
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 42, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 49, true);
 
 
 --
@@ -2895,7 +2915,7 @@ ALTER TABLE ONLY public.veterinarians
     ADD CONSTRAINT veterinarians_veterinarian_id_fkey FOREIGN KEY (veterinarian_id) REFERENCES public.users(user_id);
 
 
--- Completed on 2025-04-17 20:58:34
+-- Completed on 2025-04-25 15:45:36
 
 --
 -- PostgreSQL database dump complete

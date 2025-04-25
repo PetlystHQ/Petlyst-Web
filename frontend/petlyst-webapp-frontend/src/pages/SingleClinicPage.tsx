@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../utils/axiosConfig';
 import { useSelector } from 'react-redux';
@@ -6,6 +6,7 @@ import { RootState } from '../store';
 import AuthModal from '../components/modals/AuthModal';
 import ResetPasswordModal from '../components/modals/ResetPasswordModal';
 import AppointmentModal from '../components/petowner/petownermodals/AppointmentModal';
+import { createPortal } from 'react-dom';
 
 // Clinic interface
 interface Clinic {
@@ -110,6 +111,11 @@ const SingleClinicPage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [hasPendingAppointment, setHasPendingAppointment] = useState(false);
+  const [checkingAppointment, setCheckingAppointment] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
@@ -277,6 +283,37 @@ const SingleClinicPage: React.FC = () => {
     }
   }, [clinic, token, isVeterinarian]);
   
+  // Add a useEffect to check for pending appointments
+  useEffect(() => {
+    // Only check for pending appointments if the clinic is loaded and user is logged in
+    if (clinic && token && !isVeterinarian) {
+      const checkPendingAppointment = async () => {
+        try {
+          setCheckingAppointment(true);
+          console.log("Checking pending appointments for clinic ID:", clinic.clinic_id);
+          
+          const response = await axiosInstance.get(`/pet-owners/has-pending-appointment/${clinic.clinic_id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.data.success) {
+            setHasPendingAppointment(response.data.hasPendingAppointment);
+            console.log("Pending appointment status:", response.data.hasPendingAppointment);
+          }
+        } catch (error: any) {
+          console.warn("Could not check pending appointment status:", error);
+          // Silently fail, default is false
+        } finally {
+          setCheckingAppointment(false);
+        }
+      };
+      
+      checkPendingAppointment();
+    }
+  }, [clinic, token, isVeterinarian]);
+  
   // Format day names
   const getDayName = (index: number): string => {
     // Days starting from Monday, index 0 = Monday
@@ -402,6 +439,11 @@ const SingleClinicPage: React.FC = () => {
   const handleBookAppointment = () => {
     if (!clinic) return;
     
+    // If user has a pending appointment, don't allow booking
+    if (hasPendingAppointment) {
+      return;
+    }
+    
     // Check if user is logged in
     if (!token) {
       setIsAuthModalOpen(true);
@@ -524,6 +566,34 @@ const SingleClinicPage: React.FC = () => {
       setFavoriteLoading(false);
     }
   };
+  
+  // Show tooltip when hovering over the pending button
+  const showTooltip = () => {
+    if (buttonRef.current) {
+      setButtonPosition(buttonRef.current.getBoundingClientRect());
+      setTooltipVisible(true);
+    }
+  };
+
+  // Hide tooltip
+  const hideTooltip = () => {
+    setTooltipVisible(false);
+  };
+  
+  // Add scroll event listener to hide tooltip when scrolling
+  useEffect(() => {
+    const handleScroll = () => {
+      if (tooltipVisible) {
+        hideTooltip();
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [tooltipVisible]);
   
   // Render loading state
   if (loading) {
@@ -719,15 +789,70 @@ const SingleClinicPage: React.FC = () => {
               {/* Action Buttons Group */}
               <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 sm:items-center">
                 {/* Primary Action */}
-                <button
-                  onClick={handleBookAppointment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors"
+                <div 
+                  className="relative"
+                  onMouseEnter={hasPendingAppointment ? showTooltip : undefined}
+                  onMouseLeave={hasPendingAppointment ? hideTooltip : undefined}
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Book Appointment
-                </button>
+                  <button
+                    ref={buttonRef}
+                    onClick={handleBookAppointment}
+                    disabled={hasPendingAppointment || checkingAppointment}
+                    className={`${
+                      hasPendingAppointment 
+                        ? 'bg-orange-500 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors pointer-events-auto`}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {checkingAppointment 
+                      ? 'Checking...' 
+                      : hasPendingAppointment 
+                        ? 'Pending' 
+                        : 'Book Appointment'}
+                  </button>
+
+                  {/* Tooltip Portal */}
+                  {hasPendingAppointment && tooltipVisible && createPortal(
+                    <div 
+                      className="fixed bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm rounded-xl p-4 shadow-xl z-[9999] max-w-xs border border-gray-700"
+                      style={{
+                        top: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().top - 10}px` : '0',
+                        left: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().left + buttonRef.current.getBoundingClientRect().width / 2}px` : '0',
+                        transform: 'translate(-50%, -100%)',
+                        marginTop: '-5px',
+                        backdropFilter: 'blur(8px)'
+                      }}
+                    >
+                      <div className="relative">
+                        <div className="mb-3">
+                          <p className="text-center leading-relaxed">
+                            Your appointment request has been sent to the clinic. The veterinarian will approve it based on availability.
+                          </p>
+                        </div>
+                        
+                        <div className="text-center mb-2">
+                          <p className="text-gray-300 text-xs mb-2">If you changed your mind, please cancel your request via:</p>
+                          <div className="inline-flex items-center justify-center py-1.5 px-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer">
+                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <span className="font-medium">Dashboard</span>
+                            <svg className="w-3 h-3 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span className="font-medium">Appointments</span>
+                          </div>
+                        </div>
+                        
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>,
+                    document.body
+                  )}
+                </div>
                 
                 {/* Secondary Actions Group */}
                 <div className="flex gap-2">
@@ -1096,7 +1221,7 @@ const SingleClinicPage: React.FC = () => {
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <h3 className="text-sm font-semibold text-gray-500 mb-2 flex items-center">
                       <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                       Area
                     </h3>
@@ -1236,6 +1361,11 @@ const SingleClinicPage: React.FC = () => {
           closingTime={clinic.closing_time}
           timeSlotDuration={clinic.clinic_time_slots || 30}
           allowOnlineMeetings={true}
+          onAppointmentCreated={() => {
+            // Update pending appointment status when a new appointment is created
+            setHasPendingAppointment(true);
+            setIsAppointmentModalOpen(false);
+          }}
         />
       )}
     </div>
