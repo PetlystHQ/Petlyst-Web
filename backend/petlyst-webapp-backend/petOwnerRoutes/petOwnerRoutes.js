@@ -1581,5 +1581,56 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
   }
 });
 
+// Check if pet owner has any pending appointments
+router.get('/has-pending-appointment', authenticateToken, async (req, res) => {
+  try {
+    // Use userId from token, with fallback to id
+    const userId = req.user.userId || req.user.id;
+    
+    // Only pet owners can access this route
+    // Check if user is a pet_owner
+    const userTypeQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userTypeQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    if (userResult.rows[0].user_type !== 'pet_owner') {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Access denied. Pet owner access only.' 
+      });
+    }
+
+    // Query to check if pet owner has any pending appointments
+    const result = await pool.query(
+      `SELECT COUNT(*) 
+       FROM appointments 
+       WHERE pet_owner_id = $1 
+       AND appointment_status = 'pending'`,
+      [userId]
+    );
+
+    const hasPendingAppointment = parseInt(result.rows[0].count) > 0;
+
+    res.status(200).json({
+      success: true,
+      hasPendingAppointment
+    });
+  } catch (error) {
+    console.error('Error checking pending appointments:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to check pending appointments' 
+    });
+  }
+});
+
 // Export the router
 module.exports = router;
