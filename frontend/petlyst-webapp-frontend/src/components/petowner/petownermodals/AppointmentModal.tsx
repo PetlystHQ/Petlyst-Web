@@ -27,6 +27,7 @@ interface AppointmentModalProps {
   closingTime?: string; // HH:MM format
   timeSlotDuration?: number; // Duration in minutes
   allowOnlineMeetings?: boolean; // Whether clinic allows online meetings
+  onAppointmentCreated?: () => void; // Add callback for when an appointment is created
 }
 
 const AppointmentModal: React.FC<AppointmentModalProps> = ({ 
@@ -38,7 +39,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   openingTime = "09:00",
   closingTime = "17:00",
   timeSlotDuration = 30,
-  allowOnlineMeetings = false
+  allowOnlineMeetings = false,
+  onAppointmentCreated
 }) => {
   const [step, setStep] = useState<number>(1);
   const [pets, setPets] = useState<Pet[]>([]);
@@ -341,6 +343,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
         if (response.data) {
           console.log("Appointment created successfully:", response.data);
           setSuccess(true);
+          // Call the callback if provided
+          if (onAppointmentCreated) {
+            onAppointmentCreated();
+          }
         } else {
           throw new Error('Failed to create appointment - empty response');
         }
@@ -356,6 +362,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
         if (process.env.NODE_ENV === 'development') {
           console.warn("DEV MODE: Simulating successful appointment creation");
           setSuccess(true);
+          // Call the callback if provided, even in dev mode
+          if (onAppointmentCreated) {
+            onAppointmentCreated();
+          }
         } else {
           throw apiError; // Re-throw in production
         }

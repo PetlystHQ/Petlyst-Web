@@ -1582,10 +1582,11 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
 });
 
 // Check if pet owner has any pending appointments
-router.get('/has-pending-appointment', authenticateToken, async (req, res) => {
+router.get('/has-pending-appointment/:clinicId?', authenticateToken, async (req, res) => {
   try {
     // Use userId from token, with fallback to id
     const userId = req.user.userId || req.user.id;
+    const { clinicId } = req.params;
     
     // Only pet owners can access this route
     // Check if user is a pet_owner
@@ -1608,15 +1609,20 @@ router.get('/has-pending-appointment', authenticateToken, async (req, res) => {
       });
     }
 
-    // Query to check if pet owner has any pending appointments
-    const result = await pool.query(
-      `SELECT COUNT(*) 
-       FROM appointments 
-       WHERE pet_owner_id = $1 
-       AND appointment_status = 'pending'`,
-      [userId]
-    );
+    // Query to check if pet owner has any pending appointments for specific clinic
+    let query = `SELECT COUNT(*) 
+                 FROM appointments 
+                 WHERE pet_owner_id = $1 
+                 AND appointment_status = 'pending'`;
+    let params = [userId];
+    
+    // If clinicId is provided, filter by that clinic
+    if (clinicId) {
+      query += ` AND clinic_id = $2`;
+      params.push(clinicId);
+    }
 
+    const result = await pool.query(query, params);
     const hasPendingAppointment = parseInt(result.rows[0].count) > 0;
 
     res.status(200).json({

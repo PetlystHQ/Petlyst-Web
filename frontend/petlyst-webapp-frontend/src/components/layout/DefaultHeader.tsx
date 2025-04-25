@@ -13,7 +13,11 @@ const DefaultHeader: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const isPetOwnerPage = location.pathname === '/' || location.pathname === '/pet-owner-home' || location.pathname.startsWith('/search');
+  const isPetOwnerPage = location.pathname === '/' || 
+                          location.pathname === '/pet-owner-home' || 
+                          location.pathname.startsWith('/search') ||
+                          location.pathname.startsWith('/clinic/') ||
+                          location.pathname.includes('/clinics/');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
