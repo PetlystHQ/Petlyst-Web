@@ -7,6 +7,7 @@ import { RootState } from '../store';
 import axiosInstance from '../utils/axiosConfig';
 import MyPets from '../components/petowner/MyPets';
 import MyProfile from '../components/petowner/MyProfile';
+import MyAppointments from '../components/petowner/MyAppointments';
 import {
   ArrowLeftOnRectangleIcon,
   HomeIcon
@@ -36,10 +37,16 @@ interface Appointment {
   appointment_id: string;
   clinic_id: string;
   clinic_name: string;
+  pet_id: string;
+  pet_name: string;
   appointment_date: string;
-  appointment_time: string;
-  appointment_status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  appointment_notes?: string;
+  appointment_start_hour: string;
+  appointment_end_hour: string;
+  appointment_status: 'pending' | 'confirmed' | 'completed' | 'canceled';
+  notes?: string;
+  video_meeting: boolean;
+  meeting_url?: string;
+  meeting_password?: string;
   veterinarian_name?: string;
   veterinarian_surname?: string;
 }
@@ -171,9 +178,13 @@ const PetOwnerDashboard: React.FC = () => {
   // Fetch appointments
   const fetchAppointments = async () => {
     try {
-      const response = await axiosInstance.get('/pet-owners/appointments');
-      if (response.data.success) {
+      console.log('PetOwnerDashboard: Fetching appointments from API');
+      const response = await axiosInstance.get('/appointments/pet-owner');
+      
+      if (response.data && response.data.success) {
+        console.log('PetOwnerDashboard: Successfully fetched appointments:', response.data.appointments.length);
         setAppointments(response.data.appointments || []);
+      } else {
       }
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -273,88 +284,15 @@ const PetOwnerDashboard: React.FC = () => {
   
   // Render appointments content
   const renderAppointments = () => {
+    console.log('PetOwnerDashboard: Rendering appointments tab, appointments count:', appointments.length);
+    
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">My Appointments</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
-            Book New Appointment
-          </button>
-        </div>
-        
-        {appointments.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Clinic
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Veterinarian
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {appointments.map(appointment => (
-                  <tr key={appointment.appointment_id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{appointment.clinic_name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatDate(appointment.appointment_date)}</div>
-                      <div className="text-sm text-gray-500">{appointment.appointment_time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {appointment.veterinarian_name 
-                          ? `Dr. ${appointment.veterinarian_name} ${appointment.veterinarian_surname}`
-                          : 'Not specified'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${appointment.appointment_status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                        ${appointment.appointment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                        ${appointment.appointment_status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
-                        ${appointment.appointment_status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                      `}>
-                        {appointment.appointment_status.charAt(0).toUpperCase() + appointment.appointment_status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                      {appointment.appointment_status === 'confirmed' && (
-                        <button className="text-red-600 hover:text-red-900">Cancel</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No appointments found</h3>
-            <p className="text-gray-600 mb-4">Book your first appointment with a veterinarian</p>
-            <button className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors">
-              Book Appointment
-            </button>
-          </div>
-        )}
-      </div>
+      <MyAppointments 
+        appointments={appointments}
+        loading={loading && activeTab === 'appointments'}
+        error={error && activeTab === 'appointments' ? error : null}
+        onAppointmentCanceled={fetchAppointments}
+      />
     );
   };
   
