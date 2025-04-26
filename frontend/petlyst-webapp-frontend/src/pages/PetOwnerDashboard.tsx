@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useAppDispatch } from '../hooks/useAppDispatch';
@@ -74,6 +74,13 @@ interface Message {
   clinic_name?: string;
 }
 
+// Add a new interface for countdown timer
+interface CountdownTime {
+  days: number;
+  hours: number;
+  minutes: number;
+}
+
 const PetOwnerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -88,6 +95,10 @@ const PetOwnerDashboard: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Add state for countdown timer
+  const [timeUntilAppointment, setTimeUntilAppointment] = useState<CountdownTime | null>(null);
+  const timerRef = useRef<number | null>(null);
   
   // Menu Items
   const menuItems: MenuItem[] = [
@@ -136,8 +147,9 @@ const PetOwnerDashboard: React.FC = () => {
       // Fetch data based on active tab
       switch (activeTab) {
         case 'overview':
-          // For overview, only fetch pets which we know works
+          // For overview, fetch both pets and appointments
           await fetchPets();
+          await fetchAppointments();
           break;
         case 'pets':
           await fetchPets();
@@ -254,10 +266,26 @@ const PetOwnerDashboard: React.FC = () => {
       return null; // Return null for invalid dates
     }
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+  };
+  
+  // Format time
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    
+    try {
+      // Extract the time portion if it's a full ISO datetime
+      const timePart = timeStr.includes('T') 
+        ? timeStr.split('T')[1].substring(0, 5) 
+        : timeStr.includes(':') ? timeStr.substring(0, 5) : timeStr;
+        
+      return timePart;
+    } catch (e) {
+      console.error('Error formatting time:', e);
+      return '';
+    }
   };
   
   // Render profile content
@@ -414,6 +442,106 @@ const PetOwnerDashboard: React.FC = () => {
     );
   };
   
+  // Add a function to calculate the time remaining until the next appointment
+  const calculateTimeRemaining = (appointmentDate: string, appointmentTime: string): CountdownTime | null => {
+    try {
+      // For debugging
+      console.log('Raw inputs:', { appointmentDate, appointmentTime });
+      
+      const now = new Date();
+      
+      // Use the appointmentTime as the canonical source since it contains the actual appointment time
+      // This handles the UTC to local conversion automatically
+      const appointmentDateTime = new Date(appointmentTime);
+      
+      console.log('Appointment datetime:', appointmentDateTime);
+      
+      // Check if valid
+      if (isNaN(appointmentDateTime.getTime())) {
+        console.error('Invalid appointment datetime');
+        return { days: 0, hours: 0, minutes: 0 };
+      }
+      
+      // If in past, return zeros
+      if (appointmentDateTime <= now) {
+        console.log('Appointment is in the past');
+        return { days: 0, hours: 0, minutes: 0 };
+      }
+      
+      // Calculate difference
+      const diffMs = appointmentDateTime.getTime() - now.getTime();
+      console.log('Time difference in ms:', diffMs);
+      
+      // Convert to days, hours, minutes
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      console.log('Calculated time remaining:', { days, hours, minutes });
+      return { days, hours, minutes };
+    } catch (error) {
+      console.error('Error in countdown calculation:', error);
+      return { days: 0, hours: 0, minutes: 0 };
+    }
+  };
+  
+  // Update the timer every minute
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      // Filter confirmed appointments
+      const confirmedAppointments = appointments.filter(app => app.appointment_status === 'confirmed');
+      
+      // Sort by date
+      const upcomingAppointments = [...confirmedAppointments].sort((a, b) => {
+        const dateA = new Date(`${a.appointment_date}T${a.appointment_start_hour}`);
+        const dateB = new Date(`${b.appointment_date}T${b.appointment_start_hour}`);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      const nextAppointment = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
+      
+      if (nextAppointment) {
+        // Log appointment data for debugging
+        console.log('Next appointment data:', {
+          date: nextAppointment.appointment_date,
+          startHour: nextAppointment.appointment_start_hour,
+          fullData: nextAppointment
+        });
+        
+        // Initial calculation
+        const initialCountdown = calculateTimeRemaining(
+          nextAppointment.appointment_date, 
+          nextAppointment.appointment_start_hour
+        );
+        console.log('Initial countdown:', initialCountdown);
+        setTimeUntilAppointment(initialCountdown);
+        
+        // Set up interval for updates
+        const intervalId = window.setInterval(() => {
+          setTimeUntilAppointment(
+            calculateTimeRemaining(nextAppointment.appointment_date, nextAppointment.appointment_start_hour)
+          );
+        }, 60000); // Update every minute
+        
+        timerRef.current = intervalId as unknown as number;
+        
+        return () => {
+          if (timerRef.current !== null) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+        };
+      }
+    }
+    
+    return () => {
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [activeTab, appointments]);
+  
   // Render content based on active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -448,26 +576,26 @@ const PetOwnerDashboard: React.FC = () => {
     // Get random pet for wellbeing message
     const randomPet = pets.length > 0 ? pets[Math.floor(Math.random() * pets.length)] : null;
     
+    // Filter confirmed appointments
+    const confirmedAppointments = appointments.filter(app => app.appointment_status === 'confirmed');
+    
+    // Sort confirmed appointments by date (earliest first)
+    const upcomingAppointments = [...confirmedAppointments].sort((a, b) => {
+      const dateA = new Date(`${a.appointment_date}T${a.appointment_start_hour}`);
+      const dateB = new Date(`${b.appointment_date}T${b.appointment_start_hour}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    // Get the next appointment (if any)
+    const nextAppointment = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
+    
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Dashboard Overview</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
-          <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
-            <h3 className="text-lg font-medium text-gray-800 mb-2">My Pets</h3>
-            <p className="text-3xl font-bold text-blue-600">{pets.length}</p>
-            <button 
-              onClick={() => setActiveTab('pets')}
-              className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              View all pets
-            </button>
-          </div>
-        </div>
-        
-        {/* Pet Wellbeing Message - Simplified Design */}
+        {/* Pet Wellbeing Message - Now at the top */}
         {pets.length > 0 && (
-          <div className="mt-8 border-l-4 border-emerald-400 pl-4 py-2">
+          <div className="mb-8 border-l-4 border-emerald-400 pl-4 py-2">
             <div className="bg-gradient-to-r from-emerald-50 to-transparent p-4 rounded-r-lg">
               <h3 className="text-lg font-medium text-emerald-800 mb-2">{greeting}, {user?.name || 'Friend'}!</h3>
               
@@ -484,6 +612,75 @@ const PetOwnerDashboard: React.FC = () => {
             </div>
           </div>
         )}
+        
+        <div className="grid grid-cols-1 gap-6">
+          {/* Confirmed Appointments Card - First and only show if there are confirmed appointments */}
+          {confirmedAppointments.length > 0 && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+              <h3 className="text-lg font-medium text-gray-800 mb-2">Confirmed Appointments</h3>
+              
+              {/* Replace count with countdown timer */}
+              {nextAppointment && timeUntilAppointment && (
+                <div className="flex items-center space-x-4 mb-3">
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">{timeUntilAppointment.days}</span>
+                    <p className="text-xs text-gray-500">days</p>
+                  </div>
+                  <span className="text-green-600 font-bold">:</span>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">{timeUntilAppointment.hours}</span>
+                    <p className="text-xs text-gray-500">hours</p>
+                  </div>
+                  <span className="text-green-600 font-bold">:</span>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-green-600">{timeUntilAppointment.minutes}</span>
+                    <p className="text-xs text-gray-500">minutes</p>
+                  </div>
+                </div>
+              )}
+              
+              {nextAppointment && (
+                <div className="mt-2 bg-white p-3 rounded-md border border-green-100">
+                  <p className="text-sm font-medium text-gray-700 flex items-center mb-1">
+                    <span className="mr-2 text-lg">🗓️</span> Next appointment:
+                  </p>
+                  <p className="font-medium text-lg text-gray-800 mb-1">
+                    {formatDate(nextAppointment.appointment_date)} <span className="ml-2 text-gray-600">{formatTime(nextAppointment.appointment_start_hour)}</span>
+                  </p>
+                  <p className="text-sm text-gray-700 mb-2">
+                    {nextAppointment.clinic_name}
+                  </p>
+                </div>
+              )}
+              
+              <button 
+                onClick={() => setActiveTab('appointments')}
+                className="mt-4 text-sm text-green-600 hover:text-green-800 font-medium"
+              >
+                View all appointments
+              </button>
+            </div>
+          )}
+          
+          {/* Pets Card - Second */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">My Pets</h3>
+            {pets.length === 1 ? (
+              <>
+                <p className="text-xl font-bold text-blue-600">{pets[0].pet_name}</p>
+                <p className="text-sm text-blue-500">{pets[0].pet_type} - {pets[0].pet_breed}</p>
+              </>
+            ) : (
+              <p className="text-3xl font-bold text-blue-600">{pets.length}</p>
+            )}
+            <button 
+              onClick={() => setActiveTab('pets')}
+              className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              View all pets
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
