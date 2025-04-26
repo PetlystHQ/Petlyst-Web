@@ -788,71 +788,73 @@ const SingleClinicPage: React.FC = () => {
               
               {/* Action Buttons Group */}
               <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-2 sm:items-center">
-                {/* Primary Action */}
-                <div 
-                  className="relative"
-                  onMouseEnter={hasPendingAppointment ? showTooltip : undefined}
-                  onMouseLeave={hasPendingAppointment ? hideTooltip : undefined}
-                >
-                  <button
-                    ref={buttonRef}
-                    onClick={handleBookAppointment}
-                    disabled={hasPendingAppointment || checkingAppointment}
-                    className={`${
-                      hasPendingAppointment 
-                        ? 'bg-orange-500 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    } text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors pointer-events-auto`}
+                {/* Primary Action - Only show for non-veterinarians */}
+                {!isVeterinarian && (
+                  <div 
+                    className="relative"
+                    onMouseEnter={hasPendingAppointment ? showTooltip : undefined}
+                    onMouseLeave={hasPendingAppointment ? hideTooltip : undefined}
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {checkingAppointment 
-                      ? 'Checking...' 
-                      : hasPendingAppointment 
-                        ? 'Pending' 
-                        : 'Book Appointment'}
-                  </button>
-
-                  {/* Tooltip Portal */}
-                  {hasPendingAppointment && tooltipVisible && createPortal(
-                    <div 
-                      className="fixed bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm rounded-xl p-4 shadow-xl z-[9999] max-w-xs border border-gray-700"
-                      style={{
-                        top: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().top - 10}px` : '0',
-                        left: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().left + buttonRef.current.getBoundingClientRect().width / 2}px` : '0',
-                        transform: 'translate(-50%, -100%)',
-                        marginTop: '-5px',
-                        backdropFilter: 'blur(8px)'
-                      }}
+                    <button
+                      ref={buttonRef}
+                      onClick={handleBookAppointment}
+                      disabled={hasPendingAppointment || checkingAppointment}
+                      className={`${
+                        hasPendingAppointment 
+                          ? 'bg-orange-500 cursor-not-allowed' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white font-medium px-6 py-2.5 rounded-lg shadow-sm flex items-center justify-center transition-colors pointer-events-auto`}
                     >
-                      <div className="relative">
-                        <div className="mb-3">
-                          <p className="text-center leading-relaxed">
-                            Your appointment request has been sent to the clinic. The veterinarian will approve it based on availability.
-                          </p>
-                        </div>
-                        
-                        <div className="text-center mb-2">
-                          <p className="text-gray-300 text-xs mb-2">If you changed your mind, please cancel your request via:</p>
-                          <div className="inline-flex items-center justify-center py-1.5 px-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer">
-                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            <span className="font-medium">Dashboard</span>
-                            <svg className="w-3 h-3 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                            </svg>
-                            <span className="font-medium">Appointments</span>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {checkingAppointment 
+                        ? 'Checking...' 
+                        : hasPendingAppointment 
+                          ? 'Pending' 
+                          : 'Book Appointment'}
+                    </button>
+
+                    {/* Tooltip Portal */}
+                    {hasPendingAppointment && tooltipVisible && createPortal(
+                      <div 
+                        className="fixed bg-gradient-to-br from-gray-800 to-gray-900 text-white text-sm rounded-xl p-4 shadow-xl z-[9999] max-w-xs border border-gray-700"
+                        style={{
+                          top: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().top - 10}px` : '0',
+                          left: buttonRef.current ? `${buttonRef.current.getBoundingClientRect().left + buttonRef.current.getBoundingClientRect().width / 2}px` : '0',
+                          transform: 'translate(-50%, -100%)',
+                          marginTop: '-5px',
+                          backdropFilter: 'blur(8px)'
+                        }}
+                      >
+                        <div className="relative">
+                          <div className="mb-3">
+                            <p className="text-center leading-relaxed">
+                              Your appointment request has been sent to the clinic. The veterinarian will approve it based on availability.
+                            </p>
                           </div>
+                          
+                          <div className="text-center mb-2">
+                            <p className="text-gray-300 text-xs mb-2">If you changed your mind, please cancel your request via:</p>
+                            <div className="inline-flex items-center justify-center py-1.5 px-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer">
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                              </svg>
+                              <span className="font-medium">Dashboard</span>
+                              <svg className="w-3 h-3 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                              </svg>
+                              <span className="font-medium">Appointments</span>
+                            </div>
+                          </div>
+                          
+                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
                         </div>
-                        
-                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>,
-                    document.body
-                  )}
-                </div>
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                )}
                 
                 {/* Secondary Actions Group */}
                 <div className="flex gap-2">
@@ -894,15 +896,18 @@ const SingleClinicPage: React.FC = () => {
                     </button>
                   )}
                   
-                  <button
-                    onClick={() => setShowMessageModal(true)}
-                    className="bg-gray-50 text-gray-700 hover:bg-gray-100 font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    <span className="ml-2 hidden sm:inline">Message</span>
-                  </button>
+                  {/* Only show message button for non-veterinarians */}
+                  {!isVeterinarian && (
+                    <button
+                      onClick={() => setShowMessageModal(true)}
+                      className="bg-gray-50 text-gray-700 hover:bg-gray-100 font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                      <span className="ml-2 hidden sm:inline">Message</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

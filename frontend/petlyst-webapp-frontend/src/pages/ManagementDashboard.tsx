@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import axios from 'axios';
+import ClinicAppointments from '../components/clinic/management/ClinicAppointments';
 
 interface ClinicData {
   clinic_id: string;
@@ -139,6 +140,15 @@ const ManagementDashboard: React.FC = () => {
       ),
       expanded: false,
       subItems: [
+        {
+          name: 'Requests',
+          icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+            </svg>
+          ),
+          onClick: () => setActiveTab('appointment-requests'),
+        },
         {
           name: 'Upcoming',
           icon: (
@@ -799,6 +809,9 @@ const ManagementDashboard: React.FC = () => {
             </div>
           </div>
         );
+        
+      case 'appointment-requests':
+        return <ClinicAppointments clinicId={clinicId || ''} />;
         
       case 'upcoming-appointments':
         return (

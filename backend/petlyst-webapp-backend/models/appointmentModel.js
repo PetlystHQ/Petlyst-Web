@@ -405,6 +405,26 @@ const isAppointmentSlotAvailable = async (clinicId, date, startTime, endTime) =>
   }
 };
 
+// Check if a veterinarian has access to a specific clinic
+const doesVeterinarianHaveClinicAccess = async (veterinarianId, clinicId) => {
+  try {
+    // Check if the veterinarian is associated with the clinic and has approved status
+    const result = await pool.query(
+      `SELECT COUNT(*) 
+       FROM clinic_veterinarians 
+       WHERE veterinarian_id = $1 
+       AND clinic_id = $2 
+       AND status = 'approved'`,
+      [veterinarianId, clinicId]
+    );
+    
+    return parseInt(result.rows[0].count) > 0;
+  } catch (error) {
+    console.error('Error checking veterinarian clinic access:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAppointmentsByPetOwner,
   getAppointmentsByClinic,
@@ -414,5 +434,6 @@ module.exports = {
   deleteAppointment,
   getAvailableTimeSlots,
   isAppointmentSlotAvailable,
-  getAvailableDates
+  getAvailableDates,
+  doesVeterinarianHaveClinicAccess
 };
