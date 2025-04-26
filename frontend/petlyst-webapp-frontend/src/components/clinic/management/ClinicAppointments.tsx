@@ -34,8 +34,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
   const [error, setError] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AppointmentTab>('pending');
 
   useEffect(() => {
@@ -162,36 +160,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
     }
   };
 
-  const handleDeleteAppointment = async (appointmentId: string) => {
-    try {
-      const response = await axiosInstance.delete(`/appointments/${appointmentId}`);
-      
-      if (response.data.success) {
-        // Remove appointment from canceled list
-        setCanceledAppointments(prev => 
-          prev.filter(app => app.appointment_id !== appointmentId)
-        );
-        setIsDeleteModalOpen(false);
-        setAppointmentToDelete(null);
-      } else {
-        setError('Failed to delete appointment');
-      }
-    } catch (err) {
-      console.error('Error deleting appointment:', err);
-      setError('An error occurred while deleting the appointment');
-    }
-  };
-
-  const openDeleteModal = (appointmentId: string) => {
-    setAppointmentToDelete(appointmentId);
-    setIsDeleteModalOpen(true);
-  };
-
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setAppointmentToDelete(null);
-  };
-
   const openModal = (appointment: AppointmentRequest) => {
     setSelectedAppointment(appointment);
     setIsModalOpen(true);
@@ -217,48 +185,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
     } catch (error) {
       return timeString;
     }
-  };
-
-  // Render delete confirmation modal
-  const renderDeleteModal = () => {
-    if (!appointmentToDelete) return null;
-    
-    const appointment = canceledAppointments.find(
-      app => app.appointment_id === appointmentToDelete
-    );
-    
-    if (!appointment) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirm Deletion</h3>
-          
-          <p className="text-gray-700 mb-6">
-            Are you sure you want to permanently delete the appointment for{' '}
-            <span className="font-semibold">{appointment.pet_name}</span> on{' '}
-            <span className="font-semibold">{formatDate(appointment.appointment_date)}</span>?
-            <br /><br />
-            <span className="text-red-600 text-sm font-medium">This action cannot be undone.</span>
-          </p>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={closeDeleteModal}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleDeleteAppointment(appointmentToDelete)}
-              className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
-            >
-              Delete Permanently
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   // Render the appointment details modal
@@ -408,18 +334,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                 Cancel Appointment
               </button>
             )}
-            
-            {selectedAppointment.appointment_status === 'canceled' && (
-              <button
-                onClick={() => openDeleteModal(selectedAppointment.appointment_id)}
-                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                Delete Appointment
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -563,18 +477,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                       </button>
                     )}
                     
-                    {activeTab === 'canceled' && (
-                      <button
-                        onClick={() => openDeleteModal(appointment.appointment_id)}
-                        className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                        title="Delete Appointment"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    )}
-                    
                     <button
                       onClick={() => openModal(appointment)}
                       className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
@@ -677,7 +579,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
       )}
       
       {isModalOpen && renderAppointmentModal()}
-      {isDeleteModalOpen && renderDeleteModal()}
     </div>
   );
 };

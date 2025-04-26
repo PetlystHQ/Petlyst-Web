@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import axios from 'axios';
 import ClinicAppointments from '../components/clinic/management/ClinicAppointments';
+import UpcomingAppointments from '../components/clinic/management/UpcomingAppointments';
 
 interface ClinicData {
   clinic_id: string;
@@ -166,15 +167,6 @@ const ManagementDashboard: React.FC = () => {
             </svg>
           ),
           onClick: () => setActiveTab('past-appointments'),
-        },
-        {
-          name: 'Schedule',
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          ),
-          onClick: () => setActiveTab('schedule'),
         },
       ],
     },
@@ -814,50 +806,7 @@ const ManagementDashboard: React.FC = () => {
         return <ClinicAppointments clinicId={clinicId || ''} />;
         
       case 'upcoming-appointments':
-        return (
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
-            <h2 className="text-xl font-semibold mb-4">Upcoming Appointments</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pet Owner</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pet</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap">John Smith</td>
-                    <td className="px-6 py-4 whitespace-nowrap">Max (Dog)</td>
-                    <td className="px-6 py-4 whitespace-nowrap">May 12, 2023 - 10:30 AM</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Confirmed</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                      <button className="text-red-600 hover:text-red-900">Cancel</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap">Sarah Johnson</td>
-                    <td className="px-6 py-4 whitespace-nowrap">Whiskers (Cat)</td>
-                    <td className="px-6 py-4 whitespace-nowrap">May 12, 2023 - 11:30 AM</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                      <button className="text-red-600 hover:text-red-900">Cancel</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
+        return <UpcomingAppointments />;
         
       case 'staff':
         return (
