@@ -406,24 +406,32 @@ const isAppointmentSlotAvailable = async (clinicId, date, startTime, endTime) =>
 };
 
 // Check if a veterinarian has access to a specific clinic
-const doesVeterinarianHaveClinicAccess = async (veterinarianId, clinicId) => {
+async function doesVeterinarianHaveClinicAccess(vetId, clinicId) {
   try {
-    // Check if the veterinarian is associated with the clinic and has approved status
+    console.log(`Checking clinic access for vet ID: ${vetId} and clinic ID: ${clinicId}`);
+    
+    // If the clinicIds are strings, convert both to numbers for comparison
+    const numericVetId = typeof vetId === 'string' ? parseInt(vetId, 10) : vetId;
+    const numericClinicId = typeof clinicId === 'string' ? parseInt(clinicId, 10) : clinicId;
+    
+    console.log(`Using numeric IDs: vetId=${numericVetId}, clinicId=${numericClinicId}`);
+    
     const result = await pool.query(
-      `SELECT COUNT(*) 
-       FROM clinic_veterinarians 
-       WHERE veterinarian_id = $1 
-       AND clinic_id = $2 
-       AND status = 'approved'`,
-      [veterinarianId, clinicId]
+      `SELECT * FROM clinic_veterinarians 
+       WHERE veterinarian_id = $1 AND clinic_id = $2 AND status = 'approved'`,
+      [numericVetId, numericClinicId]
     );
     
-    return parseInt(result.rows[0].count) > 0;
+    console.log('Query result:', result.rows);
+    const hasAccess = result.rows.length > 0;
+    console.log(`Veterinarian has access: ${hasAccess}`);
+    
+    return hasAccess;
   } catch (error) {
     console.error('Error checking veterinarian clinic access:', error);
     throw error;
   }
-};
+}
 
 module.exports = {
   getAppointmentsByPetOwner,
