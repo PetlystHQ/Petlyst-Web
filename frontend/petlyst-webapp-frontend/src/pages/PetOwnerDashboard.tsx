@@ -338,11 +338,11 @@ const PetOwnerDashboard: React.FC = () => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/booking/${clinic.clinic_id}`);
+                      navigate(`/clinics/${clinic.slug || clinic.clinic_id}`);
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    Book Appointment
+                    View Clinic
                   </button>
                 </div>
               </div>

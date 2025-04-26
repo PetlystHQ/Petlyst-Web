@@ -290,25 +290,88 @@ router.patch('/:appointmentId/cancel', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete an appointment (Administrative purposes only)
+// Delete an appointment (only if it's already canceled)
 router.delete('/:appointmentId', authenticateToken, async (req, res) => {
   try {
-    // Only admin users can completely delete appointments
-    if (req.user.userType !== 'admin') {
-      return res.status(403).json({ error: 'Access denied. Admin access only.' });
-    }
-
     const { appointmentId } = req.params;
-    const deletedAppointment = await appointmentModel.deleteAppointment(appointmentId);
-
-    if (!deletedAppointment) {
-      return res.status(404).json({ error: 'Appointment not found' });
+    
+    // First, retrieve the appointment details to check the status and other information
+    const appointmentQuery = `
+      SELECT 
+        a.appointment_id,
+        a.clinic_id,
+        a.pet_owner_id,
+        a.appointment_status
+      FROM 
+        appointments a
+      WHERE 
+        a.appointment_id = $1
+    `;
+    
+    const appointmentResult = await pool.query(appointmentQuery, [appointmentId]);
+    
+    if (appointmentResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Appointment not found'
+      });
     }
-
-    res.status(200).json({ message: 'Appointment successfully deleted' });
+    
+    const appointment = appointmentResult.rows[0];
+    
+    // Check if the appointment is already canceled
+    if (appointment.appointment_status !== 'canceled') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only canceled appointments can be deleted'
+      });
+    }
+    
+    // Verify that the user has permission to delete this appointment
+    if (req.user.userType === 'veterinarian') {
+      // For veterinarians, check if they have access to the clinic
+      const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, appointment.clinic_id);
+      
+      if (!hasAccess) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. You do not have access to this clinic.'
+        });
+      }
+    } else if (req.user.userType === 'pet_owner') {
+      // For pet owners, check if they own the appointment
+      if (req.user.userId !== appointment.pet_owner_id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. You can only delete your own appointments.'
+        });
+      }
+    } else {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only veterinarians or pet owners can delete appointments.'
+      });
+    }
+    
+    // Now that all checks have passed, delete the appointment
+    const deleteQuery = `
+      DELETE FROM appointments
+      WHERE appointment_id = $1
+    `;
+    
+    await pool.query(deleteQuery, [appointmentId]);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Appointment successfully deleted'
+    });
   } catch (error) {
     console.error('Error deleting appointment:', error);
-    res.status(500).json({ error: 'Failed to delete appointment' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to delete appointment',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -499,6 +562,286 @@ router.get('/booked-slots/:clinicId/:date', async (req, res) => {
       success: false,
       message: 'Failed to fetch booked slots',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get pending appointments for a specific clinic
+router.get('/clinic/:clinicId/pending', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get all pending appointments for this clinic with detailed information
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'pending'
+      ORDER BY 
+        a.appointment_date, 
+        a.appointment_start_hour
+    `;
+
+    const result = await pool.query(query, [clinicId]);
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching pending appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch pending appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Update appointment status (approve/reject)
+router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can update appointment status
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+    
+    // Validate status value
+    if (!status || !['confirmed', 'canceled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Must be "confirmed" or "canceled".'
+      });
+    }
+    
+    // Get appointment details to verify clinic
+    const appointment = await appointmentModel.getAppointmentById(appointmentId);
+    
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Appointment not found'
+      });
+    }
+    
+    // Verify that the veterinarian has access to the clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, appointment.clinic_id);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+    
+    // Check if status change is valid based on current appointment status
+    if (appointment.appointment_status === 'pending') {
+      // Pending appointments can be changed to confirmed or canceled
+    } else if (appointment.appointment_status === 'confirmed' && status === 'canceled') {
+      // Confirmed appointments can only be canceled
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot change status from ${appointment.appointment_status} to ${status}.`
+      });
+    }
+    
+    // Update the appointment status
+    const updatedAppointment = await appointmentModel.updateAppointment(appointmentId, {
+      appointmentStatus: status
+    });
+    
+    res.status(200).json({
+      success: true,
+      appointment: updatedAppointment
+    });
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to update appointment status',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get confirmed appointments for a specific clinic
+router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get all confirmed appointments for this clinic with detailed information
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'confirmed'
+      ORDER BY 
+        a.appointment_date, 
+        a.appointment_start_hour
+    `;
+
+    const result = await pool.query(query, [clinicId]);
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching confirmed appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch confirmed appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get canceled appointments for a specific clinic
+router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get all canceled appointments for this clinic with detailed information
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'canceled'
+      ORDER BY 
+        a.appointment_date, 
+        a.appointment_start_hour
+    `;
+
+    const result = await pool.query(query, [clinicId]);
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching canceled appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch canceled appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
