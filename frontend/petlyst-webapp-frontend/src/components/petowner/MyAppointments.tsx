@@ -51,9 +51,7 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
-  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   
   // Update internal state when external appointments change
@@ -244,51 +242,10 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
     }
   };
   
-  // Handle delete appointment
-  const handleDeleteAppointment = async (appointmentId: string) => {
-    setDeletingId(appointmentId);
-    
-    try {
-      const response = await axiosInstance.delete(`/appointments/${appointmentId}/pet-owner`);
-      
-      if (response.data && response.data.success) {
-        // Yeni diziler oluştur
-        const updatedAppointments = appointments.filter(appointment => appointment.appointment_id !== appointmentId);
-        const updatedFilteredAppointments = filteredAppointments.filter(appointment => appointment.appointment_id !== appointmentId);
-        
-        // State'leri güncelle
-        setAppointments(updatedAppointments);
-        setFilteredAppointments(updatedFilteredAppointments);
-        
-        // Debug log
-        console.log('Appointment deleted:', appointmentId);
-        console.log('Remaining appointments:', updatedAppointments.length);
-        
-        // Notify parent component if needed
-        if (onAppointmentCanceled) {
-          onAppointmentCanceled();
-        }
-      }
-    } catch (err: any) {
-      console.error('Error deleting appointment:', err);
-      setError(err.response?.data?.error || 'Failed to delete appointment');
-    } finally {
-      setDeletingId(null);
-      setShowDeleteModal(false);
-      setSelectedAppointment(null);
-    }
-  };
-  
   // Open cancel modal
   const openCancelModal = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowCancelModal(true);
-  };
-  
-  // Open delete modal
-  const openDeleteModal = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setShowDeleteModal(true);
   };
   
   // Join online meeting
@@ -423,43 +380,6 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         </div>
       )}
       
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Appointment</h3>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to permanently delete your canceled appointment at <span className="font-medium">{selectedAppointment.clinic_name}</span> on <span className="font-medium">{formatDate(selectedAppointment.appointment_date)}</span>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                No, Keep Record
-              </button>
-              <button 
-                onClick={() => handleDeleteAppointment(selectedAppointment.appointment_id)}
-                className="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700 focus:outline-none"
-                disabled={deletingId === selectedAppointment.appointment_id}
-              >
-                {deletingId === selectedAppointment.appointment_id ? (
-                  <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Deleting...
-                  </div>
-                ) : (
-                  "Yes, Delete Permanently"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {filteredAppointments.length > 0 ? (
         <div className="overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8">
           <div className="py-2 align-middle inline-block min-w-full px-4 sm:px-6 lg:px-8">
@@ -535,17 +455,6 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
                               title="Cancel appointment"
                             >
                               Cancel
-                            </button>
-                          )}
-                          
-                          {/* Delete appointment - only for canceled appointments */}
-                          {appointment.appointment_status === 'canceled' && (
-                            <button
-                              onClick={() => openDeleteModal(appointment)}
-                              className="text-gray-600 hover:text-white hover:bg-gray-600 transition-colors bg-gray-100 px-3 py-1 rounded-md text-sm font-medium"
-                              title="Delete canceled appointment permanently"
-                            >
-                              Delete
                             </button>
                           )}
                         </div>

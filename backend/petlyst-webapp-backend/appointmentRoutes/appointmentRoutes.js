@@ -298,155 +298,6 @@ router.patch('/:appointmentId/cancel', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete an appointment (only if it's already canceled)
-router.delete('/:appointmentId', authenticateToken, async (req, res) => {
-  try {
-    const { appointmentId } = req.params;
-    
-    // First, retrieve the appointment details to check the status and other information
-    const appointmentQuery = `
-      SELECT 
-        a.appointment_id,
-        a.clinic_id,
-        a.pet_owner_id,
-        a.appointment_status
-      FROM 
-        appointments a
-      WHERE 
-        a.appointment_id = $1
-    `;
-    
-    const appointmentResult = await pool.query(appointmentQuery, [appointmentId]);
-    
-    if (appointmentResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Appointment not found'
-      });
-    }
-    
-    const appointment = appointmentResult.rows[0];
-    
-    // Check if the appointment is already canceled
-    if (appointment.appointment_status !== 'canceled') {
-      return res.status(400).json({
-        success: false,
-        error: 'Only canceled appointments can be deleted'
-      });
-    }
-    
-    // Verify that the user has permission to delete this appointment
-    if (req.user.userType === 'veterinarian') {
-      // For veterinarians, check if they have access to the clinic
-      const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, appointment.clinic_id);
-      
-      if (!hasAccess) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You do not have access to this clinic.'
-        });
-      }
-    } else if (req.user.userType === 'pet_owner') {
-      // For pet owners, check if they own the appointment
-      if (req.user.userId !== appointment.pet_owner_id) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You can only delete your own appointments.'
-        });
-      }
-    } else {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied. Only veterinarians or pet owners can delete appointments.'
-      });
-    }
-    
-    // Now that all checks have passed, delete the appointment
-    const deleteQuery = `
-      DELETE FROM appointments
-      WHERE appointment_id = $1
-    `;
-    
-    await pool.query(deleteQuery, [appointmentId]);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Appointment successfully deleted'
-    });
-  } catch (error) {
-    console.error('Error deleting appointment:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to delete appointment',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-// Delete a canceled appointment by pet owner
-router.delete('/:appointmentId/pet-owner', authenticateToken, async (req, res) => {
-  try {
-    // Only pet owners can use this endpoint
-    if (req.user.userType !== 'pet_owner') {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Access denied. Pet owner access only.' 
-      });
-    }
-
-    const { appointmentId } = req.params;
-    
-    // First, check if the appointment exists and belongs to this pet owner
-    const appointment = await appointmentModel.getAppointmentById(appointmentId);
-    
-    if (!appointment) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Appointment not found' 
-      });
-    }
-    
-    // Verify that the appointment belongs to the authenticated pet owner
-    if (appointment.pet_owner_id !== req.user.userId) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Access denied. You can only delete your own appointments.' 
-      });
-    }
-    
-    // Check if the appointment is already canceled
-    if (appointment.appointment_status !== 'canceled') {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Only canceled appointments can be deleted. Please cancel the appointment first.' 
-      });
-    }
-    
-    // If all checks pass, delete the appointment
-    const deletedAppointment = await appointmentModel.deleteAppointment(appointmentId);
-
-    if (!deletedAppointment) {
-      return res.status(500).json({ 
-        success: false,
-        error: 'Failed to delete appointment' 
-      });
-    }
-
-    res.status(200).json({ 
-      success: true,
-      message: 'Appointment successfully deleted',
-      deletedAppointmentId: appointmentId
-    });
-  } catch (error) {
-    console.error('Error deleting pet owner appointment:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to delete appointment',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
 // Get available appointment slots for a clinic on a specific date
 router.get('/available-slots/:clinicId/:date', async (req, res) => {
   try {
@@ -852,6 +703,191 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch canceled appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get upcoming appointments for a specific clinic for the next 24 hours
+router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get current date and time
+    const now = new Date();
+    
+    // Calculate date 24 hours from now
+    const nextDay = new Date(now);
+    nextDay.setHours(now.getHours() + 24);
+    
+    // Convert to ISO strings for database comparison
+    const nowISO = now.toISOString();
+    const nextDayISO = nextDay.toISOString();
+    
+    console.log('Timezone diagnostics:', {
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      utcOffset: now.getTimezoneOffset(),
+      currentTime: now.toISOString(),
+      now: nowISO,
+      nextDay: nextDayISO,
+      clinic: clinicId
+    });
+
+    // Get all confirmed appointments for this clinic in the next 24 hours
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'confirmed' AND
+        a.appointment_start_hour >= $2 AND
+        a.appointment_start_hour <= $3
+      ORDER BY 
+        a.appointment_date, 
+        a.appointment_start_hour
+    `;
+
+    const result = await pool.query(query, [clinicId, nowISO, nextDayISO]);
+    
+    console.log('Found upcoming appointments:', result.rows.length);
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching upcoming appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch upcoming appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get past confirmed appointments that can be marked as completed
+router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get current date and time
+    const now = new Date();
+    const currentTime = now.toISOString();
+    
+    console.log('Fetching past confirmed appointments:', {
+      clinicId,
+      currentTime
+    });
+
+    // Find all confirmed appointments with end time in the past
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'confirmed' AND
+        a.appointment_end_hour < $2
+      ORDER BY 
+        a.appointment_date DESC, 
+        a.appointment_start_hour DESC
+    `;
+
+    const result = await pool.query(query, [clinicId, currentTime]);
+    
+    if (result.rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No past confirmed appointments to display',
+        appointments: []
+      });
+    }
+    
+    console.log(`Found ${result.rows.length} past confirmed appointments that can be marked as completed`);
+    
+    res.status(200).json({
+      success: true,
+      message: `Found ${result.rows.length} past confirmed appointments`,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching past confirmed appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch past confirmed appointments',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
