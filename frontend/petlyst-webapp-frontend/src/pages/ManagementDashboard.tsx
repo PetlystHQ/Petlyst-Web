@@ -5,6 +5,7 @@ import { RootState } from '../store';
 import axios from 'axios';
 import ClinicAppointments from '../components/clinic/management/ClinicAppointments';
 import UpcomingAppointments from '../components/clinic/management/UpcomingAppointments';
+import PastAppointments from '../components/clinic/management/PastAppointments';
 
 interface ClinicData {
   clinic_id: string;
@@ -807,6 +808,9 @@ const ManagementDashboard: React.FC = () => {
         
       case 'upcoming-appointments':
         return <UpcomingAppointments />;
+        
+      case 'past-appointments':
+        return <PastAppointments />;
         
       case 'staff':
         return (
