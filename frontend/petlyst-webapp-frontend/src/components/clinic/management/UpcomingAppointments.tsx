@@ -82,6 +82,7 @@ const UpcomingAppointments: React.FC = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<UpcomingAppointment | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isCanceling, setIsCanceling] = useState<boolean>(false);
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
   
   // Update current time periodically
   useEffect(() => {
@@ -341,6 +342,40 @@ const UpcomingAppointments: React.FC = () => {
     }
   };
 
+  // Handle marking appointment as completed
+  const handleCompleteAppointment = async () => {
+    if (!selectedAppointment) return;
+    
+    try {
+      setIsCompleting(true);
+      
+      // Call the complete appointment endpoint
+      const response = await axiosInstance.patch(`/appointments/${selectedAppointment.appointment_id}/complete`);
+      
+      if (response.data.message === 'Appointment marked as completed') {
+        // Update the local state but keep appointment visible with completed status
+        const updatedAppointments = appointments.map(app => 
+          app.appointment_id === selectedAppointment.appointment_id 
+            ? { ...app, appointment_status: 'completed' as const }
+            : app
+        );
+        
+        setAppointments(updatedAppointments);
+        processAppointmentsIntoTimeSlots(updatedAppointments);
+        
+        // Close the modal
+        closeAppointmentModal();
+      } else {
+        setError('Failed to mark appointment as completed');
+      }
+    } catch (err) {
+      console.error('Error completing appointment:', err);
+      setError('An error occurred while marking the appointment as completed');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   // Format a date as DD/MM/YYYY
   const formatDate = (dateString: string) => {
     try {
@@ -351,13 +386,25 @@ const UpcomingAppointments: React.FC = () => {
     }
   };
 
+  // Get the CSS class for appointment card based on status
+  const getAppointmentCardClass = (appointment: UpcomingAppointment) => {
+    if (appointment.appointment_status === 'completed') {
+      return 'absolute bg-gray-200 border-l-4 border-gray-500 rounded py-1 px-2 shadow-sm z-10 overflow-hidden text-xs cursor-pointer hover:bg-gray-300 transition-colors';
+    }
+    return 'absolute bg-blue-100 border-l-4 border-blue-500 rounded py-1 px-2 shadow-sm z-10 overflow-hidden text-xs cursor-pointer hover:bg-blue-200 transition-colors';
+  };
+
   // Render appointment details modal
   const renderAppointmentModal = () => {
     if (!selectedAppointment) return null;
     
+    const isPastAppointment = new Date(selectedAppointment.appointment_end_hour) < new Date();
+    const isConfirmedAppointment = selectedAppointment.appointment_status === 'confirmed';
+    const canComplete = isPastAppointment && isConfirmedAppointment;
+    
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-0 max-w-md w-full shadow-xl overflow-hidden">
+        <div className="bg-white rounded-lg p-0 max-w-xl w-full shadow-xl overflow-hidden">
           {/* Modal Header */}
           <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
             <div className="flex justify-between items-center">
@@ -449,8 +496,8 @@ const UpcomingAppointments: React.FC = () => {
             </div>
           </div>
           
-          {/* Modal Footer */}
-          <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-2 border-t border-gray-200">
+          {/* Modal Footer - wider buttons with better spacing */}
+          <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3 border-t border-gray-200">
             <button
               onClick={closeAppointmentModal}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
@@ -458,28 +505,57 @@ const UpcomingAppointments: React.FC = () => {
               Close
             </button>
             
-            <button
-              onClick={handleCancelAppointment}
-              disabled={isCanceling}
-              className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center disabled:opacity-50"
-            >
-              {isCanceling ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Canceling...
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Cancel Appointment
-                </>
-              )}
-            </button>
+            {isConfirmedAppointment && (
+              <>
+                {canComplete && (
+                  <button
+                    onClick={handleCompleteAppointment}
+                    disabled={isCompleting}
+                    className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 min-w-[160px] justify-center"
+                  >
+                    {isCompleting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Mark as Completed
+                      </>
+                    )}
+                  </button>
+                )}
+                
+                <button
+                  onClick={handleCancelAppointment}
+                  disabled={isCanceling}
+                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center disabled:opacity-50 min-w-[160px] justify-center"
+                >
+                  {isCanceling ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Canceling...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      Cancel Appointment
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -545,7 +621,7 @@ const UpcomingAppointments: React.FC = () => {
                     
                     {/* Time of day marker centered in slot */}
                     {timeMarker && (
-                      <div className="absolute left-0 right-0 flex justify-center items-center" style={{ top: '50%', transform: 'translateY(-50%)', zIndex: 20 }}>
+                      <div className="absolute left-0 right-0 flex justify-center items-center" style={{ top: '50%', transform: 'translateY(-50%)', zIndex: 30 }}>
                         <div className={`flex items-center justify-center rounded-full px-3 py-1 border ${timeMarker.color} shadow-sm`}>
                           <span className="mr-1">{timeMarker.icon}</span>
                           <span className="text-xs whitespace-nowrap font-medium">{timeMarker.label}</span>
@@ -557,7 +633,7 @@ const UpcomingAppointments: React.FC = () => {
                     {timeSlots.find(slot => slot.hour === hour)?.appointments.map((appointment, index) => (
                       <div 
                         key={appointment.appointment_id}
-                        className="absolute bg-blue-100 border-l-4 border-blue-500 rounded py-1 px-2 shadow-sm z-20 overflow-hidden text-xs cursor-pointer hover:bg-blue-200 transition-colors"
+                        className={getAppointmentCardClass(appointment)}
                         style={{
                           ...getAppointmentStyle(appointment.appointment_start_hour, appointment.appointment_end_hour, index),
                           maxWidth: 'calc(100% - 70px)',
@@ -567,18 +643,24 @@ const UpcomingAppointments: React.FC = () => {
                       >
                         <div className="flex items-center space-x-1.5">
                           <div className="truncate flex-1">
-                            <span className="font-medium text-blue-800">{getPetInfoDisplay(appointment)}</span>
+                            <span className={appointment.appointment_status === 'completed' ? "font-medium text-gray-600" : "font-medium text-blue-800"}>
+                              {getPetInfoDisplay(appointment)}
+                            </span>
                           </div>
                           
                           {/* Minimal time display */}
-                          <div className="flex-shrink-0 text-gray-500">
+                          <div className={appointment.appointment_status === 'completed' ? "flex-shrink-0 text-gray-500" : "flex-shrink-0 text-gray-500"}>
                             {appointment.appointment_start_hour && new Date(appointment.appointment_start_hour).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </div>
                           
                           {/* Video indicator if needed */}
                           {appointment.video_meeting && (
                             <div className="flex-shrink-0">
-                              <span className="bg-green-100 text-green-800 text-xs px-1 py-0.5 rounded">V</span>
+                              <span className={appointment.appointment_status === 'completed' 
+                                ? "bg-gray-100 text-gray-700 text-xs px-1 py-0.5 rounded" 
+                                : "bg-green-100 text-green-800 text-xs px-1 py-0.5 rounded"}>
+                                V
+                              </span>
                             </div>
                           )}
                         </div>

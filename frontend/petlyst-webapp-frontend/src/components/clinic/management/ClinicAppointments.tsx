@@ -24,17 +24,19 @@ interface ClinicAppointmentsProps {
   clinicId: string;
 }
 
-type AppointmentTab = 'pending' | 'confirmed' | 'canceled';
+type AppointmentTab = 'pending' | 'confirmed' | 'completed' | 'canceled';
 
 const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => {
   const [appointmentRequests, setAppointmentRequests] = useState<AppointmentRequest[]>([]);
   const [confirmedAppointments, setConfirmedAppointments] = useState<AppointmentRequest[]>([]);
+  const [completedAppointments, setCompletedAppointments] = useState<AppointmentRequest[]>([]);
   const [canceledAppointments, setCanceledAppointments] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<AppointmentTab>('pending');
+  const [currentTime] = useState<Date>(new Date());  // Current time for comparing appointment times
 
   useEffect(() => {
     fetchAppointments();
@@ -57,6 +59,18 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
       
       if (confirmedResponse.data.success) {
         setConfirmedAppointments(confirmedResponse.data.appointments || []);
+      }
+      
+      // Get all completed appointments
+      try {
+        const completedResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/completed`);
+        
+        if (completedResponse.data.success) {
+          setCompletedAppointments(completedResponse.data.appointments || []);
+        }
+      } catch (completedErr) {
+        console.error('Error fetching completed appointments:', completedErr);
+        setCompletedAppointments([]);
       }
       
       // Get all canceled appointments
@@ -160,6 +174,38 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
     }
   };
 
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    try {
+      const response = await axiosInstance.patch(`/appointments/${appointmentId}/complete`);
+      
+      if (response.data) {
+        // Move appointment from confirmed to completed
+        const confirmedAppointment = confirmedAppointments.find(
+          req => req.appointment_id === appointmentId
+        );
+        
+        if (confirmedAppointment) {
+          const updatedAppointment = {
+            ...confirmedAppointment,
+            appointment_status: 'completed' as 'completed'
+          };
+          
+          setCompletedAppointments(prev => [...prev, updatedAppointment]);
+          setConfirmedAppointments(prev => 
+            prev.filter(req => req.appointment_id !== appointmentId)
+          );
+        }
+        
+        setIsModalOpen(false);
+      } else {
+        setError('Failed to complete appointment');
+      }
+    } catch (err) {
+      console.error('Error completing appointment:', err);
+      setError('An error occurred while completing the appointment');
+    }
+  };
+
   const openModal = (appointment: AppointmentRequest) => {
     setSelectedAppointment(appointment);
     setIsModalOpen(true);
@@ -187,9 +233,23 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
     }
   };
 
+  // Check if appointment end time has passed
+  const isAppointmentPast = (endHour: string): boolean => {
+    try {
+      const endTime = new Date(endHour);
+      return endTime < currentTime;
+    } catch (error) {
+      console.error('Error parsing appointment time:', error);
+      return false;
+    }
+  };
+
   // Render the appointment details modal
   const renderAppointmentModal = () => {
     if (!selectedAppointment) return null;
+    
+    // Check if the appointment is past its end time
+    const isPastAppointment = isAppointmentPast(selectedAppointment.appointment_end_hour);
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -197,7 +257,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
           {/* Modal Header */}
           <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-blue-800">Appointment Request Details</h3>
+              <h3 className="text-lg font-semibold text-blue-800">Appointment Details</h3>
               <button
                 onClick={closeModal}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -324,15 +384,28 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
             )}
             
             {selectedAppointment.appointment_status === 'confirmed' && (
-              <button
-                onClick={() => handleRejectAppointment(selectedAppointment.appointment_id)}
-                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                Cancel Appointment
-              </button>
+              <>
+                {isPastAppointment && (
+                  <button
+                    onClick={() => handleCompleteAppointment(selectedAppointment.appointment_id)}
+                    className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Mark as Completed
+                  </button>
+                )}
+                <button
+                  onClick={() => handleRejectAppointment(selectedAppointment.appointment_id)}
+                  className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Cancel Appointment
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -353,6 +426,10 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
         appointments = confirmedAppointments;
         emptyMessage = "No confirmed appointments";
         break;
+      case 'completed':
+        appointments = completedAppointments;
+        emptyMessage = "No completed appointments";
+        break;
       case 'canceled':
         appointments = canceledAppointments;
         emptyMessage = "No canceled appointments";
@@ -371,6 +448,8 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
               ? "When pet owners request appointments, they will appear here"
               : activeTab === 'confirmed'
               ? "Approved appointments will appear here"
+              : activeTab === 'completed'
+              ? "Completed appointments will appear here"
               : "Canceled appointments will appear here"}
           </p>
         </div>
@@ -400,97 +479,117 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {appointments.map((appointment) => (
-              <tr 
-                key={appointment.appointment_id}
-                className="hover:bg-gray-50"
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {appointment.pet_owner_name} {appointment.pet_owner_surname}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {typeof appointment.pet_owner_id === 'string' 
-                      ? `ID: ${appointment.pet_owner_id.substring(0, 8)}...` 
-                      : ''}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{appointment.pet_name}</div>
-                  <div className="text-xs text-gray-500">{appointment.pet_type}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{formatDate(appointment.appointment_date)}</div>
-                  <div className="text-xs text-gray-500">
-                    {formatTime(appointment.appointment_start_hour)} - {formatTime(appointment.appointment_end_hour)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <div className="inline-block">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      appointment.appointment_status === 'pending' 
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : appointment.appointment_status === 'confirmed'
-                        ? 'bg-green-100 text-green-800'
-                        : appointment.appointment_status === 'canceled'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {appointment.appointment_status.charAt(0).toUpperCase() + appointment.appointment_status.slice(1)}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
-                  <div className="flex items-center justify-center space-x-2">
-                    {activeTab === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleApproveAppointment(appointment.appointment_id)}
-                          className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200 transition-colors"
-                          title="Approve"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleRejectAppointment(appointment.appointment_id)}
-                          className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                          title="Reject"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                    
-                    {activeTab === 'confirmed' && (
+            {appointments.map((appointment) => {
+              // Check if the appointment is past its end time
+              const isPastAppointment = 
+                activeTab === 'confirmed' && 
+                isAppointmentPast(appointment.appointment_end_hour);
+                
+              return (
+                <tr 
+                  key={appointment.appointment_id}
+                  className="hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {appointment.pet_owner_name} {appointment.pet_owner_surname}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {typeof appointment.pet_owner_id === 'string' 
+                        ? `ID: ${appointment.pet_owner_id.substring(0, 8)}...` 
+                        : ''}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{appointment.pet_name}</div>
+                    <div className="text-xs text-gray-500">{appointment.pet_type}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{formatDate(appointment.appointment_date)}</div>
+                    <div className="text-xs text-gray-500">
+                      {formatTime(appointment.appointment_start_hour)} - {formatTime(appointment.appointment_end_hour)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="inline-block">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        appointment.appointment_status === 'pending' 
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : appointment.appointment_status === 'confirmed'
+                          ? 'bg-green-100 text-green-800'
+                          : appointment.appointment_status === 'canceled'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {appointment.appointment_status.charAt(0).toUpperCase() + appointment.appointment_status.slice(1)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      {activeTab === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleApproveAppointment(appointment.appointment_id)}
+                            className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200 transition-colors"
+                            title="Approve"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleRejectAppointment(appointment.appointment_id)}
+                            className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                            title="Reject"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      
+                      {activeTab === 'confirmed' && (
+                        <>
+                          {isPastAppointment && (
+                            <button
+                              onClick={() => handleCompleteAppointment(appointment.appointment_id)}
+                              className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
+                              title="Mark as Completed"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRejectAppointment(appointment.appointment_id)}
+                            className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                            title="Cancel Appointment"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      
                       <button
-                        onClick={() => handleRejectAppointment(appointment.appointment_id)}
-                        className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                        title="Cancel Appointment"
+                        onClick={() => openModal(appointment)}
+                        className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
+                        title="View Details"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                         </svg>
                       </button>
-                    )}
-                    
-                    <button
-                      onClick={() => openModal(appointment)}
-                      className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
-                      title="View Details"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -535,6 +634,24 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
               {confirmedAppointments.length > 0 && (
                 <span className="ml-2 bg-green-100 text-green-800 py-0.5 px-2 rounded-full text-xs font-medium">
                   {confirmedAppointments.length}
+                </span>
+              )}
+            </span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`ml-8 py-2 px-4 text-center border-b-2 font-medium text-sm ${
+              activeTab === 'completed'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span className="inline-flex items-center">
+              Completed
+              {completedAppointments.length > 0 && (
+                <span className="ml-2 bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full text-xs font-medium">
+                  {completedAppointments.length}
                 </span>
               )}
             </span>

@@ -329,32 +329,54 @@ router.get('/available-slots/:clinicId/:date', async (req, res) => {
 // Mark appointment as completed
 router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => {
   try {
-    // Only clinic/veterinarian users can mark appointments as completed
-    if (req.user.userType !== 'veterinarian') {
-      return res.status(403).json({ error: 'Access denied. Clinic/veterinarian access only.' });
-    }
+    console.log('=== DEBUG: Mark Appointment as Completed ===');
+    const appointmentId = req.params.appointmentId;
+    console.log(`Appointment ID: ${appointmentId}`);
+    console.log(`User type: ${req.user.userType}`);
+    console.log(`User ID: ${req.user.userId}`);
 
-    const { appointmentId } = req.params;
+    // Get appointment details
     const appointment = await appointmentModel.getAppointmentById(appointmentId);
+    console.log('Appointment details:', appointment);
 
     if (!appointment) {
-      return res.status(404).json({ error: 'Appointment not found' });
+      console.log('Appointment not found');
+      return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Ensure the clinic user belongs to the clinic associated with the appointment
-    if (appointment.clinic_id !== req.user.clinicId) {
-      return res.status(403).json({ error: 'Not authorized to update this appointment' });
+    // Check if user is a veterinarian
+    if (req.user.userType !== 'veterinarian') {
+      console.log('User is not a veterinarian');
+      return res.status(403).json({ message: 'Only veterinarians can mark appointments as completed' });
     }
 
-    // Update appointment status to 'completed'
+    // Get the clinic ID from the appointment
+    const clinicId = appointment.clinic_id;
+    console.log(`Clinic ID from appointment: ${clinicId}`);
+
+    // Check if the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    console.log(`Clinic access check result: ${hasAccess}`);
+
+    if (!hasAccess) {
+      console.log('Veterinarian does not have access to this clinic');
+      return res.status(403).json({ message: 'You do not have access to this clinic' });
+    }
+
+    // Mark the appointment as completed
+    console.log('Updating appointment status to completed');
     const updatedAppointment = await appointmentModel.updateAppointment(appointmentId, {
       appointmentStatus: 'completed'
     });
-
-    res.status(200).json(updatedAppointment);
+    console.log('Updated appointment:', updatedAppointment);
+    
+    res.status(200).json({ 
+      message: 'Appointment marked as completed', 
+      appointment: updatedAppointment 
+    });
   } catch (error) {
-    console.error('Error completing appointment:', error);
-    res.status(500).json({ error: 'Failed to mark appointment as completed' });
+    console.error('Error marking appointment as completed:', error);
+    res.status(500).json({ message: 'Error marking appointment as completed', error: error.message });
   }
 });
 
@@ -708,6 +730,76 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
   }
 });
 
+// Get completed appointments for a specific clinic
+router.get('/clinic/:clinicId/completed', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Get all completed appointments for this clinic with detailed information
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_status = 'completed'
+      ORDER BY 
+        a.appointment_date DESC, 
+        a.appointment_start_hour DESC
+    `;
+
+    const result = await pool.query(query, [clinicId]);
+    
+    res.status(200).json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching completed appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch completed appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Get upcoming appointments for a specific clinic for the next 24 hours
 router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res) => {
   try {
@@ -751,7 +843,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
       clinic: clinicId
     });
 
-    // Get all confirmed appointments for this clinic in the next 24 hours
+    // Get appointments for this clinic in the next 24 hours (both confirmed and completed)
     const query = `
       SELECT 
         a.appointment_id,
@@ -776,7 +868,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_status = 'confirmed' AND
+        (a.appointment_status = 'confirmed' OR a.appointment_status = 'completed') AND
         a.appointment_start_hour >= $2 AND
         a.appointment_start_hour <= $3
       ORDER BY 
