@@ -6,6 +6,7 @@ interface AppointmentRequest {
   appointment_id: string;
   pet_owner_id: string;
   pet_owner_name: string;
+  pet_owner_surname: string;
   pet_id: string;
   pet_name: string;
   pet_type: string;
@@ -287,7 +288,9 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-sm text-gray-500 mb-1">Pet Owner</p>
-                <p className="font-medium text-gray-800">{selectedAppointment.pet_owner_name}</p>
+                <p className="font-medium text-gray-800">
+                  {selectedAppointment.pet_owner_name} {selectedAppointment.pet_owner_surname}
+                </p>
               </div>
               
               <div>
@@ -489,7 +492,14 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                 className="hover:bg-gray-50"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{appointment.pet_owner_name}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {appointment.pet_owner_name} {appointment.pet_owner_surname}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {typeof appointment.pet_owner_id === 'string' 
+                      ? `ID: ${appointment.pet_owner_id.substring(0, 8)}...` 
+                      : ''}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{appointment.pet_name}</div>

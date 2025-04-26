@@ -35,18 +35,26 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
         a.notes,
         c.clinic_name,
         p.pet_name,
-        u.user_name as veterinarian_name,
-        u.user_surname as veterinarian_surname
+        (
+          SELECT u.user_name 
+          FROM clinic_veterinarians cv
+          JOIN users u ON cv.veterinarian_id = u.user_id
+          WHERE cv.clinic_id = a.clinic_id AND cv.status = 'approved'
+          LIMIT 1
+        ) as veterinarian_name,
+        (
+          SELECT u.user_surname 
+          FROM clinic_veterinarians cv
+          JOIN users u ON cv.veterinarian_id = u.user_id
+          WHERE cv.clinic_id = a.clinic_id AND cv.status = 'approved'
+          LIMIT 1
+        ) as veterinarian_surname
       FROM 
         appointments a
       JOIN 
         clinics c ON a.clinic_id = c.clinic_id
       JOIN 
         pets p ON a.pet_id = p.pet_id
-      LEFT JOIN 
-        clinic_veterinarians cv ON a.clinic_id = cv.clinic_id
-      LEFT JOIN 
-        users u ON cv.veterinarian_id = u.user_id AND cv.status = 'approved'
       WHERE 
         a.pet_owner_id = $1
       ORDER BY 
@@ -596,6 +604,7 @@ router.get('/clinic/:clinicId/pending', authenticateToken, async (req, res) => {
         a.pet_id,
         a.pet_owner_id,
         u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
         p.pet_name,
         p.pet_species as pet_type,
         p.pet_breed,
@@ -738,6 +747,7 @@ router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) =>
         a.pet_id,
         a.pet_owner_id,
         u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
         p.pet_name,
         p.pet_species as pet_type,
         p.pet_breed,
@@ -807,6 +817,7 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
         a.pet_id,
         a.pet_owner_id,
         u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
         p.pet_name,
         p.pet_species as pet_type,
         p.pet_breed,
