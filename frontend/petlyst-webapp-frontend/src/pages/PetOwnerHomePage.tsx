@@ -3,6 +3,7 @@ import { useAppSelector } from '../hooks/useAppSelector';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
+import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 
 interface SearchSuggestion {
   text: string;
@@ -201,6 +202,38 @@ const PetOwnerHomePage: React.FC = () => {
     params.set('veterinarian', 'all');
     
     // Navigate to search results with "All" selected by default
+    navigate(`/search?${params.toString()}`);
+  };
+
+  // Handle clinic card click
+  const handleClinicCardClick = () => {
+    // Prepare URL parameters for clinic search
+    const params = new URLSearchParams();
+    params.set('veterinarian', ''); // Empty string for clinics view
+    params.set('clinicType', 'Veterinary Clinic'); // Set clinic type to Veterinary Clinic
+    
+    // Navigate to search results
+    navigate(`/search?${params.toString()}`);
+  };
+
+  // Handle veterinarian card click
+  const handleVeterinarianCardClick = () => {
+    // Prepare URL parameters for veterinarian search
+    const params = new URLSearchParams();
+    params.set('veterinarian', 'any'); // 'any' for veterinarians view
+    
+    // Navigate to search results
+    navigate(`/search?${params.toString()}`);
+  };
+
+  // Handle animal hospital card click
+  const handleHospitalCardClick = () => {
+    // Prepare URL parameters for animal hospital search
+    const params = new URLSearchParams();
+    params.set('veterinarian', ''); // Empty string for clinics view
+    params.set('clinicType', 'Animal Hospital'); // Set clinic type to Animal Hospital
+    
+    // Navigate to search results
     navigate(`/search?${params.toString()}`);
   };
 
@@ -406,7 +439,10 @@ const PetOwnerHomePage: React.FC = () => {
       <div className="mt-16">
         <h2 className="text-2xl font-semibold text-center mb-8">Popular Categories</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center">
+          <div 
+            className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center cursor-pointer"
+            onClick={handleVeterinarianCardClick}
+          >
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -416,24 +452,28 @@ const PetOwnerHomePage: React.FC = () => {
             <p className="text-gray-600">Find trusted veterinarians near you</p>
           </div>
           
-          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center">
+          <div 
+            className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center cursor-pointer"
+            onClick={handleClinicCardClick}
+          >
             <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
+              <BuildingOffice2Icon className="w-8 h-8 text-purple-600" />
             </div>
-            <h3 className="text-xl font-medium mb-2">Pet Shops</h3>
-            <p className="text-gray-600">Quality products for your pets</p>
+            <h3 className="text-xl font-medium mb-2">Clinics</h3>
+            <p className="text-gray-600">Professional veterinary clinics for your pets</p>
           </div>
           
-          <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center">
+          <div 
+            className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 text-center cursor-pointer"
+            onClick={handleHospitalCardClick}
+          >
             <div className="bg-pink-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
-            <h3 className="text-xl font-medium mb-2">Pet Services</h3>
-            <p className="text-gray-600">Grooming, training and more</p>
+            <h3 className="text-xl font-medium mb-2">Animal Hospital</h3>
+            <p className="text-gray-600">Advanced care for all animal health needs</p>
           </div>
         </div>
       </div>
