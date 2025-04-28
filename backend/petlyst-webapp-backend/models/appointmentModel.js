@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const generator = require ('generate-password');
 
 // Get all appointments for a pet owner
 const getAppointmentsByPetOwner = async (petOwnerId) => {
@@ -72,7 +73,11 @@ const createAppointment = async (appointmentData) => {
     appointmentStartHour,
     appointmentEndHour,
     videoMeeting,
-    meetingUrl,
+    meeting_url = generator.generate({
+        length: 20,
+        numbers: true,
+        uppercase: false,
+    }),
     meetingPassword,
     notes
   } = appointmentData;
