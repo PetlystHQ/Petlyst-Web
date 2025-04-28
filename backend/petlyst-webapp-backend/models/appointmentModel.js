@@ -65,6 +65,11 @@ const getAppointmentById = async (appointmentId) => {
 
 // Create a new appointment
 const createAppointment = async (appointmentData) => {
+  const meetingUrl = generator.generate({
+    length: 20,
+    numbers: true,
+    uppercase: false,
+});
   const {
     petId,
     clinicId,
@@ -73,11 +78,6 @@ const createAppointment = async (appointmentData) => {
     appointmentStartHour,
     appointmentEndHour,
     videoMeeting,
-    meeting_url = generator.generate({
-        length: 20,
-        numbers: true,
-        uppercase: false,
-    }),
     meetingPassword,
     notes
   } = appointmentData;
@@ -86,6 +86,7 @@ const createAppointment = async (appointmentData) => {
     petId, clinicId, petOwnerId, appointmentDate,
     appointmentStartHour, appointmentEndHour, videoMeeting, notes
   });
+  console.log(`meetingUrl: ${meetingUrl}`)
 
   try {
     const result = await pool.query(
@@ -111,7 +112,7 @@ const createAppointment = async (appointmentData) => {
         appointmentStartHour,
         appointmentEndHour,
         videoMeeting || false,
-        meetingUrl || null,
+        meetingUrl,
         meetingPassword || null,
         notes || null
       ]
