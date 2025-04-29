@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
+import AuthModal from '../components/modals/AuthModal';
 
 interface SearchSuggestion {
   text: string;
@@ -27,6 +28,7 @@ const PetOwnerHomePage: React.FC = () => {
   const [popularServices, setPopularServices] = useState<string[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isEmergency, setIsEmergency] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Fetch popular searches when component mounts
   useEffect(() => {
@@ -272,8 +274,21 @@ const PetOwnerHomePage: React.FC = () => {
     setSelectedSuggestionIndex(-1);
   }, [suggestions]);
 
+  // Handle Register button click
+  const handleRegisterClick = () => {
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <div className="container mx-auto px-4 py-12">
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onForgotPassword={() => {/* Handle forgot password */}}
+        initialTab="register"
+      />
+
       {/* Hero Section with Search */}
       <div className="relative mb-16">
         {/* Background Image Container */}
@@ -474,6 +489,44 @@ const PetOwnerHomePage: React.FC = () => {
             </div>
             <h3 className="text-xl font-medium mb-2">Animal Hospital</h3>
             <p className="text-gray-600">Advanced care for all animal health needs</p>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section - Same size and structure as hero section */}
+      <div className="relative mt-16 mb-16">
+        {/* Background Image Container */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl shadow-lg h-[400px]">
+          <img 
+            src="https://d2j5evtsf6ql1v.cloudfront.net/petlyst-signup-cta.png" 
+            alt="Pet Care" 
+            className="w-full h-full object-cover object-bottom"
+          />
+          {/* Slight overlay for better text readability */}
+          <div className="absolute inset-0 bg-blue-900/20"></div>
+        </div>
+        
+        {/* Content Container with white card */}
+        <div className="relative z-10 py-16 px-12 h-[400px] flex items-center">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Pawfect Care, Just a Tap Away
+            </h2>
+            
+            {/* Short description */}
+            <p className="text-lg text-gray-700 mb-6">
+              Sign up for personalized vet recommendations and easy appointment booking.
+            </p>
+            
+            {/* Registration Button */}
+            <div className="mt-6">
+              <button 
+                onClick={handleRegisterClick}
+                className="inline-block bg-white border-2 border-blue-500 text-blue-600 px-8 py-3 rounded-full font-medium hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-md flex items-center justify-center"
+              >
+                Register Now
+              </button>
+            </div>
           </div>
         </div>
       </div>

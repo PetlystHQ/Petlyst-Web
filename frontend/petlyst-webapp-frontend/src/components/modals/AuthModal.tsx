@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { setCredentials } from '../../store/slices/authSlice';
 
@@ -6,11 +6,12 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onForgotPassword: () => void;
+  initialTab?: 'login' | 'register';
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword, initialTab = 'login' }) => {
   const dispatch = useAppDispatch();
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
   const [userType, setUserType] = useState<'pet_owner' | 'veterinarian'>('pet_owner');
   const [formData, setFormData] = useState({
     name: '',
@@ -20,6 +21,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
