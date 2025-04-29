@@ -358,4 +358,224 @@ router.delete('/:petId', authenticateToken, async (req, res) => {
     }
 });
 
+// Add chip number to a pet
+router.post('/:petId/chip', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const { chipNumber } = req.body;
+        const userId = req.user.userId;
+        
+        // Validate chip number
+        if (!chipNumber || chipNumber.length !== 15 || !/^\d+$/.test(chipNumber)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chip number must be 15 digits'
+            });
+        }
+        
+        // Check if pet exists
+        const pet = await Pet.getPetById(petId);
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check authorization (pet owner or veterinarian)
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not own this pet.'
+            });
+        }
+        
+        // Add chip number to pet
+        const result = await pool.query(
+            'UPDATE pets SET chip_number = $1 WHERE pet_id = $2 AND chip_number IS NULL RETURNING *',
+            [chipNumber, petId]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chip number already exists for this pet or pet not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Chip number added successfully',
+            chipNumber: chipNumber
+        });
+    } catch (error) {
+        console.error('Error adding chip number:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to add chip number',
+            error: error.message
+        });
+    }
+});
+
+// Get chip number of a pet
+router.get('/:petId/chip', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const userId = req.user.userId;
+        
+        // Check if pet exists
+        const pet = await Pet.getPetById(petId);
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check authorization (pet owner or veterinarian)
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not own this pet.'
+            });
+        }
+        
+        // Get chip number
+        const result = await pool.query(
+            'SELECT chip_number FROM pets WHERE pet_id = $1',
+            [petId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            chipNumber: result.rows[0].chip_number
+        });
+    } catch (error) {
+        console.error('Error getting chip number:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get chip number',
+            error: error.message
+        });
+    }
+});
+
+// Update chip number of a pet
+router.put('/:petId/chip', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const { chipNumber } = req.body;
+        const userId = req.user.userId;
+        
+        // Validate chip number
+        if (!chipNumber || chipNumber.length !== 15 || !/^\d+$/.test(chipNumber)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chip number must be 15 digits'
+            });
+        }
+        
+        // Check if pet exists
+        const pet = await Pet.getPetById(petId);
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check authorization (pet owner or veterinarian)
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not own this pet.'
+            });
+        }
+        
+        // Update chip number
+        const result = await pool.query(
+            'UPDATE pets SET chip_number = $1 WHERE pet_id = $2 RETURNING *',
+            [chipNumber, petId]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Chip number updated successfully',
+            chipNumber: chipNumber
+        });
+    } catch (error) {
+        console.error('Error updating chip number:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update chip number',
+            error: error.message
+        });
+    }
+});
+
+// Delete chip number from a pet
+router.delete('/:petId/chip', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const userId = req.user.userId;
+        
+        // Check if pet exists
+        const pet = await Pet.getPetById(petId);
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check authorization (pet owner or veterinarian)
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You do not own this pet.'
+            });
+        }
+        
+        // Delete chip number
+        const result = await pool.query(
+            'UPDATE pets SET chip_number = NULL WHERE pet_id = $1 RETURNING *',
+            [petId]
+        );
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Chip number removed successfully'
+        });
+    } catch (error) {
+        console.error('Error removing chip number:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to remove chip number',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router; 

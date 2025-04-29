@@ -13,6 +13,7 @@ interface Pet {
   pet_gender: string;
   pet_owner_id: string;
   pet_profile_photo?: string;
+  chip_number?: string;
 }
 
 // Pet form data interface
@@ -26,6 +27,7 @@ interface PetFormData {
   gender: string;
   photo?: string | File;
   removePhoto?: boolean;
+  chip_number?: string;
 }
 
 interface EditPetModalProps {
@@ -256,7 +258,8 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
     birth_year: '',
     gender: '',
     photo: '',
-    removePhoto: false
+    removePhoto: false,
+    chip_number: ''
   });
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -264,6 +267,13 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Chip number state
+  const [isEditingChip, setIsEditingChip] = useState<boolean>(false);
+  const [chipNumber, setChipNumber] = useState<string>('');
+  const [chipError, setChipError] = useState<string>('');
+  const [chipSuccessMessage, setChipSuccessMessage] = useState<string>('');
+  const [isChipLoading, setIsChipLoading] = useState<boolean>(false);
   
   // Reset and populate form when pet changes
   useEffect(() => {
@@ -295,17 +305,141 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
         birth_year: birthYear,
         gender: pet.pet_gender || '',
         photo: pet.pet_profile_photo || '',
-        removePhoto: false
+        removePhoto: false,
+        chip_number: pet.chip_number || ''
       });
+      
+      // Set chip number
+      setChipNumber(pet.chip_number || '');
       
       // Set preview URL if pet has a photo
       setPreviewUrl(pet.pet_profile_photo || null);
       
       // Clear any previous errors
       setFormErrors({});
+      setChipError('');
+      setChipSuccessMessage('');
     }
   }, [pet, isOpen]);
   
+  // Fetch chip number for the pet
+  useEffect(() => {
+    if (pet && isOpen) {
+      fetchChipNumber();
+    }
+  }, [pet, isOpen]);
+  
+  // Fetch chip number from API
+  const fetchChipNumber = async () => {
+    if (!pet || !pet.pet_id) return;
+    
+    try {
+      setIsChipLoading(true);
+      const response = await axiosInstance.get(`/pets/${pet.pet_id}/chip`);
+      if (response.data.success) {
+        setChipNumber(response.data.chipNumber || '');
+        setFormData(prev => ({
+          ...prev,
+          chip_number: response.data.chipNumber || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching chip number:', error);
+      // Don't set error message here as the chip might not exist yet
+    } finally {
+      setIsChipLoading(false);
+    }
+  };
+  
+  // Add or update chip number
+  const saveChipNumber = async () => {
+    if (!pet || !pet.pet_id) return;
+    
+    // Validate chip number
+    if (!chipNumber.trim()) {
+      setChipError('Chip number is required');
+      return;
+    }
+    
+    if (chipNumber.length !== 15 || !/^\d+$/.test(chipNumber)) {
+      setChipError('Chip number must be 15 digits');
+      return;
+    }
+    
+    setChipError('');
+    setIsChipLoading(true);
+    
+    try {
+      let response;
+      
+      if (pet.chip_number) {
+        // Update existing chip number
+        response = await axiosInstance.put(`/pets/${pet.pet_id}/chip`, { chipNumber });
+      } else {
+        // Add new chip number
+        response = await axiosInstance.post(`/pets/${pet.pet_id}/chip`, { chipNumber });
+      }
+      
+      if (response.data.success) {
+        setChipSuccessMessage('Chip number saved successfully');
+        
+        // Update form data with new chip number
+        setFormData(prev => ({
+          ...prev,
+          chip_number: chipNumber
+        }));
+        
+        setIsEditingChip(false);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setChipSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error saving chip number:', error);
+      setChipError('Failed to save chip number. Please try again.');
+    } finally {
+      setIsChipLoading(false);
+    }
+  };
+  
+  // Delete chip number
+  const deleteChipNumber = async () => {
+    if (!pet || !pet.pet_id || !chipNumber) return;
+    
+    if (!window.confirm('Are you sure you want to delete this chip number?')) {
+      return;
+    }
+    
+    setIsChipLoading(true);
+    
+    try {
+      const response = await axiosInstance.delete(`/pets/${pet.pet_id}/chip`);
+      
+      if (response.data.success) {
+        setChipSuccessMessage('Chip number removed successfully');
+        setChipNumber('');
+        
+        // Update form data to remove chip number
+        setFormData(prev => ({
+          ...prev,
+          chip_number: ''
+        }));
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setChipSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting chip number:', error);
+      setChipError('Failed to delete chip number. Please try again.');
+    } finally {
+      setIsChipLoading(false);
+    }
+  };
+
   // Get available breeds based on selected species
   const availableBreeds = useMemo<PetBreed[]>(() => {
     if (!formData.species) return [];
@@ -727,6 +861,97 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
                         className={!formData.species ? "bg-gray-50 cursor-not-allowed" : ""}
                       />
                     </div>
+                  </div>
+                  
+                  {/* Chip Number Section */}
+                  <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Microchip Number</label>
+                    
+                    {isChipLoading ? (
+                      <div className="flex items-center mt-1">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent mr-2"></div>
+                        <span className="text-gray-600">Loading...</span>
+                      </div>
+                    ) : isEditingChip ? (
+                      <div className="mt-1">
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            value={chipNumber}
+                            onChange={(e) => {
+                              setChipNumber(e.target.value);
+                              setChipError('');
+                            }}
+                            maxLength={15}
+                            placeholder="15-Digit chip number"
+                            className="px-3 py-2 border border-gray-300 rounded-md mr-2 text-sm flex-grow focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={saveChipNumber}
+                            className="px-3 py-2 bg-green-500 text-white rounded-md text-sm hover:bg-green-600 transition-colors"
+                            disabled={isChipLoading}
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingChip(false);
+                              setChipError('');
+                              fetchChipNumber();
+                            }}
+                            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md text-sm ml-1 hover:bg-gray-300 transition-colors"
+                            disabled={isChipLoading}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {chipError && (
+                          <p className="text-red-500 text-xs mt-1">{chipError}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center mt-1">
+                        <p className="font-medium text-gray-800 mr-2">
+                          {chipNumber ? chipNumber : 'Not assigned'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingChip(true);
+                            setChipError('');
+                            setChipSuccessMessage('');
+                          }}
+                          className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                          title="Edit chip number"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        {chipNumber && (
+                          <button
+                            type="button"
+                            onClick={deleteChipNumber}
+                            className="p-1 text-red-500 hover:text-red-700 transition-colors ml-1"
+                            title="Delete chip number"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {chipSuccessMessage && (
+                      <p className="text-green-500 text-xs mt-1">{chipSuccessMessage}</p>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-3">
+                      A microchip is a permanent ID that helps locate your pet if they become lost. If your pet has been microchipped, please enter the 15-digit number here.
+                    </p>
                   </div>
                   
                   {/* Birth date with improved layout - MOVED BEFORE GENDER */}
