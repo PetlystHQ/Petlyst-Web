@@ -370,6 +370,28 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
     });
     console.log('Updated appointment:', updatedAppointment);
     
+    // Add the pet to clinic_patients table if not already there
+    try {
+      // Check if the pet is already in the clinic_patients table
+      const checkResult = await pool.query(
+        `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
+        [appointment.clinic_id, appointment.pet_id]
+      );
+      
+      // If the pet is not already in the clinic_patients table, add it
+      if (checkResult.rowCount === 0) {
+        await pool.query(
+          `INSERT INTO clinic_patients (clinic_id, pet_id) 
+           VALUES ($1, $2)`,
+          [appointment.clinic_id, appointment.pet_id]
+        );
+        console.log(`Added pet ${appointment.pet_id} to clinic_patients for clinic ${appointment.clinic_id}`);
+      }
+    } catch (error) {
+      console.error('Error updating clinic_patients table:', error);
+      // Don't fail the request if this part fails
+    }
+    
     res.status(200).json({ 
       message: 'Appointment marked as completed', 
       appointment: updatedAppointment 
@@ -575,6 +597,30 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
     const updatedAppointment = await appointmentModel.updateAppointment(appointmentId, {
       appointmentStatus: status
     });
+    
+    // If status is confirmed, add the pet to clinic_patients table if not already there
+    if (status === 'confirmed') {
+      try {
+        // Check if the pet is already in the clinic_patients table
+        const checkResult = await pool.query(
+          `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
+          [appointment.clinic_id, appointment.pet_id]
+        );
+        
+        // If the pet is not already in the clinic_patients table, add it
+        if (checkResult.rowCount === 0) {
+          await pool.query(
+            `INSERT INTO clinic_patients (clinic_id, pet_id) 
+             VALUES ($1, $2)`,
+            [appointment.clinic_id, appointment.pet_id]
+          );
+          console.log(`Added pet ${appointment.pet_id} to clinic_patients for clinic ${appointment.clinic_id}`);
+        }
+      } catch (error) {
+        console.error('Error updating clinic_patients table:', error);
+        // Don't fail the request if this part fails
+      }
+    }
     
     res.status(200).json({
       success: true,
