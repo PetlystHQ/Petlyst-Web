@@ -654,15 +654,15 @@ const UpcomingAppointments: React.FC = () => {
                           </div>
                           
                           {/* Video indicator if needed */}
-                          {appointment.video_meeting && (
+                        {appointment.video_meeting && (
                             <div className="flex-shrink-0">
                               <span className={appointment.appointment_status === 'completed' 
                                 ? "bg-gray-100 text-gray-700 text-xs px-1 py-0.5 rounded" 
                                 : "bg-green-100 text-green-800 text-xs px-1 py-0.5 rounded"}>
                                 V
-                              </span>
+                          </span>
                             </div>
-                          )}
+                        )}
                         </div>
                       </div>
                     ))}

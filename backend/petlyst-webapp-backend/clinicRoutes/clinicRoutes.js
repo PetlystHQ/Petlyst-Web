@@ -621,8 +621,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
         for (const link of social_media_links) {
           if (link.platform && link.url) {
             const socialMediaQuery = `
-              INSERT INTO clinic_social_media (clinic_id, platform, url)
-              VALUES ($1, $2, $3)
+              INSERT INTO clinic_social_media (clinic_id, platform, url) VALUES ($1, $2, $3)
             `;
             await client.query(socialMediaQuery, [newClinic.clinic_id, link.platform, link.url]);
           }
@@ -2306,6 +2305,301 @@ router.put('/:clinicId/social-media', authenticateToken, checkVerificationStatus
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
+    });
+  }
+});
+
+// Get pets from confirmed and completed appointments (Pet Records)
+router.get('/:clinicId/pets/from-appointments', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    
+    // Redirect to the new endpoint
+    return res.status(301).json({
+      success: false,
+      message: 'This endpoint is deprecated. Please use /clinics/:clinicId/patients instead.',
+      redirectTo: `/clinics/${clinicId}/patients`
+    });
+  } catch (error) {
+    console.error('Error in deprecated endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get clinic patients (using clinic_patients table)
+router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT clinic_id FROM clinics 
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to view patient records'
+      });
+    }
+
+    // Get patients from clinic_patients table with pet and owner information
+    const patientsQuery = `
+      SELECT 
+        cp.id,
+        cp.clinic_id,
+        cp.pet_id,
+        p.pet_name,
+        p.pet_breed,
+        p.pet_species AS pet_type,
+        p.pet_gender,
+        p.pet_birth_date AS pet_birthdate,
+        p.pet_birth_day,
+        p.pet_birth_month,
+        p.pet_birth_year,
+        p.pet_owner_id AS owner_id,
+        u.user_name AS pet_owner_name,
+        u.user_surname AS pet_owner_surname,
+        cp.created_at,
+        cp.updated_at
+      FROM clinic_patients cp
+      JOIN pets p ON cp.pet_id = p.pet_id
+      JOIN pet_owners po ON p.pet_owner_id = po.pet_owner_id
+      JOIN users u ON po.pet_owner_id = u.user_id
+      WHERE cp.clinic_id = $1
+      ORDER BY cp.updated_at DESC
+    `;
+
+    const patientsResult = await pool.query(patientsQuery, [clinicId]);
+
+    // For each patient, get additional info like last visit date and total appointments
+    const patientsWithStats = await Promise.all(patientsResult.rows.map(async (patient) => {
+      // Get appointment statistics for each patient
+      const statsQuery = `
+        SELECT 
+          COUNT(*) AS total_appointments,
+          MAX(appointment_date) AS last_visit_date,
+          MAX(appointment_id) AS last_appointment_id
+        FROM appointments
+        WHERE clinic_id = $1 AND pet_id = $2
+        AND appointment_status IN ('confirmed', 'completed')
+      `;
+      
+      const statsResult = await pool.query(statsQuery, [clinicId, patient.pet_id]);
+      const stats = statsResult.rows[0];
+      
+      return {
+        ...patient,
+        last_visit_date: stats.last_visit_date,
+        total_appointments: parseInt(stats.total_appointments) || 0
+      };
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: 'Patient records fetched successfully',
+      pets: patientsWithStats
+    });
+
+  } catch (error) {
+    console.error('Error fetching patient records:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Update appointment status and sync with clinic_patients table
+router.put('/appointments/:appointmentId/status', authenticateToken, async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+    const user_id = req.user.userId;
+
+    if (!status || !['pending', 'confirmed', 'completed', 'canceled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status value'
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check if appointment exists and the user has permission to update it
+      const appointmentQuery = `
+        SELECT a.*, c.clinic_operator_id
+        FROM appointments a
+        JOIN clinics c ON a.clinic_id = c.clinic_id
+        WHERE a.appointment_id = $1
+      `;
+      const appointmentResult = await client.query(appointmentQuery, [appointmentId]);
+      
+      if (appointmentResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          message: 'Appointment not found'
+        });
+      }
+      
+      const appointment = appointmentResult.rows[0];
+      
+      // Only veterinarians or clinic operators can update appointment status
+      if (user_id !== appointment.clinic_operator_id) {
+        const isVeterinarian = await client.query(
+          'SELECT * FROM clinic_veterinarians WHERE clinic_id = $1 AND veterinarian_id = $2 AND status = $3',
+          [appointment.clinic_id, user_id, 'approved']
+        );
+        
+        if (isVeterinarian.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have permission to update this appointment'
+          });
+        }
+      }
+      
+      // Update appointment status
+      await client.query(
+        'UPDATE appointments SET appointment_status = $1 WHERE appointment_id = $2',
+        [status, appointmentId]
+      );
+      
+      // If status is 'confirmed' or 'completed', ensure the pet is in clinic_patients table
+      if (status === 'confirmed' || status === 'completed') {
+        // Check if the pet is already a patient of this clinic
+        const checkPatientQuery = `
+          SELECT id FROM clinic_patients 
+          WHERE clinic_id = $1 AND pet_id = $2
+        `;
+        const checkPatientResult = await client.query(checkPatientQuery, [
+          appointment.clinic_id, 
+          appointment.pet_id
+        ]);
+        
+        if (checkPatientResult.rows.length === 0) {
+          // Insert new record in clinic_patients
+          await client.query(`
+            INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `, [appointment.clinic_id, appointment.pet_id]);
+        } else {
+          // Update the existing record timestamp
+          await client.query(`
+            UPDATE clinic_patients 
+            SET updated_at = CURRENT_TIMESTAMP 
+            WHERE clinic_id = $1 AND pet_id = $2
+          `, [appointment.clinic_id, appointment.pet_id]);
+        }
+      }
+      
+      await client.query('COMMIT');
+      
+      res.status(200).json({
+        success: true,
+        message: `Appointment status updated to ${status}`,
+        appointment_id: appointmentId,
+        status: status
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Sync patients table with appointments - this could be run as a scheduled task
+router.post('/:clinicId/sync-patients', authenticateToken, checkVerificationStatus, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const operator_id = req.user.userId;
+
+    // Check if clinic exists and belongs to the operator
+    const checkQuery = `
+      SELECT clinic_id FROM clinics 
+      WHERE clinic_id = $1 AND clinic_operator_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found or you do not have permission to sync patient records'
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Find all pets with confirmed or completed appointments that aren't in the patients table
+      const missingPatientsQuery = `
+        SELECT DISTINCT a.pet_id, a.clinic_id 
+        FROM appointments a
+        WHERE a.clinic_id = $1
+        AND a.appointment_status IN ('confirmed', 'completed')
+        AND NOT EXISTS (
+          SELECT 1 FROM clinic_patients cp 
+          WHERE cp.clinic_id = a.clinic_id AND cp.pet_id = a.pet_id
+        )
+      `;
+      
+      const missingPatientsResult = await client.query(missingPatientsQuery, [clinicId]);
+      
+      // Add missing patients to the clinic_patients table
+      let addedCount = 0;
+      for (const row of missingPatientsResult.rows) {
+        await client.query(`
+          INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
+          VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `, [row.clinic_id, row.pet_id]);
+        addedCount++;
+      }
+      
+      await client.query('COMMIT');
+      
+      res.status(200).json({
+        success: true,
+        message: 'Patient records synced with appointments',
+        added_patients: addedCount
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('Error syncing patient records:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

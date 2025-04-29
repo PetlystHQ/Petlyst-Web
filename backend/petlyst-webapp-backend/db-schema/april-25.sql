@@ -1985,7 +1985,7 @@ COPY public.veterinarians (veterinarian_id, veterinarian_graduate_barcode, veter
 35	\N	not_verified	\N	2025-04-04 17:10:47.279434	2025-04-04 17:10:47.279434	\N	\N	t	dr-saltuk-emre
 49	123213123213131	verified	e0f5f1744d573831fde604ac5e21e899:3d81292ffe609aa3f393a1afa09e751d	2025-04-25 12:24:57.387543	2025-04-25 12:24:57.387543	\N	\N	f	dr-petlyst-vet
 34	KUTLUCANBARCODE	verified	1a5d0cc11c50acf6bc40f32e216fb54d:52463f23229af9629a23ae86cc40f54f	2025-04-03 19:21:25.297825	2025-04-03 19:21:25.297825	\N	\N	t	dr-kutlucan-ztrk
-36	OSMANBARCODE	verified	2af08d70a0eb385ff0ceca4a1fb38f62:fdb280f49648d1d96fa1e7f5830db22f	2025-04-06 16:24:40.116182	2025-04-06 16:27:04.420483	Dr. Osman İç is a dedicated veterinary specialist in internal medicine, with a deep focus on diagnosing and managing complex diseases in companion animals. Known for his analytical approach and compassionate care, he strives to improve each patient’s quality of life through precise, evidence-based treatments.	{english,turkish}	t	dr-osman-i
+36	OSMANBARCODE	verified	2af08d70a0eb385ff0ceca4a1fb38f62:fdb280f49648d1d96fa1e7f5830db22f	2025-04-06 16:24:40.116182	2025-04-06 16:27:04.420483	Dr. Osman İç is a dedicated veterinary specialist in internal medicine, with a deep focus on diagnosing and managing complex diseases in companion animals. Known for his analytical approach and compassionate care, he strives to improve each patient's quality of life through precise, evidence-based treatments.	{english,turkish}	t	dr-osman-i
 39	TUNABARCODE	verified	624834a136c655af396ba64ff9ad8d5b:9474747b490ecee5952349621a62a79f	2025-04-08 11:10:26.688737	2025-04-08 11:10:26.688737	\N	\N	f	dr-tuna-ll
 30	TIMURBARCODE	verified	617a47e3060b351b634eb65f0ea0ccad:e0c35035c57947024cedce157225c72c	2025-04-01 00:21:13.72516	2025-04-01 00:21:13.72516	\N	\N	t	dr-timur-canda
 33	EYUPBARCODE	verified	e168445633eed980313c951fbdd75ce0:7bbbbc678ebeb213a07ea91cc27c0b72	2025-04-01 14:50:29.451547	2025-04-01 14:50:29.451547	\N	\N	f	dr-eyp-erolu
@@ -2913,6 +2913,136 @@ ALTER TABLE ONLY public.veterinarian_expertise
 
 ALTER TABLE ONLY public.veterinarians
     ADD CONSTRAINT veterinarians_veterinarian_id_fkey FOREIGN KEY (veterinarian_id) REFERENCES public.users(user_id);
+
+
+--
+-- TOC entry 265 (class 1259 OID 17245)
+-- Name: clinic_patients; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.clinic_patients (
+    id integer NOT NULL,
+    clinic_id integer NOT NULL,
+    pet_id integer NOT NULL,
+    pet_owner_id integer NOT NULL,
+    veterinarian_id integer NOT NULL,
+    first_visit_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_visit_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    first_appointment_id integer NOT NULL,
+    last_appointment_id integer NOT NULL,
+    visit_count integer DEFAULT 1,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.clinic_patients OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 266 (class 1259 OID 17246)
+-- Name: clinic_patients_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.clinic_patients_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.clinic_patients_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4668 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: clinic_patients_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.clinic_patients_id_seq OWNED BY public.clinic_patients.id;
+
+
+--
+-- Name: clinic_patients id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients ALTER COLUMN id SET DEFAULT nextval('public.clinic_patients_id_seq'::regclass);
+
+--
+-- Name: clinic_patients clinic_patients_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_pkey PRIMARY KEY (id);
+
+--
+-- Name: clinic_patients unique_clinic_pet; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT unique_clinic_pet UNIQUE (clinic_id, pet_id);
+
+--
+-- Name: idx_clinic_patients_clinic_id; Type: INDEX; Schema: public; Owner: petlystAdmin
+--
+
+CREATE INDEX idx_clinic_patients_clinic_id ON public.clinic_patients USING btree (clinic_id);
+
+--
+-- Name: idx_clinic_patients_pet_id; Type: INDEX; Schema: public; Owner: petlystAdmin
+--
+
+CREATE INDEX idx_clinic_patients_pet_id ON public.clinic_patients USING btree (pet_id);
+
+--
+-- Name: idx_clinic_patients_veterinarian_id; Type: INDEX; Schema: public; Owner: petlystAdmin
+--
+
+CREATE INDEX idx_clinic_patients_veterinarian_id ON public.clinic_patients USING btree (veterinarian_id);
+
+--
+-- Name: clinic_patients clinic_patients_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(clinic_id) ON DELETE CASCADE;
+
+--
+-- Name: clinic_patients clinic_patients_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(pet_id) ON DELETE CASCADE;
+
+--
+-- Name: clinic_patients clinic_patients_pet_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_pet_owner_id_fkey FOREIGN KEY (pet_owner_id) REFERENCES public.pet_owners(pet_owner_id) ON DELETE CASCADE;
+
+--
+-- Name: clinic_patients clinic_patients_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_veterinarian_id_fkey FOREIGN KEY (veterinarian_id) REFERENCES public.veterinarians(veterinarian_id);
+
+--
+-- Name: clinic_patients clinic_patients_first_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_first_appointment_id_fkey FOREIGN KEY (first_appointment_id) REFERENCES public.appointments(appointment_id);
+
+--
+-- Name: clinic_patients clinic_patients_last_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_patients
+    ADD CONSTRAINT clinic_patients_last_appointment_id_fkey FOREIGN KEY (last_appointment_id) REFERENCES public.appointments(appointment_id);
 
 
 -- Completed on 2025-04-25 15:45:36
