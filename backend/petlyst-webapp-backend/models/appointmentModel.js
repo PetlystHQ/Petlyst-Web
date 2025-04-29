@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const generator = require('generate-password')
 
 // Get all appointments for a pet owner
 const getAppointmentsByPetOwner = async (petOwnerId) => {
@@ -64,6 +65,14 @@ const getAppointmentById = async (appointmentId) => {
 
 // Create a new appointment
 const createAppointment = async (appointmentData) => {
+
+const meeting_url = generator.generate({
+        length: 15,
+        numbers: true,
+        uppercase: false,
+        lowercase: false,
+      }).match(/.{1,3}/g)?.join('-') ?? '';
+
   const {
     petId,
     clinicId,
@@ -72,7 +81,6 @@ const createAppointment = async (appointmentData) => {
     appointmentStartHour,
     appointmentEndHour,
     videoMeeting,
-    meetingUrl,
     meetingPassword,
     notes
   } = appointmentData;
@@ -106,7 +114,7 @@ const createAppointment = async (appointmentData) => {
         appointmentStartHour,
         appointmentEndHour,
         videoMeeting || false,
-        meetingUrl || null,
+        "Room-ID-" + meeting_url,
         meetingPassword || null,
         notes || null
       ]
