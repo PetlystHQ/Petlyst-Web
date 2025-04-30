@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import axios from 'axios';
+import AddTransactionModal from './inventorymodals/AddTransactionModal';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -73,6 +74,33 @@ const InventoryTransactions: React.FC = () => {
   const clinicId = localStorage.getItem('selectedClinicId');
   const userId = useSelector((state: RootState) => state.auth.user?.id);
 
+  // Define closeModals function using useCallback so it can be used in the event listener
+  const closeModals = useCallback(() => {
+    setShowAddModal(false);
+    setShowDetailModal(false);
+    setCurrentTransaction(null);
+    resetForm();
+  }, []);
+
+  // Add event listener for ESC key
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (showAddModal || showDetailModal)) {
+        closeModals();
+      }
+    };
+
+    // Add event listener when modals are open
+    if (showAddModal || showDetailModal) {
+      document.addEventListener('keydown', handleEscKey);
+    }
+
+    // Cleanup - remove event listener
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showAddModal, showDetailModal, closeModals]);
+
   useEffect(() => {
     fetchTransactions();
     fetchInventoryItems();
@@ -108,7 +136,7 @@ const InventoryTransactions: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory`, {
+      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/items`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -125,23 +153,25 @@ const InventoryTransactions: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    setFormData({
-      ...formData,
+    // Prevent default form behavior to maintain focus
+    e.preventDefault();
+    
+    // Use callback form of setState to avoid focus issues
+    setFormData(prevState => ({
+      ...prevState,
       [name]: name === 'quantity' || name === 'unit_price' 
-              ? parseFloat(value) 
+              ? parseFloat(value) || 0 // Ensure we handle NaN values
               : value
-    });
+    }));
 
     // Auto-calculate total price when unit price or quantity changes
     if (name === 'quantity' || name === 'unit_price') {
-      const quantity = name === 'quantity' ? parseFloat(value) : formData.quantity;
-      const unitPrice = name === 'unit_price' ? parseFloat(value) : formData.unit_price;
+      const quantity = name === 'quantity' ? parseFloat(value) || 0 : formData.quantity;
+      const unitPrice = name === 'unit_price' ? parseFloat(value) || 0 : formData.unit_price;
       
-      if (!isNaN(quantity) && !isNaN(unitPrice)) {
-        // This is just for visual feedback in the form - the backend will calculate the actual total
-        const totalPrice = quantity * unitPrice;
-        console.log('Calculated total price:', totalPrice);
-      }
+      // This is just for visual feedback in the form - the backend will calculate the actual total
+      const totalPrice = quantity * unitPrice;
+      console.log('Calculated total price:', totalPrice);
     }
   };
 
@@ -166,13 +196,6 @@ const InventoryTransactions: React.FC = () => {
   const openDetailModal = (transaction: Transaction) => {
     setCurrentTransaction(transaction);
     setShowDetailModal(true);
-  };
-
-  const closeModals = () => {
-    setShowAddModal(false);
-    setShowDetailModal(false);
-    setCurrentTransaction(null);
-    resetForm();
   };
 
   const handleAddTransaction = async (e: React.FormEvent) => {
@@ -224,6 +247,8 @@ const InventoryTransactions: React.FC = () => {
       return meetsStartDate && meetsEndDate && meetsType && meetsItem;
     });
   };
+  
+  const filteredTransactions = getFilteredTransactions();
 
   // Get transaction type display name
   const getTransactionTypeDisplay = (type: string): string => {
@@ -340,209 +365,12 @@ const InventoryTransactions: React.FC = () => {
     );
   };
 
-  // Add Transaction Modal Component
-  const AddTransactionModal = () => {
-    if (!showAddModal) return null;
-    
-    const selectedItemData = inventoryItems.find(item => item.id === formData.inventory_item_id);
-    const showExpiryAndBatch = formData.transaction_type === 'purchase' || formData.transaction_type === 'adjustment';
-    const isDeduction = ['usage', 'expired', 'damaged'].includes(formData.transaction_type);
-    
+  // Filter controls
+  const FilterControls = () => {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Add Transaction</h3>
-            <button
-              onClick={closeModals}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <form onSubmit={handleAddTransaction}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Item</label>
-                <select
-                  name="inventory_item_id"
-                  value={formData.inventory_item_id}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select an item</option>
-                  {inventoryItems.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.current_quantity} {item.unit_type} available)
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Transaction Type</label>
-                <select
-                  name="transaction_type"
-                  value={formData.transaction_type}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="purchase">Purchase (Add Stock)</option>
-                  <option value="usage">Usage (Reduce Stock)</option>
-                  <option value="adjustment">Adjustment</option>
-                  <option value="expired">Expired</option>
-                  <option value="damaged">Damaged</option>
-                  <option value="return">Return</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Quantity ({selectedItemData?.unit_type || 'units'})
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  min={0.01}
-                  step={0.01}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                {isDeduction && selectedItemData && formData.quantity > selectedItemData.current_quantity && (
-                  <p className="mt-1 text-xs text-red-600">
-                    Warning: Quantity exceeds current stock ({selectedItemData.current_quantity} {selectedItemData.unit_type})
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Price ($)</label>
-                <input
-                  type="number"
-                  name="unit_price"
-                  value={formData.unit_price}
-                  min={0}
-                  step={0.01}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              
-              {showExpiryAndBatch && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Batch Number (Optional)</label>
-                    <input
-                      type="text"
-                      name="batch_number"
-                      value={formData.batch_number}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Expiry Date (Optional)</label>
-                    <input
-                      type="date"
-                      name="expiry_date"
-                      value={formData.expiry_date}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Reference ID (Optional)</label>
-                <input
-                  type="text"
-                  name="reference_id"
-                  value={formData.reference_id}
-                  onChange={handleInputChange}
-                  placeholder="Invoice/Order/Lot number"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                ></textarea>
-              </div>
-            </div>
-            
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={closeModals}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Add Transaction
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-  
-  const filteredTransactions = getFilteredTransactions();
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-medium">Inventory Transactions</h3>
-        <button
-          onClick={openAddModal}
-          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Add Transaction
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Filters */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-        <h4 className="font-medium text-gray-700 mb-3">Filter Transactions</h4>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="bg-white p-4 rounded-md shadow-sm border border-gray-200 mb-6">
+        <h3 className="font-medium text-lg mb-4">Filter Transactions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
             <input
@@ -588,13 +416,48 @@ const InventoryTransactions: React.FC = () => {
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Items</option>
-              {inventoryItems.map(item => (
+              {inventoryItems.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}
             </select>
           </div>
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-medium">Inventory Transactions</h3>
+        <button
+          onClick={openAddModal}
+          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Transaction
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Filters */}
+      <FilterControls />
 
       {/* Transactions list */}
       {loading ? (
@@ -738,7 +601,14 @@ const InventoryTransactions: React.FC = () => {
       )}
 
       {/* Modals */}
-      <AddTransactionModal />
+      <AddTransactionModal 
+        showAddModal={showAddModal}
+        formData={formData}
+        inventoryItems={inventoryItems}
+        handleInputChange={handleInputChange}
+        handleAddTransaction={handleAddTransaction}
+        closeModals={closeModals}
+      />
       <TransactionDetailModal />
     </div>
   );
