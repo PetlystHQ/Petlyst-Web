@@ -372,20 +372,35 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
     
     // Add the pet to clinic_patients table if not already there
     try {
+      console.log(`[DEBUG-APIROUTE] Randevu tamamlandı. clinic_patients tablosu güncelleniyor...`);
+      console.log(`[DEBUG-APIROUTE] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+      
       // Check if the pet is already in the clinic_patients table
       const checkResult = await pool.query(
         `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
         [appointment.clinic_id, appointment.pet_id]
       );
       
+      console.log(`[DEBUG-APIROUTE] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+      
       // If the pet is not already in the clinic_patients table, add it
       if (checkResult.rowCount === 0) {
+        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
         await pool.query(
-          `INSERT INTO clinic_patients (clinic_id, pet_id) 
-           VALUES ($1, $2)`,
+          `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
+           VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
           [appointment.clinic_id, appointment.pet_id]
         );
-        console.log(`Added pet ${appointment.pet_id} to clinic_patients for clinic ${appointment.clinic_id}`);
+        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosuna eklendi (tamamlama endpointi).`);
+      } else {
+        console.log(`[DEBUG-APIROUTE] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+        await pool.query(
+          `UPDATE clinic_patients 
+           SET updated_at = CURRENT_TIMESTAMP 
+           WHERE clinic_id = $1 AND pet_id = $2`,
+          [appointment.clinic_id, appointment.pet_id]
+        );
+        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients kaydı güncellendi (tamamlama endpointi).`);
       }
     } catch (error) {
       console.error('Error updating clinic_patients table:', error);
@@ -601,25 +616,42 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
     // If status is confirmed, add the pet to clinic_patients table if not already there
     if (status === 'confirmed') {
       try {
+        console.log(`[DEBUG-APIROUTE-STATUS] Randevu onaylandı. clinic_patients tablosu güncelleniyor...`);
+        console.log(`[DEBUG-APIROUTE-STATUS] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+        
         // Check if the pet is already in the clinic_patients table
         const checkResult = await pool.query(
           `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
           [appointment.clinic_id, appointment.pet_id]
         );
         
+        console.log(`[DEBUG-APIROUTE-STATUS] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+        
         // If the pet is not already in the clinic_patients table, add it
         if (checkResult.rowCount === 0) {
+          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
           await pool.query(
-            `INSERT INTO clinic_patients (clinic_id, pet_id) 
-             VALUES ($1, $2)`,
+            `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
+             VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [appointment.clinic_id, appointment.pet_id]
           );
-          console.log(`Added pet ${appointment.pet_id} to clinic_patients for clinic ${appointment.clinic_id}`);
+          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosuna eklendi (onaylama endpointi).`);
+        } else {
+          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+          await pool.query(
+            `UPDATE clinic_patients 
+             SET updated_at = CURRENT_TIMESTAMP 
+             WHERE clinic_id = $1 AND pet_id = $2`,
+            [appointment.clinic_id, appointment.pet_id]
+          );
+          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients kaydı güncellendi (onaylama endpointi).`);
         }
       } catch (error) {
         console.error('Error updating clinic_patients table:', error);
         // Don't fail the request if this part fails
       }
+    } else {
+      console.log(`[DEBUG-APIROUTE-STATUS] Randevu durumu ${status} olduğu için clinic_patients tablosu güncellenmedi.`);
     }
     
     res.status(200).json({

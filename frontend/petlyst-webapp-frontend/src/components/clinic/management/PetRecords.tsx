@@ -47,21 +47,25 @@ const PetRecords: React.FC = () => {
   const fetchPets = async () => {
     if (!clinicId) {
       setLoading(false);
+      console.log('[DEBUG-PETRECORDS] Klinik ID bulunamadı, veri çekilemiyor.');
       return;
     }
 
     try {
       setLoading(true);
+      console.log(`[DEBUG-PETRECORDS] Klinik hastaları için veri çekiliyor. Klinik ID: ${clinicId}`);
       
       // Using the new endpoint that uses clinic_patients table
       const response = await axiosInstance.get(`/clinics/${clinicId}/patients`);
       
       if (response.data.success) {
         const fetchedPets = response.data.pets || [];
-        console.log('Fetched patients:', fetchedPets);
+        console.log(`[DEBUG-PETRECORDS] Başarıyla ${fetchedPets.length} hasta kaydı çekildi.`);
+        console.log('[DEBUG-PETRECORDS] İlk 3 hasta kaydı:', fetchedPets.slice(0, 3));
         setPets(fetchedPets);
         setLastRefresh(new Date());
       } else {
+        console.log('[DEBUG-PETRECORDS] Hasta kayıtları çekilirken hata oluştu:', response.data);
         setError('Failed to fetch patient records');
         
         // For development: Create mock data if endpoint fails
@@ -70,7 +74,7 @@ const PetRecords: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('Error fetching patient records:', err);
+      console.error('[DEBUG-PETRECORDS] Hasta kayıtları çekilirken bir hata oluştu:', err);
       setError('Failed to fetch patient records. Please try again.');
       
       // For development: Create mock data

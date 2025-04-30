@@ -2335,6 +2335,8 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
   try {
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
+    
+    console.log(`[DEBUG-PATIENTS] Klinik ID ${clinicId} için hasta kayıtları isteniyor. Operatör ID: ${operator_id}`);
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
@@ -2344,11 +2346,14 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
 
     if (checkResult.rows.length === 0) {
+      console.log(`[DEBUG-PATIENTS] Klinik bulunamadı veya kullanıcının erişim izni yok. Klinik ID: ${clinicId}, Operatör ID: ${operator_id}`);
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to view patient records'
       });
     }
+
+    console.log(`[DEBUG-PATIENTS] Klinik erişimi doğrulandı. clinic_patients tablosundan veri çekiliyor.`);
 
     // Get patients from clinic_patients table with pet and owner information
     const patientsQuery = `
@@ -2376,10 +2381,21 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
       WHERE cp.clinic_id = $1
       ORDER BY cp.updated_at DESC
     `;
+    
+    console.log(`[DEBUG-PATIENTS] Çalıştırılacak sorgu: ${patientsQuery}`);
+    console.log(`[DEBUG-PATIENTS] Sorgu parametreleri: clinicId = ${clinicId}`);
 
     const patientsResult = await pool.query(patientsQuery, [clinicId]);
+    console.log(`[DEBUG-PATIENTS] clinic_patients tablosundan ${patientsResult.rows.length} kayıt bulundu.`);
+    
+    if (patientsResult.rows.length === 0) {
+      console.log(`[DEBUG-PATIENTS] Klinik için clinic_patients tablosunda kayıt bulunamadı. SQL sorgusu tekrar kontrol edilmeli.`);
+    } else {
+      console.log(`[DEBUG-PATIENTS] İlk hasta kaydı örneği:`, patientsResult.rows[0]);
+    }
 
     // For each patient, get additional info like last visit date and total appointments
+    console.log(`[DEBUG-PATIENTS] Her hasta için randevu istatistikleri alınıyor...`);
     const patientsWithStats = await Promise.all(patientsResult.rows.map(async (patient) => {
       // Get appointment statistics for each patient
       const statsQuery = `
@@ -2395,13 +2411,19 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
       const statsResult = await pool.query(statsQuery, [clinicId, patient.pet_id]);
       const stats = statsResult.rows[0];
       
-      return {
+      const patientWithStats = {
         ...patient,
         last_visit_date: stats.last_visit_date,
         total_appointments: parseInt(stats.total_appointments) || 0
       };
+      
+      console.log(`[DEBUG-PATIENTS] Hayvan ID: ${patient.pet_id}, İsim: ${patient.pet_name}, Toplam Randevular: ${patientWithStats.total_appointments}, Son Ziyaret: ${patientWithStats.last_visit_date || 'N/A'}`);
+      
+      return patientWithStats;
     }));
 
+    console.log(`[DEBUG-PATIENTS] Tüm veriler hazırlandı. ${patientsWithStats.length} hasta kaydı gönderiliyor.`);
+    
     res.status(200).json({
       success: true,
       message: 'Patient records fetched successfully',
@@ -2409,7 +2431,7 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
     });
 
   } catch (error) {
-    console.error('Error fetching patient records:', error);
+    console.error('[DEBUG-PATIENTS] Hasta kayıtları alınırken hata:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -2472,13 +2494,18 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
       }
       
       // Update appointment status
+      console.log(`[DEBUG-CLINIC] Randevu durumu güncelleniyor: Randevu ID: ${appointmentId}, Yeni durum: ${status}`);
       await client.query(
         'UPDATE appointments SET appointment_status = $1, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = $2',
         [status, appointmentId]
       );
+      console.log(`[DEBUG-CLINIC] Randevu durumu güncellendi: ${status}`);
       
       // If status is 'confirmed' or 'completed', ensure the pet is in clinic_patients table
       if (status === 'confirmed' || status === 'completed') {
+        console.log(`[DEBUG-CLINIC] Randevu '${status}' durumunda. Hayvanın clinic_patients tablosunda olup olmadığı kontrol ediliyor.`);
+        console.log(`[DEBUG-CLINIC] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+        
         // Check if the pet is already a patient of this clinic
         const checkPatientQuery = `
           SELECT id FROM clinic_patients 
@@ -2489,20 +2516,28 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
           appointment.pet_id
         ]);
         
+        console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda mı? Sonuç sayısı: ${checkPatientResult.rows.length}`);
+        
         if (checkPatientResult.rows.length === 0) {
           // Insert new record in clinic_patients
+          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
           await client.query(`
             INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
             VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `, [appointment.clinic_id, appointment.pet_id]);
+          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosuna eklendi.`);
         } else {
           // Update the existing record timestamp
+          console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda. Timestamp güncelleniyor.`);
           await client.query(`
             UPDATE clinic_patients 
             SET updated_at = CURRENT_TIMESTAMP 
             WHERE clinic_id = $1 AND pet_id = $2
           `, [appointment.clinic_id, appointment.pet_id]);
+          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients kaydı güncellendi.`);
         }
+      } else {
+        console.log(`[DEBUG-CLINIC] Randevu durumu '${status}' olduğu için clinic_patients tablosu güncellenmedi.`);
       }
       
       await client.query('COMMIT');
