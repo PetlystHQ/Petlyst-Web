@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import axios from 'axios';
+import AddCategoryModal from './inventorymodals/AddCategoryModal';
 
 // Interface for category
 interface Category {
@@ -40,6 +41,36 @@ const InventoryCategories: React.FC = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   const clinicId = localStorage.getItem('selectedClinicId');
 
+  // Define closeModals function using useCallback so it can be used in the event listener
+  const closeModals = useCallback(() => {
+    // First reset form to avoid flicker
+    resetForm();
+    
+    // Then close modals and clear currentCategory
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setCurrentCategory(null);
+  }, []);
+
+  // Add event listener for ESC key
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (showAddModal || showEditModal)) {
+        closeModals();
+      }
+    };
+
+    // Add event listener when modals are open
+    if (showAddModal || showEditModal) {
+      document.addEventListener('keydown', handleEscKey);
+    }
+
+    // Cleanup - remove event listener
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showAddModal, showEditModal, closeModals]);
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -71,14 +102,20 @@ const InventoryCategories: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    const { name, value, type } = e.target;
+    
+    // Prevent default form behavior to maintain focus
+    e.preventDefault();
+    
+    // Use callback form of setState to avoid focus issues
+    setFormData(prevState => ({
+      ...prevState,
       [name]: value === '' && name === 'parent_id' ? undefined : value
-    });
+    }));
   };
 
   const resetForm = () => {
+    // Reset form to initial state
     setFormData({
       name: '',
       description: '',
@@ -99,13 +136,6 @@ const InventoryCategories: React.FC = () => {
       parent_id: category.parent_id
     });
     setShowEditModal(true);
-  };
-
-  const closeModals = () => {
-    setShowAddModal(false);
-    setShowEditModal(false);
-    setCurrentCategory(null);
-    resetForm();
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -211,137 +241,94 @@ const InventoryCategories: React.FC = () => {
     );
   };
 
-  // Add Category Modal
-  const AddCategoryModal = () => {
-    if (!showAddModal) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg w-full max-w-md p-6">
-          <h3 className="text-lg font-medium mb-4">Add New Category</h3>
-          
-          <form onSubmit={handleAddCategory}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                rows={3}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category (Optional)</label>
-              <select
-                name="parent_id"
-                value={formData.parent_id || ''}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">None (Root Category)</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                type="button"
-                onClick={closeModals}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Add Category
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
   // Edit Category Modal
   const EditCategoryModal = () => {
     if (!showEditModal || !currentCategory) return null;
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg w-full max-w-md p-6">
-          <h3 className="text-lg font-medium mb-4">Edit Category</h3>
+        <div className="bg-white rounded-lg w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 className="text-xl font-semibold text-gray-800">Edit Category</h3>
+            <button
+              onClick={closeModals}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           
-          <form onSubmit={handleEditCategory}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
+          <form onSubmit={handleEditCategory} className="space-y-6">
+            <div className="bg-gray-50 p-5 rounded-md border border-gray-200">
+              <div className="mb-5">
+                <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Category Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  required
+                />
+              </div>
+              
+              <div className="mb-5">
+                <label htmlFor="edit-parent_id" className="block text-sm font-medium text-gray-700 mb-2">
+                  Parent Category (Optional)
+                </label>
+                <select
+                  id="edit-parent_id"
+                  name="parent_id"
+                  value={formData.parent_id || ''}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                >
+                  <option value="">None (Top-level category)</option>
+                  {categories
+                    .filter(category => category.id !== currentCategory.id) // Prevent circular references
+                    .map(category => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))
+                  }
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  A category cannot be its own parent
+                </p>
+              </div>
+              
+              <div>
+                <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="edit-description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  rows={4}
+                  placeholder="Enter category description"
+                />
+              </div>
             </div>
             
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                rows={3}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category (Optional)</label>
-              <select
-                name="parent_id"
-                value={formData.parent_id || ''}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">None (Root Category)</option>
-                {categories
-                  .filter(cat => cat.id !== currentCategory.id) // Prevent selecting self as parent
-                  .map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))
-                }
-              </select>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
+            <div className="flex justify-end space-x-3 pt-4 border-t">
               <button
                 type="button"
                 onClick={closeModals}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                className="px-5 py-2.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-5 py-2.5 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Update Category
               </button>
@@ -423,7 +410,14 @@ const InventoryCategories: React.FC = () => {
       )}
 
       {/* Modals */}
-      <AddCategoryModal />
+      <AddCategoryModal 
+        showAddModal={showAddModal}
+        formData={formData}
+        categories={categories}
+        handleInputChange={handleInputChange}
+        handleAddCategory={handleAddCategory}
+        closeModals={closeModals}
+      />
       <EditCategoryModal />
     </div>
   );
