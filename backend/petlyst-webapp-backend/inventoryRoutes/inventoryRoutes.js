@@ -366,7 +366,7 @@ router.get('/:clinicId/inventory/items', authenticateToken, async (req, res) => 
       });
     }
 
-    // Get all items with category details
+    // Get all items with category details - aligned with frontend field names
     const query = `
       SELECT 
         i.id,
@@ -375,11 +375,14 @@ router.get('/:clinicId/inventory/items', authenticateToken, async (req, res) => 
         i.sku,
         i.category_id,
         c.name as category_name,
-        i.current_quantity as quantity,
-        i.unit_type as unit,
-        i.purchase_price as unit_price,
+        i.current_quantity,
+        i.unit_type,
+        i.purchase_price,
+        i.sale_price,
+        i.location,
         i.expiry_date,
-        i.min_quantity as reorder_level,
+        i.batch_number,
+        i.min_quantity,
         i.is_active
       FROM 
         inventory_items i
@@ -424,10 +427,13 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
       description, 
       sku, 
       category_id, 
-      quantity, 
       unit_type, 
-      purchase_price, 
+      current_quantity, 
+      purchase_price,
+      sale_price,
+      location, 
       expiry_date, 
+      batch_number,
       min_quantity
     } = req.body;
 
@@ -464,14 +470,17 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
         current_quantity,
         unit_type,
         purchase_price,
+        sale_price,
+        location,
         expiry_date,
+        batch_number,
         min_quantity,
         created_at,
         updated_at,
         created_by,
         is_active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $12, true)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $15, true)
       RETURNING *
     `;
 
@@ -482,16 +491,19 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
       sku, 
       category_id, 
       clinicId, 
-      quantity || 0, 
+      current_quantity || 0, 
       unit_type, 
-      purchase_price || 0, 
-      expiry_date, 
+      purchase_price || 0,
+      sale_price || 0,
+      location,
+      expiry_date,
+      batch_number,
       min_quantity || 0,
       req.user.userId
     ]);
     
     // If item was created with initial stock, create a transaction record
-    if (quantity && quantity > 0) {
+    if (current_quantity && current_quantity > 0) {
       const transactionId = 'trans-' + Date.now().toString();
       const transactionQuery = `
         INSERT INTO inventory_transactions (
@@ -511,7 +523,7 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
       await pool.query(transactionQuery, [
         transactionId,
         itemId, 
-        quantity, 
+        current_quantity, 
         req.user.userId,
         clinicId
       ]);
@@ -549,9 +561,13 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       sku, 
       category_id, 
       unit_type, 
-      purchase_price, 
-      expiry_date, 
+      current_quantity,
       min_quantity, 
+      purchase_price, 
+      sale_price,
+      location,
+      expiry_date, 
+      batch_number,
       is_active 
     } = req.body;
 
@@ -567,7 +583,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
 
     // Validate that the item exists and belongs to this clinic
     const checkQuery = `
-      SELECT id FROM inventory_items
+      SELECT id, current_quantity FROM inventory_items
       WHERE id = $1 AND clinic_id = $2
     `;
     
@@ -579,8 +595,10 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
         error: 'Item not found'
       });
     }
+    
+    const oldQuantity = parseFloat(checkResult.rows[0].current_quantity);
 
-    // Update the item (note: quantity should only be updated via transactions)
+    // Update the item with all form fields from frontend
     const updateQuery = `
       UPDATE inventory_items
       SET 
@@ -589,12 +607,16 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
         sku = $3,
         category_id = $4,
         unit_type = $5,
-        purchase_price = COALESCE($6, purchase_price),
-        expiry_date = $7,
-        min_quantity = COALESCE($8, min_quantity),
-        is_active = COALESCE($9, is_active),
+        current_quantity = COALESCE($6, current_quantity),
+        min_quantity = COALESCE($7, min_quantity),
+        purchase_price = COALESCE($8, purchase_price),
+        sale_price = COALESCE($9, sale_price),
+        location = $10,
+        expiry_date = $11,
+        batch_number = $12,
+        is_active = COALESCE($13, is_active),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10 AND clinic_id = $11
+      WHERE id = $14 AND clinic_id = $15
       RETURNING *
     `;
 
@@ -603,14 +625,49 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       description, 
       sku, 
       category_id, 
-      unit_type, 
-      purchase_price, 
-      expiry_date, 
+      unit_type,
+      current_quantity,
       min_quantity, 
+      purchase_price,
+      sale_price,
+      location,
+      expiry_date, 
+      batch_number,
       is_active,
       itemId, 
       clinicId
     ]);
+    
+    // If quantity was changed, create a transaction record
+    if (current_quantity !== undefined && current_quantity !== oldQuantity) {
+      const transactionId = 'trans-' + Date.now().toString();
+      const quantityDiff = current_quantity - oldQuantity;
+      const transactionType = quantityDiff > 0 ? 'adjustment' : 'adjustment';
+      
+      const transactionQuery = `
+        INSERT INTO inventory_transactions (
+          id,
+          inventory_item_id,
+          transaction_type,
+          quantity,
+          transaction_date,
+          notes,
+          performed_by_user_id,
+          clinic_id,
+          created_at
+        )
+        VALUES ($1, $2, $3::transaction_type, $4, CURRENT_TIMESTAMP, 'Quantity adjusted via item edit', $5, $6, CURRENT_TIMESTAMP)
+      `;
+      
+      await pool.query(transactionQuery, [
+        transactionId,
+        itemId, 
+        transactionType,
+        Math.abs(quantityDiff), 
+        req.user.userId,
+        clinicId
+      ]);
+    }
     
     res.status(200).json({
       success: true,
