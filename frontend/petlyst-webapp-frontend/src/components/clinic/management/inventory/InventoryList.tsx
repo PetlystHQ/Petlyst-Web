@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import axios from 'axios';
 import AddItemModal from './inventorymodals/AddItemModal';
+import EditItemModal from './inventorymodals/EditItemModal';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -36,7 +37,7 @@ interface InventoryItemForm {
   purchase_price: number;
   sale_price: number;
   location: string;
-  expiry_date?: string;
+  expiry_date?: string | null;
   batch_number?: string;
 }
 
@@ -124,7 +125,18 @@ const InventoryList: React.FC = () => {
       });
 
       if (response.data.success && response.data.items) {
-        setInventoryItems(response.data.items);
+        console.log('Fetched inventory items:', response.data.items);
+        
+        // Process the items to ensure numeric values are properly parsed
+        const processedItems = response.data.items.map((item: any) => ({
+          ...item,
+          current_quantity: Number(item.current_quantity || 0),
+          min_quantity: Number(item.min_quantity || 0),
+          purchase_price: Number(item.purchase_price || 0),
+          sale_price: Number(item.sale_price || 0)
+        }));
+        
+        setInventoryItems(processedItems);
       } else {
         setError('Failed to load inventory items');
       }
@@ -195,21 +207,9 @@ const InventoryList: React.FC = () => {
   };
 
   const openEditModal = (item: InventoryItem) => {
+    console.log("Opening edit modal for item:", item);
+    console.log("Item expiry date:", item.expiry_date, "type:", typeof item.expiry_date);
     setCurrentItem(item);
-    setFormData({
-      name: item.name,
-      sku: item.sku || '',
-      category_id: item.category_id,
-      description: item.description || '',
-      unit_type: item.unit_type,
-      current_quantity: item.current_quantity,
-      min_quantity: item.min_quantity,
-      purchase_price: item.purchase_price,
-      sale_price: item.sale_price,
-      location: item.location || '',
-      expiry_date: item.expiry_date,
-      batch_number: item.batch_number,
-    });
     setShowEditModal(true);
   };
 
@@ -225,8 +225,17 @@ const InventoryList: React.FC = () => {
       // Create a copy of formData with null instead of empty string for expiry_date
       const dataToSubmit = {
         ...formData,
-        expiry_date: formData.expiry_date === '' ? null : formData.expiry_date
+        // Ensure these fields are explicitly included even if they're empty strings
+        current_quantity: formData.current_quantity || 0,
+        min_quantity: formData.min_quantity || 0,
+        purchase_price: formData.purchase_price || 0,
+        sale_price: formData.sale_price || 0,
+        location: formData.location || null,
+        expiry_date: formData.expiry_date === '' ? null : formData.expiry_date,
+        batch_number: formData.batch_number || null
       };
+
+      console.log('Submitting new item:', dataToSubmit);
 
       const response = await axios.post(
         `http://localhost:3000/api/clinics/${clinicId}/inventory/items`,
@@ -341,7 +350,7 @@ const InventoryList: React.FC = () => {
         <td className="p-3 text-sm text-gray-500">{item.category_name || '-'}</td>
         <td className="p-3 text-sm text-gray-900 font-medium">{item.current_quantity}</td>
         <td className="p-3 text-sm text-gray-500">{item.unit_type}</td>
-        <td className="p-3 text-sm text-gray-500">${(item.purchase_price || 0).toFixed(2)}</td>
+        <td className="p-3 text-sm text-gray-500">${Number(item.purchase_price).toFixed(2)}</td>
         <td className="p-3">
           <span className={`px-2 py-1 text-xs rounded-full ${statusColor}`}>
             {stockStatus}
@@ -349,15 +358,6 @@ const InventoryList: React.FC = () => {
         </td>
         <td className="p-3">
           <div className="flex space-x-2">
-            <button
-              onClick={() => openAddStockModal(item)}
-              className="p-1 text-blue-600 hover:text-blue-900 bg-blue-50 rounded"
-              title="Add Stock"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
-              </svg>
-            </button>
             <button
               onClick={() => openEditModal(item)}
               className="p-1 text-green-600 hover:text-green-900 bg-green-50 rounded"
@@ -370,268 +370,6 @@ const InventoryList: React.FC = () => {
           </div>
         </td>
       </tr>
-    );
-  };
-
-  // Edit Item Modal
-  const EditItemModal = () => {
-    if (!showEditModal || !currentItem) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg w-full max-w-4xl p-8 max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6 border-b pb-4">
-            <h3 className="text-xl font-semibold text-gray-800">Edit Inventory Item</h3>
-            <button
-              onClick={closeModals}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Close"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <form onSubmit={handleEditItem} className="space-y-6">
-            {/* Item Details Section */}
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-              <h4 className="text-md font-medium text-gray-700 mb-4">Item Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="col-span-2">
-                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Item Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="edit-name"
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-sku" className="block text-sm font-medium text-gray-700 mb-2">
-                    SKU / Item Code
-                  </label>
-                  <input
-                    id="edit-sku"
-                    type="text"
-                    name="sku"
-                    value={formData.sku}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    placeholder="Enter SKU or item code"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-category_id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Category <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="edit-category_id"
-                    name="category_id"
-                    value={formData.category_id}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="col-span-2">
-                  <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    placeholder="Enter item description"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-            
-            {/* Stock & Pricing Section */}
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-              <h4 className="text-md font-medium text-gray-700 mb-4">Stock & Pricing</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label htmlFor="edit-unit_type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Unit Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="edit-unit_type"
-                    name="unit_type"
-                    value={formData.unit_type}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    required
-                  >
-                    <option value="Unit">Unit</option>
-                    <option value="Box">Box</option>
-                    <option value="Bottle">Bottle</option>
-                    <option value="Pack">Pack</option>
-                    <option value="Vial">Vial</option>
-                    <option value="Ampule">Ampule</option>
-                    <option value="Tube">Tube</option>
-                    <option value="Syringe">Syringe</option>
-                    <option value="Bag">Bag</option>
-                    <option value="Roll">Roll</option>
-                    <option value="Piece">Piece</option>
-                    <option value="Pair">Pair</option>
-                    <option value="Kit">Kit</option>
-                    <option value="Set">Set</option>
-                    <option value="Gram">Gram</option>
-                    <option value="Kilogram">Kilogram</option>
-                    <option value="Milliliter">Milliliter</option>
-                    <option value="Liter">Liter</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-min_quantity" className="block text-sm font-medium text-gray-700 mb-2">
-                    Min Stock Level <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="edit-min_quantity"
-                    type="number"
-                    name="min_quantity"
-                    value={formData.min_quantity}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Alert will be triggered when stock falls below this level</p>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-purchase_price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Purchase Price <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">$</span>
-                    </div>
-                    <input
-                      id="edit-purchase_price"
-                      type="number"
-                      name="purchase_price"
-                      value={formData.purchase_price}
-                      onChange={handleInputChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full border border-gray-300 rounded-md pl-7 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-sale_price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Sale Price <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">$</span>
-                    </div>
-                    <input
-                      id="edit-sale_price"
-                      type="number"
-                      name="sale_price"
-                      value={formData.sale_price}
-                      onChange={handleInputChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full border border-gray-300 rounded-md pl-7 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Additional Details Section */}
-            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-6">
-              <h4 className="text-md font-medium text-gray-700 mb-4">Additional Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label htmlFor="edit-expiry_date" className="block text-sm font-medium text-gray-700 mb-2">
-                    Expiry Date
-                  </label>
-                  <input
-                    id="edit-expiry_date"
-                    type="date"
-                    name="expiry_date"
-                    value={formData.expiry_date}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-batch_number" className="block text-sm font-medium text-gray-700 mb-2">
-                    Batch Number
-                  </label>
-                  <input
-                    id="edit-batch_number"
-                    type="text"
-                    name="batch_number"
-                    value={formData.batch_number}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-location" className="block text-sm font-medium text-gray-700 mb-2">
-                    Storage Location
-                  </label>
-                  <input
-                    id="edit-location"
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                    placeholder="Shelf, cabinet, etc."
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={closeModals}
-                className="px-5 py-2.5 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                Update Item
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     );
   };
 
@@ -739,7 +477,7 @@ const InventoryList: React.FC = () => {
         </>
       )}
 
-      {/* Add Item Modal - Updated to use the new component */}
+      {/* Add Item Modal */}
       <AddItemModal 
         showAddModal={showAddModal}
         formData={formData}
@@ -750,7 +488,16 @@ const InventoryList: React.FC = () => {
       />
 
       {/* Edit Item Modal */}
-      <EditItemModal />
+      <EditItemModal
+        showEditModal={showEditModal}
+        currentItem={currentItem}
+        categories={categories}
+        closeModal={() => {
+          setShowEditModal(false);
+          setCurrentItem(null);
+        }}
+        onItemUpdated={fetchInventoryItems}
+      />
     </div>
   );
 };
