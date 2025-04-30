@@ -2473,7 +2473,7 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
       
       // Update appointment status
       await client.query(
-        'UPDATE appointments SET appointment_status = $1 WHERE appointment_id = $2',
+        'UPDATE appointments SET appointment_status = $1, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = $2',
         [status, appointmentId]
       );
       

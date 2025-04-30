@@ -103,8 +103,10 @@ const meeting_url = generator.generate({
         meeting_url,
         meeting_password,
         notes,
-        appointment_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+        appointment_status,
+        created_at,
+        updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *`,
       [
         petId,
@@ -193,6 +195,9 @@ const updateAppointment = async (appointmentId, updateData) => {
       values.push(appointmentStatus);
       paramCounter++;
     }
+
+    // Always update the updated_at timestamp
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
     if (updateFields.length === 0) {
       throw new Error('No fields to update');
