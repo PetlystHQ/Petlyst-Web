@@ -7,6 +7,7 @@ import ClinicAppointments from '../components/clinic/management/ClinicAppointmen
 import UpcomingAppointments from '../components/clinic/management/UpcomingAppointments';
 import PastAppointments from '../components/clinic/management/PastAppointments';
 import PetRecords from '../components/clinic/management/PetRecords';
+import InventoryManagement from '../components/clinic/management/InventoryManagement';
 
 interface ClinicData {
   clinic_id: string;
@@ -815,6 +816,9 @@ const ManagementDashboard: React.FC = () => {
         
       case 'pet-records':
         return <PetRecords />;
+        
+      case 'inventory':
+        return <InventoryManagement />;
         
       case 'staff':
         return (
