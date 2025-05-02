@@ -218,10 +218,10 @@ router.put('/:clinicId/inventory/categories/:categoryId', authenticateToken, asy
     }
 
     const { clinicId, categoryId } = req.params;
-    const { name, description, parent_id } = req.body;
+    const { name, description, parent_id, is_active } = req.body;
     
     console.log('Updating category ID:', categoryId, 'for clinic ID:', clinicId);
-    console.log('Update data:', { name, description, parent_id });
+    console.log('Update data:', { name, description, parent_id, is_active });
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -281,8 +281,9 @@ router.put('/:clinicId/inventory/categories/:categoryId', authenticateToken, asy
         name = COALESCE($1, name),
         description = $2,
         parent_id = $3,
+        is_active = COALESCE($4, is_active),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $4 AND clinic_id = $5
+      WHERE id = $5 AND clinic_id = $6
       RETURNING *
     `;
 
@@ -290,6 +291,7 @@ router.put('/:clinicId/inventory/categories/:categoryId', authenticateToken, asy
       name, 
       description, 
       parent_id, 
+      is_active !== undefined ? is_active : null,
       categoryId, 
       parsedClinicId
     ]);
