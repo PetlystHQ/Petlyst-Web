@@ -21,6 +21,8 @@ import VeterinariansListPage from './pages/VeterinariansListPage';
 import SingleVeterinarianPage from './pages/SingleVeterinarianPage';
 import SingleClinicPage from './pages/SingleClinicPage';
 import SavedClinicsPage from './pages/SavedClinicsPage';
+import ContactUsPage from './pages/ContactUsPage';
+import AboutUsPage from './pages/AboutUsPage';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
@@ -96,6 +98,8 @@ const AppContent: React.FC = () => {
             <ManagementDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/contact-us" element={<ContactUsPage />} />
+        <Route path="/about-us" element={<AboutUsPage />} />
       </Routes>
       <Toaster position="top-right" />
     </div>
