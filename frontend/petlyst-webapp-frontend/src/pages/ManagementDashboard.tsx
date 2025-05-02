@@ -8,6 +8,7 @@ import UpcomingAppointments from '../components/clinic/management/UpcomingAppoin
 import PastAppointments from '../components/clinic/management/PastAppointments';
 import PetRecords from '../components/clinic/management/PetRecords';
 import InventoryManagement from '../components/clinic/management/InventoryManagement';
+import HospitalizationDashboard from '../components/clinic/management/hospitalization/HospitalizationDashboard';
 
 interface ClinicData {
   clinic_id: string;
@@ -201,6 +202,15 @@ const ManagementDashboard: React.FC = () => {
           onClick: () => setActiveTab('medical-history'),
         },
       ],
+    },
+    {
+      name: 'Hospitalization',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      onClick: () => setActiveTab('hospitalization'),
     },
     {
       name: 'Staff',
@@ -819,6 +829,9 @@ const ManagementDashboard: React.FC = () => {
         
       case 'inventory':
         return <InventoryManagement />;
+        
+      case 'hospitalization':
+        return <HospitalizationDashboard clinicId={clinicId || ''} />;
         
       case 'staff':
         return (
