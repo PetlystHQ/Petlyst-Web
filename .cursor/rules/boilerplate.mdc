@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Dont use && in terminal, this computer is Windows so always use ; instead &&.

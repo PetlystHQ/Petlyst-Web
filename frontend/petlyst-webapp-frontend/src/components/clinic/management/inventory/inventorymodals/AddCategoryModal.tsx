@@ -6,6 +6,7 @@ interface Category {
   name: string;
   description?: string;
   parent_id?: string;
+  is_active: boolean;
 }
 
 // Interface for category form
@@ -13,6 +14,7 @@ interface CategoryForm {
   name: string;
   description: string;
   parent_id?: string;
+  is_active: boolean;
 }
 
 interface AddCategoryModalProps {

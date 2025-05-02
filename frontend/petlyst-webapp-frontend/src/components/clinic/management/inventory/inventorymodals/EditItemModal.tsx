@@ -38,10 +38,10 @@ interface InventoryItemForm {
   category_id: string;
   description: string;
   unit_type: string;
-  current_quantity: number;
-  min_quantity: number;
-  purchase_price: number;
-  sale_price: number;
+  current_quantity: number | string;
+  min_quantity: number | string;
+  purchase_price: number | string;
+  sale_price: number | string;
   location: string;
   expiry_date?: string | null;
   batch_number?: string;
@@ -78,10 +78,21 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
     batch_number: '',
     is_active: true
   });
+  
+  // Local state for numeric inputs
+  const [localQuantity, setLocalQuantity] = useState<string>('');
+  const [localMinQuantity, setLocalMinQuantity] = useState<string>('');
+  const [localPurchasePrice, setLocalPurchasePrice] = useState<string>('');
+  const [localSalePrice, setLocalSalePrice] = useState<string>('');
+  const [previousUnitType, setPreviousUnitType] = useState<string>('Unit');
+  
   // Local state for expiry date to fix date input issues
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if expiry date is in the past
+  const isExpiryDateInPast = expiryDate ? new Date(expiryDate) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
 
   const token = useSelector((state: RootState) => state.auth.token);
   const clinicId = localStorage.getItem('selectedClinicId');
@@ -116,7 +127,11 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
 
       console.log('Setting expiryDate state to:', formattedDate);
       setExpiryDate(formattedDate);
-
+      
+      // Debug current quantity
+      console.log('Current quantity from DB:', currentItem.current_quantity, typeof currentItem.current_quantity);
+      
+      // Set up form data
       setFormData({
         name: currentItem.name,
         sku: currentItem.sku || '',
@@ -132,19 +147,70 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
         batch_number: currentItem.batch_number || '',
         is_active: currentItem.is_active
       });
+      
+      // Set local numeric input values - ensure we're getting the correct values
+      const currentQty = currentItem.current_quantity !== undefined ? String(currentItem.current_quantity) : '0';
+      setLocalQuantity(currentQty);
+      
+      setLocalMinQuantity(String(currentItem.min_quantity));
+      setLocalPurchasePrice(String(currentItem.purchase_price));
+      setLocalSalePrice(String(currentItem.sale_price || 0));
+      setPreviousUnitType(currentItem.unit_type);
+      
+      // Debug after setting the value
+      console.log('Set localQuantity to:', currentQty);
     }
   }, [currentItem]);
+  
+  // Handle unit type changes without resetting numeric values
+  useEffect(() => {
+    if (formData.unit_type !== previousUnitType) {
+      setPreviousUnitType(formData.unit_type);
+      // No need to reset numeric values when unit type changes
+    }
+  }, [formData.unit_type]);
 
-  // Handle input changes
+  // Handle input changes for text fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     
     setFormData(prevState => ({
       ...prevState,
-      [name]: type === 'number' ? 
-        (value === '' ? 0 : parseFloat(value)) : 
-        value
+      [name]: value
     }));
+  };
+  
+  // Custom handler for unit type changes
+  const handleUnitTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    // Call the regular input handler
+    handleInputChange(e);
+  };
+  
+  // Handler for numeric field with integer values
+  const handleNumericChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<string>>
+  ) => {
+    const { name, value } = e.target;
+    
+    // Allow empty string for user input
+    if (value === '') {
+      setter('');
+      setFormData(prevState => ({
+        ...prevState,
+        [name]: 0 // Default to 0 instead of empty string for backend compatibility
+      }));
+      return;
+    }
+    
+    // Only allow numeric input (integers only)
+    if (/^\d+$/.test(value)) {
+      setter(value);
+      setFormData(prevState => ({
+        ...prevState,
+        [name]: parseInt(value, 10)
+      }));
+    }
   };
 
   // Custom handler for expiry date to ensure proper format and handling
@@ -174,14 +240,24 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
     setError(null);
 
     try {
-      // Create a copy of formData with proper handling for expiry_date
+      // Log the current form state for debugging
+      console.log('Current form data before submission:', formData);
+      console.log('Current local values:', {
+        localQuantity,
+        localMinQuantity, 
+        localPurchasePrice,
+        localSalePrice
+      });
+      
+      // Create a copy of formData with proper handling for numeric values and dates
       const dataToSubmit = {
         ...formData,
-        // Ensure numeric values are properly formatted
-        current_quantity: Number(formData.current_quantity) || 0,
-        min_quantity: Number(formData.min_quantity) || 0,
-        purchase_price: Number(formData.purchase_price) || 0,
-        sale_price: Number(formData.sale_price) || 0,
+        // Ensure numeric values are properly converted to integers
+        current_quantity: parseInt(String(localQuantity || 0), 10),
+        min_quantity: parseInt(String(localMinQuantity || 0), 10),
+        purchase_price: parseInt(String(localPurchasePrice || 0), 10),
+        sale_price: parseInt(String(localSalePrice || 0), 10),
+        
         // Format the date properly
         expiry_date: formData.expiry_date || null
       };
@@ -320,7 +396,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                   id="edit-unit_type"
                   name="unit_type"
                   value={formData.unit_type}
-                  onChange={handleInputChange}
+                  onChange={handleUnitTypeChange}
                   className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                   required
                 >
@@ -328,20 +404,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                   <option value="Box">Box</option>
                   <option value="Bottle">Bottle</option>
                   <option value="Pack">Pack</option>
-                  <option value="Vial">Vial</option>
-                  <option value="Ampule">Ampule</option>
                   <option value="Tube">Tube</option>
-                  <option value="Syringe">Syringe</option>
-                  <option value="Bag">Bag</option>
-                  <option value="Roll">Roll</option>
-                  <option value="Piece">Piece</option>
-                  <option value="Pair">Pair</option>
-                  <option value="Kit">Kit</option>
-                  <option value="Set">Set</option>
-                  <option value="Gram">Gram</option>
-                  <option value="Kilogram">Kilogram</option>
-                  <option value="Milliliter">Milliliter</option>
-                  <option value="Liter">Liter</option>
                 </select>
               </div>
               
@@ -351,14 +414,22 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                 </label>
                 <input
                   id="edit-current_quantity"
-                  type="number"
+                  type="text"
                   name="current_quantity"
-                  value={formData.current_quantity}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
+                  value={localQuantity}
+                  onChange={(e) => handleNumericChange(e, setLocalQuantity)}
                   className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                   required
+                  min="0"
+                  placeholder="Enter quantity"
+                  onFocus={(e) => {
+                    // Ensure the value is never empty on focus
+                    if (!e.target.value) {
+                      const currentQtyValue = currentItem?.current_quantity !== undefined ? 
+                        String(currentItem.current_quantity) : '0';
+                      setLocalQuantity(currentQtyValue);
+                    }
+                  }}
                 />
               </div>
               
@@ -368,14 +439,13 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                 </label>
                 <input
                   id="edit-min_quantity"
-                  type="number"
+                  type="text"
                   name="min_quantity"
-                  value={formData.min_quantity}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
+                  value={localMinQuantity}
+                  onChange={(e) => handleNumericChange(e, setLocalMinQuantity)}
                   className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                   required
+                  placeholder="Enter minimum quantity"
                 />
                 <p className="mt-1 text-xs text-gray-500">Alert will be triggered when stock falls below this level</p>
               </div>
@@ -390,14 +460,13 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                   </div>
                   <input
                     id="edit-purchase_price"
-                    type="number"
+                    type="text"
                     name="purchase_price"
-                    value={formData.purchase_price}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.01"
+                    value={localPurchasePrice}
+                    onChange={(e) => handleNumericChange(e, setLocalPurchasePrice)}
                     className="w-full border border-gray-300 rounded-md pl-7 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                     required
+                    placeholder="Enter purchase price"
                   />
                 </div>
               </div>
@@ -412,14 +481,13 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                   </div>
                   <input
                     id="edit-sale_price"
-                    type="number"
+                    type="text"
                     name="sale_price"
-                    value={formData.sale_price}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.01"
+                    value={localSalePrice}
+                    onChange={(e) => handleNumericChange(e, setLocalSalePrice)}
                     className="w-full border border-gray-300 rounded-md pl-7 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                     required
+                    placeholder="Enter sale price"
                   />
                 </div>
               </div>
@@ -440,8 +508,13 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
                   name="expiry_date"
                   value={expiryDate}
                   onChange={handleExpiryDateChange}
-                  className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                  className={`w-full border ${isExpiryDateInPast ? 'border-red-300' : 'border-gray-300'} rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm`}
                 />
+                {isExpiryDateInPast && (
+                  <p className="mt-1 text-xs text-red-600">
+                    Warning: You are editing an item with an expired date.
+                  </p>
+                )}
               </div>
               
               <div>
