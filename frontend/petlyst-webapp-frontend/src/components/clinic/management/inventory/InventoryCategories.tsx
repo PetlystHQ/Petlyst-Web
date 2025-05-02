@@ -23,6 +23,7 @@ interface CategoryForm {
   name: string;
   description: string;
   parent_id?: string;
+  is_active: boolean;
 }
 
 const InventoryCategories: React.FC = () => {
@@ -35,7 +36,8 @@ const InventoryCategories: React.FC = () => {
   const [formData, setFormData] = useState<CategoryForm>({
     name: '',
     description: '',
-    parent_id: undefined
+    parent_id: undefined,
+    is_active: true
   });
 
   const token = useSelector((state: RootState) => state.auth.token);
@@ -102,10 +104,20 @@ const InventoryCategories: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value, type } = e.target as HTMLInputElement;
     
     // Prevent default form behavior to maintain focus
     e.preventDefault();
+    
+    // Handle checkbox input
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prevState => ({
+        ...prevState,
+        [name]: checked
+      }));
+      return;
+    }
     
     // Use callback form of setState to avoid focus issues
     setFormData(prevState => ({
@@ -119,7 +131,8 @@ const InventoryCategories: React.FC = () => {
     setFormData({
       name: '',
       description: '',
-      parent_id: undefined
+      parent_id: undefined,
+      is_active: true
     });
   };
 
@@ -133,7 +146,8 @@ const InventoryCategories: React.FC = () => {
     setFormData({
       name: category.name,
       description: category.description || '',
-      parent_id: category.parent_id
+      parent_id: category.parent_id,
+      is_active: category.is_active
     });
     setShowEditModal(true);
   };
@@ -213,9 +227,16 @@ const InventoryCategories: React.FC = () => {
   const CategoryItem = ({ category, level = 0 }: { category: CategoryWithChildren, level?: number }) => {
     return (
       <div className="mb-2">
-        <div className={`flex items-center justify-between p-3 bg-white border rounded-md ${level > 0 ? 'ml-6' : ''}`}>
+        <div className={`flex items-center justify-between p-3 bg-white border rounded-md ${level > 0 ? 'ml-6' : ''} ${!category.is_active ? 'opacity-60' : ''}`}>
           <div>
-            <span className="font-medium">{category.name}</span>
+            <div className="flex items-center">
+              <span className="font-medium">{category.name}</span>
+              {!category.is_active && (
+                <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  Inactive
+                </span>
+              )}
+            </div>
             {category.description && (
               <p className="text-sm text-gray-500">{category.description}</p>
             )}
@@ -302,7 +323,7 @@ const InventoryCategories: React.FC = () => {
                 </p>
               </div>
               
-              <div>
+              <div className="mb-5">
                 <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-2">
                   Description
                 </label>
@@ -315,6 +336,20 @@ const InventoryCategories: React.FC = () => {
                   rows={4}
                   placeholder="Enter category description"
                 />
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  id="edit-is_active"
+                  type="checkbox"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="edit-is_active" className="ml-2 block text-sm text-gray-900">
+                  Active
+                </label>
               </div>
             </div>
             

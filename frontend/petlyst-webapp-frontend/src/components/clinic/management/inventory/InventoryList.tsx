@@ -19,7 +19,7 @@ interface InventoryItem {
   purchase_price: number;
   sale_price: number;
   location: string;
-  expiry_date?: string;
+  expiry_date?: string | null;
   batch_number?: string;
   image_url?: string;
   is_active: boolean;
@@ -127,14 +127,46 @@ const InventoryList: React.FC = () => {
       if (response.data.success && response.data.items) {
         console.log('Fetched inventory items:', response.data.items);
         
-        // Process the items to ensure numeric values are properly parsed
-        const processedItems = response.data.items.map((item: any) => ({
-          ...item,
-          current_quantity: Number(item.current_quantity || 0),
-          min_quantity: Number(item.min_quantity || 0),
-          purchase_price: Number(item.purchase_price || 0),
-          sale_price: Number(item.sale_price || 0)
-        }));
+        // Process the items to ensure numeric values are properly parsed and field names are corrected
+        const processedItems = response.data.items.map((item: any) => {
+          // Deep copy the item object first
+          const processedItem: InventoryItem = {
+            id: item.id,
+            name: item.name,
+            sku: item.sku || '',
+            category_id: item.category_id,
+            category_name: item.category_name || '',
+            description: item.description || '',
+            // Fix field name differences
+            unit_type: item.unit || item.unit_type || '',
+            // Ensure all numeric fields are proper numbers
+            current_quantity: parseInt(String(item.current_quantity !== undefined ? item.current_quantity : (item.quantity || 0)), 10),
+            min_quantity: parseInt(String(item.min_quantity || 0), 10),
+            purchase_price: parseInt(String(item.purchase_price || 0), 10),
+            sale_price: parseInt(String(item.sale_price || 0), 10),
+            // Other fields
+            location: item.location || '',
+            expiry_date: item.expiry_date || null,
+            batch_number: item.batch_number || '',
+            is_active: item.is_active !== undefined ? item.is_active : true
+          };
+          
+          // Log the conversion for debugging
+          console.log('Conversion:', {
+            original: {
+              quantity: item.quantity,
+              current_quantity: item.current_quantity,
+              unit: item.unit,
+              unit_type: item.unit_type
+            },
+            converted: {
+              current_quantity: processedItem.current_quantity,
+              unit_type: processedItem.unit_type
+            }
+          });
+          
+          return processedItem;
+        });
         
         setInventoryItems(processedItems);
       } else {
@@ -169,18 +201,25 @@ const InventoryList: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
-    // Prevent default form behavior to maintain focus
-    e.preventDefault();
+    // Prevent default form behavior to maintain focus (only if it's a real event)
+    if (e.preventDefault && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     
-    // Use callback form of setState to avoid focus issues
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: type === 'number' ? 
-        // Handle number inputs consistently
-        (value === '' ? 0 : parseFloat(value)) : 
-        // For other inputs, just use the value directly
-        value
-    }));
+    // Handle numeric fields consistently
+    if (name === 'current_quantity' || name === 'min_quantity' || name === 'purchase_price' || name === 'sale_price') {
+      // For numeric fields, allow empty string during input (handled during form submission)
+      setFormData(prevState => ({
+        ...prevState,
+        [name]: value === '' ? '' : value
+      }));
+    } else {
+      // For other inputs, just use the value directly
+      setFormData(prevState => ({
+        ...prevState,
+        [name]: value
+      }));
+    }
   };
 
   const resetForm = () => {
@@ -208,8 +247,19 @@ const InventoryList: React.FC = () => {
 
   const openEditModal = (item: InventoryItem) => {
     console.log("Opening edit modal for item:", item);
+    console.log("Item current quantity:", item.current_quantity, "type:", typeof item.current_quantity);
     console.log("Item expiry date:", item.expiry_date, "type:", typeof item.expiry_date);
-    setCurrentItem(item);
+    
+    // Create a deep copy to avoid reference issues
+    const itemCopy = {
+      ...item,
+      current_quantity: Number(item.current_quantity),
+      min_quantity: Number(item.min_quantity),
+      purchase_price: Number(item.purchase_price),
+      sale_price: Number(item.sale_price)
+    };
+    
+    setCurrentItem(itemCopy);
     setShowEditModal(true);
   };
 
@@ -222,20 +272,38 @@ const InventoryList: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      // Create a copy of formData with null instead of empty string for expiry_date
+      console.log("Raw form data before submission:", formData);
+      
+      // Create a copy with explicit integer conversions
       const dataToSubmit = {
-        ...formData,
-        // Ensure these fields are explicitly included even if they're empty strings
-        current_quantity: formData.current_quantity || 0,
-        min_quantity: formData.min_quantity || 0,
-        purchase_price: formData.purchase_price || 0,
-        sale_price: formData.sale_price || 0,
-        location: formData.location || null,
+        name: formData.name,
+        sku: formData.sku || '',
+        category_id: formData.category_id,
+        description: formData.description || '',
+        unit_type: formData.unit_type,
+        // Force explicit integer conversions, ensure values are never NaN
+        current_quantity: typeof formData.current_quantity === 'string' 
+          ? parseInt(formData.current_quantity || '0', 10) || 0
+          : parseInt(String(formData.current_quantity || 0), 10) || 0,
+        
+        min_quantity: typeof formData.min_quantity === 'string'
+          ? parseInt(formData.min_quantity || '0', 10) || 0
+          : parseInt(String(formData.min_quantity || 0), 10) || 0,
+        
+        purchase_price: typeof formData.purchase_price === 'string'
+          ? parseInt(formData.purchase_price || '0', 10) || 0
+          : parseInt(String(formData.purchase_price || 0), 10) || 0,
+        
+        sale_price: typeof formData.sale_price === 'string'
+          ? parseInt(formData.sale_price || '0', 10) || 0
+          : parseInt(String(formData.sale_price || 0), 10) || 0,
+        
+        location: formData.location || '',
         expiry_date: formData.expiry_date === '' ? null : formData.expiry_date,
-        batch_number: formData.batch_number || null
+        batch_number: formData.batch_number || ''
       };
 
-      console.log('Submitting new item:', dataToSubmit);
+      console.log('Submitting data with forced integers:', dataToSubmit);
 
       const response = await axios.post(
         `http://localhost:3000/api/clinics/${clinicId}/inventory/items`,
@@ -248,7 +316,47 @@ const InventoryList: React.FC = () => {
       );
 
       if (response.data.success) {
-        await fetchInventoryItems();
+        console.log('Item created successfully:', response.data);
+        
+        // Option 1: Directly add the new item to the state (optimized approach)
+        if (response.data.item) {
+          const newItem = response.data.item;
+          
+          // Create a properly formatted item object
+          const formattedNewItem: InventoryItem = {
+            id: newItem.id,
+            name: newItem.name,
+            sku: newItem.sku || '',
+            category_id: newItem.category_id,
+            category_name: '', // Fetch the category name from the categories array
+            description: newItem.description || '',
+            unit_type: newItem.unit_type || '',
+            current_quantity: parseInt(String(newItem.current_quantity || 0), 10),
+            min_quantity: parseInt(String(newItem.min_quantity || 0), 10),
+            purchase_price: parseInt(String(newItem.purchase_price || 0), 10),
+            sale_price: parseInt(String(newItem.sale_price || 0), 10),
+            location: newItem.location || '',
+            expiry_date: newItem.expiry_date || null,
+            batch_number: newItem.batch_number || '',
+            is_active: newItem.is_active !== undefined ? newItem.is_active : true
+          };
+          
+          // Find category name for the newly added item
+          const categoryObj = categories.find(cat => cat.id === formattedNewItem.category_id);
+          if (categoryObj) {
+            formattedNewItem.category_name = categoryObj.name;
+          }
+          
+          console.log('Adding new item to state:', formattedNewItem);
+          
+          // Update the inventory items state with the new item
+          setInventoryItems(prevItems => [...prevItems, formattedNewItem]);
+        } 
+        // Option 2: Fallback to re-fetching all items if there's no item in the response
+        else {
+          await fetchInventoryItems();
+        }
+        
         closeModals();
       }
     } catch (err: any) {
@@ -262,11 +370,31 @@ const InventoryList: React.FC = () => {
     if (!token || !clinicId || !currentItem) return;
 
     try {
-      // Create a copy of formData with null instead of empty string for expiry_date
+      // Create a copy of formData with proper handling for numeric values and dates
       const dataToSubmit = {
         ...formData,
+        // Convert all numeric values to integers (required by the DB schema)
+        current_quantity: typeof formData.current_quantity === 'string' ? 
+          (formData.current_quantity === '' ? 0 : parseInt(formData.current_quantity, 10)) : 
+          parseInt(String(formData.current_quantity || 0), 10),
+        
+        min_quantity: typeof formData.min_quantity === 'string' ? 
+          (formData.min_quantity === '' ? 0 : parseInt(formData.min_quantity, 10)) : 
+          parseInt(String(formData.min_quantity || 0), 10),
+        
+        purchase_price: typeof formData.purchase_price === 'string' ? 
+          (formData.purchase_price === '' ? 0 : parseInt(formData.purchase_price, 10)) : 
+          parseInt(String(formData.purchase_price || 0), 10),
+        
+        sale_price: typeof formData.sale_price === 'string' ? 
+          (formData.sale_price === '' ? 0 : parseInt(formData.sale_price, 10)) : 
+          parseInt(String(formData.sale_price || 0), 10),
+        
+        // Other fields
         expiry_date: formData.expiry_date === '' ? null : formData.expiry_date
       };
+
+      console.log('Submitting edit with integer values:', dataToSubmit);
 
       const response = await axios.put(
         `http://localhost:3000/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
@@ -291,18 +419,20 @@ const InventoryList: React.FC = () => {
   // Filter items based on search term, category, and stock status
   const filteredItems = inventoryItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                           (item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                           (item.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     
     const matchesCategory = selectedCategory ? item.category_id === selectedCategory : true;
     
     let matchesStockStatus = true;
     if (selectedStockStatus === 'low') {
-      matchesStockStatus = item.current_quantity <= item.min_quantity;
+      matchesStockStatus = item.current_quantity <= item.min_quantity && item.is_active;
     } else if (selectedStockStatus === 'out') {
-      matchesStockStatus = item.current_quantity === 0;
+      matchesStockStatus = item.current_quantity === 0 && item.is_active;
     } else if (selectedStockStatus === 'in') {
-      matchesStockStatus = item.current_quantity > 0;
+      matchesStockStatus = item.current_quantity > 0 && item.is_active;
+    } else if (selectedStockStatus === 'inactive') {
+      matchesStockStatus = !item.is_active;
     }
     
     return matchesSearch && matchesCategory && matchesStockStatus;
@@ -318,7 +448,6 @@ const InventoryList: React.FC = () => {
           <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
           <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
           <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-          <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
           <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
           <th className="p-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
@@ -328,18 +457,24 @@ const InventoryList: React.FC = () => {
 
   // Render each inventory item row
   const renderTableRow = (item: InventoryItem) => {
+    // Ensure numeric values are parsed correctly and use default values if missing
+    const quantity = parseInt(String(item.current_quantity), 10) || 0;
+    const minQuantity = parseInt(String(item.min_quantity), 10) || 0;
+    
     // Stock status based on quantity vs reorder level
     const stockStatus = 
-      item.current_quantity <= 0 ? 'Out of Stock' : 
-      item.current_quantity <= item.min_quantity ? 'Low Stock' : 'In Stock';
+      !item.is_active ? 'Inactive' :
+      quantity <= 0 ? 'Out of Stock' : 
+      quantity <= minQuantity ? 'Low Stock' : 'In Stock';
       
     const statusColor = 
-      item.current_quantity <= 0 ? 'bg-red-100 text-red-800' : 
-      item.current_quantity <= item.min_quantity ? 'bg-yellow-100 text-yellow-800' : 
+      !item.is_active ? 'bg-gray-100 text-gray-800' :
+      quantity <= 0 ? 'bg-red-100 text-red-800' : 
+      quantity <= minQuantity ? 'bg-yellow-100 text-yellow-800' : 
       'bg-green-100 text-green-800';
 
     return (
-      <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+      <tr key={item.id} className={`border-b border-gray-100 hover:bg-gray-50 ${!item.is_active ? 'opacity-60' : ''}`}>
         <td className="p-3 text-sm">
           <div className="font-medium text-gray-900">{item.name}</div>
           {item.description && (
@@ -348,9 +483,8 @@ const InventoryList: React.FC = () => {
         </td>
         <td className="p-3 text-sm text-gray-500">{item.sku || '-'}</td>
         <td className="p-3 text-sm text-gray-500">{item.category_name || '-'}</td>
-        <td className="p-3 text-sm text-gray-900 font-medium">{item.current_quantity}</td>
-        <td className="p-3 text-sm text-gray-500">{item.unit_type}</td>
-        <td className="p-3 text-sm text-gray-500">${Number(item.purchase_price).toFixed(2)}</td>
+        <td className="p-3 text-sm text-gray-900 font-medium">{quantity}</td>
+        <td className="p-3 text-sm text-gray-500">{item.unit_type || 'Unit'}</td>
         <td className="p-3">
           <span className={`px-2 py-1 text-xs rounded-full ${statusColor}`}>
             {stockStatus}
@@ -418,6 +552,7 @@ const InventoryList: React.FC = () => {
               <option value="low">Low Stock</option>
               <option value="out">Out of Stock</option>
               <option value="in">In Stock</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
           

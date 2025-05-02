@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -17,7 +17,7 @@ interface TransactionForm {
   quantity: number;
   unit_price: number;
   batch_number?: string;
-  expiry_date?: string;
+  expiry_date?: string | null;
   notes?: string;
   reference_id?: string;
 }
@@ -41,6 +41,61 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 }) => {
   if (!showAddModal) return null;
   
+  // Track if fields have been touched by user
+  const [touched, setTouched] = useState({
+    inventory_item_id: false,
+    quantity: false,
+    expiry_date: false
+  });
+  
+  // Handle field touch
+  const handleBlur = (fieldName: string) => {
+    setTouched({...touched, [fieldName]: true});
+  };
+  
+  // Seçilen ürünün bilgilerini al
+  const selectedItem = formData.inventory_item_id 
+    ? inventoryItems.find(item => item.id === formData.inventory_item_id) 
+    : null;
+  
+  // Form submit öncesi veri kontrolü
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Mark all fields as touched on submit
+    setTouched({
+      inventory_item_id: true,
+      quantity: true,
+      expiry_date: true
+    });
+    
+    // Eksik alan kontrolü
+    if (!formData.inventory_item_id) {
+      alert('Please select an inventory item');
+      return;
+    }
+    
+    if (!formData.quantity || formData.quantity <= 0) {
+      alert('Quantity must be greater than zero');
+      return;
+    }
+    
+    // Expiry date kontrolü
+    if (!formData.expiry_date) {
+      alert('Please enter an expiry date');
+      return;
+    }
+    
+    // Ana form handler'ı çağır
+    handleAddTransaction(e);
+  };
+  
+  // Render validation state
+  const hasError = !formData.inventory_item_id || 
+                   !formData.quantity || 
+                   formData.quantity <= 0 || 
+                   !formData.expiry_date;
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
       <div className="bg-white rounded-lg w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -53,7 +108,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </button>
         </div>
         
-        <form onSubmit={handleAddTransaction} className="mt-4">
+        <form onSubmit={handleSubmit} className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -63,7 +118,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 name="inventory_item_id"
                 value={formData.inventory_item_id}
                 onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onBlur={() => handleBlur('inventory_item_id')}
+                className={`w-full border ${!formData.inventory_item_id && touched.inventory_item_id ? 'border-red-300' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 required
               >
                 <option value="">Select an item</option>
@@ -73,6 +129,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   </option>
                 ))}
               </select>
+              {!formData.inventory_item_id && touched.inventory_item_id && (
+                <p className="text-red-500 text-xs mt-1">Please select an item</p>
+              )}
             </div>
             
             <div>
@@ -104,11 +163,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 name="quantity"
                 value={formData.quantity}
                 onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onBlur={() => handleBlur('quantity')}
+                className={`w-full border ${formData.quantity <= 0 && touched.quantity ? 'border-red-300' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
                 required
-                min="0.01"
-                step="0.01"
+                min="1"
+                step="1"
               />
+              {formData.quantity <= 0 && touched.quantity && (
+                <p className="text-red-500 text-xs mt-1">Quantity must be greater than zero</p>
+              )}
             </div>
             
             <div>
@@ -122,7 +185,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 min="0"
-                step="0.01"
+                step="1"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Leave at 0 for non-purchase transactions
@@ -144,15 +207,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Expiry Date
+                Expiry Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 name="expiry_date"
-                value={formData.expiry_date}
+                value={formData.expiry_date || ''}
                 onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onBlur={() => handleBlur('expiry_date')}
+                className={`w-full border ${!formData.expiry_date && touched.expiry_date ? 'border-red-300' : 'border-gray-300'} rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                required
               />
+              {!formData.expiry_date && touched.expiry_date && (
+                <p className="text-red-500 text-xs mt-1">Please enter an expiry date</p>
+              )}
             </div>
           
             <div>
@@ -193,7 +261,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={hasError}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                hasError ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               Add Transaction
             </button>

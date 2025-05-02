@@ -20,8 +20,8 @@ interface Transaction {
   inventory_item_id: string;
   transaction_type: 'purchase' | 'usage' | 'adjustment' | 'expired' | 'damaged' | 'return';
   quantity: number;
-  unit_price: number;
-  total_price: number;
+  unit_price: number | null;
+  total_price: number | null;
   transaction_date: string;
   batch_number?: string;
   expiry_date?: string;
@@ -120,7 +120,23 @@ const InventoryTransactions: React.FC = () => {
       });
 
       if (response.data.success && response.data.transactions) {
-        setTransactions(response.data.transactions);
+        console.log('Raw transactions from API:', response.data.transactions);
+        
+        // Process the transactions to ensure numeric values are properly parsed
+        const processedTransactions = response.data.transactions.map((transaction: any) => ({
+          ...transaction,
+          // Convert to number and handle null/undefined
+          quantity: parseFloat(transaction.quantity || '0'),
+          unit_price: transaction.unit_price !== null && transaction.unit_price !== undefined 
+            ? parseFloat(transaction.unit_price) 
+            : null,
+          total_price: transaction.total_price !== null && transaction.total_price !== undefined 
+            ? parseFloat(transaction.total_price) 
+            : null
+        }));
+        
+        console.log('Processed transactions:', processedTransactions);
+        setTransactions(processedTransactions);
       } else {
         setError('Failed to load transactions');
       }
@@ -160,14 +176,14 @@ const InventoryTransactions: React.FC = () => {
     setFormData(prevState => ({
       ...prevState,
       [name]: name === 'quantity' || name === 'unit_price' 
-              ? parseFloat(value) || 0 // Ensure we handle NaN values
+              ? (value === '' ? 0 : parseInt(value, 10)) // Use parseInt instead of parseFloat
               : value
     }));
 
     // Auto-calculate total price when unit price or quantity changes
     if (name === 'quantity' || name === 'unit_price') {
-      const quantity = name === 'quantity' ? parseFloat(value) || 0 : formData.quantity;
-      const unitPrice = name === 'unit_price' ? parseFloat(value) || 0 : formData.unit_price;
+      const quantity = name === 'quantity' ? (value === '' ? 0 : parseInt(value, 10)) : formData.quantity;
+      const unitPrice = name === 'unit_price' ? (value === '' ? 0 : parseInt(value, 10)) : formData.unit_price;
       
       // This is just for visual feedback in the form - the backend will calculate the actual total
       const totalPrice = quantity * unitPrice;
@@ -177,7 +193,7 @@ const InventoryTransactions: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      inventory_item_id: '',
+      inventory_item_id: '',  // Boş string olarak başlat, item seçilmediğini gösterir
       transaction_type: 'purchase',
       quantity: 0,
       unit_price: 0,
@@ -202,16 +218,40 @@ const InventoryTransactions: React.FC = () => {
     e.preventDefault();
     if (!token || !clinicId || !userId) return;
 
+    // Veri doğrulama kontrolü
+    if (!formData.inventory_item_id) {
+      setError('Please select an inventory item');
+      return;
+    }
+
+    if (formData.quantity <= 0) {
+      setError('Quantity must be greater than zero');
+      return;
+    }
+
     try {
-      // Add the performed_by_user_id to the form data
-      const transactionData = {
+      // Log raw data for debugging
+      console.log('Form data before processing:', formData);
+      
+      // Process the data to ensure numeric values are integers
+      const processedData = {
         ...formData,
+        // Make sure item_id is correctly mapped to inventory_item_id
+        item_id: formData.inventory_item_id, // Backend bekliyor olabilir
+        inventory_item_id: formData.inventory_item_id, // Frontend bekliyor olabilir
+        // Ensure quantity is an integer
+        quantity: parseInt(String(formData.quantity || 0), 10),
+        // Ensure unit_price is an integer
+        unit_price: parseInt(String(formData.unit_price || 0), 10),
+        // Add the performed_by_user_id
         performed_by_user_id: userId
       };
 
+      console.log('Submitting transaction with integer values:', processedData);
+
       const response = await axios.post(
         `http://localhost:3000/api/clinics/${clinicId}/inventory/transactions`,
-        transactionData,
+        processedData,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -226,7 +266,9 @@ const InventoryTransactions: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Error adding transaction:', err);
-      setError(err.response?.data?.message || 'Failed to add transaction');
+      // Daha detaylı hata mesajı göster
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to add transaction';
+      setError(errorMessage);
     }
   };
 
@@ -275,6 +317,12 @@ const InventoryTransactions: React.FC = () => {
     
     const item = inventoryItems.find(item => item.id === currentTransaction.inventory_item_id);
     
+    // Create a function to safely format price values
+    const formatPrice = (price: number | null | undefined) => {
+      if (price === null || price === undefined) return '-';
+      return `${parseFloat(price.toString()).toFixed(2)} TL`;
+    };
+    
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div className="bg-white rounded-lg max-w-2xl w-full p-6">
@@ -315,12 +363,12 @@ const InventoryTransactions: React.FC = () => {
             
             <div>
               <p className="text-sm font-medium text-gray-500">Unit Price</p>
-              <p className="text-sm text-gray-900">${currentTransaction.unit_price.toFixed(2)}</p>
+              <p className="text-sm text-gray-900">{formatPrice(currentTransaction.unit_price)}</p>
             </div>
             
             <div>
               <p className="text-sm font-medium text-gray-500">Total Price</p>
-              <p className="text-sm text-gray-900">${currentTransaction.total_price.toFixed(2)}</p>
+              <p className="text-sm text-gray-900">{formatPrice(currentTransaction.total_price)}</p>
             </div>
             
             {currentTransaction.batch_number && (
@@ -537,6 +585,12 @@ const InventoryTransactions: React.FC = () => {
                       }
                     })();
                     
+                    // Create a function to safely format price values
+                    const formatPrice = (price: number | null | undefined) => {
+                      if (price === null || price === undefined) return '-';
+                      return `${parseFloat(price.toString()).toFixed(2)} TL`;
+                    };
+                    
                     return (
                       <tr 
                         key={transaction.id}
@@ -568,10 +622,10 @@ const InventoryTransactions: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            ${transaction.total_price.toFixed(2)}
+                            {formatPrice(transaction.total_price)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            ${transaction.unit_price.toFixed(2)} per unit
+                            {transaction.unit_price ? `${formatPrice(transaction.unit_price)} per unit` : '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
