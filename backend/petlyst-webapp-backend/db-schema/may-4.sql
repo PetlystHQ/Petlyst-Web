@@ -5,7 +5,7 @@
 -- Dumped from database version 16.4
 -- Dumped by pg_dump version 16.4
 
--- Started on 2025-05-02 01:23:37
+-- Started on 2025-05-04 00:37:21
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -19,7 +19,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 905 (class 1247 OID 16506)
+-- TOC entry 922 (class 1247 OID 16506)
 -- Name: appointment_status_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -35,7 +35,7 @@ CREATE TYPE public.appointment_status_enum AS ENUM (
 ALTER TYPE public.appointment_status_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 971 (class 1247 OID 17004)
+-- TOC entry 985 (class 1247 OID 17004)
 -- Name: clinic_type_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -48,7 +48,7 @@ CREATE TYPE public.clinic_type_enum AS ENUM (
 ALTER TYPE public.clinic_type_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 902 (class 1247 OID 16498)
+-- TOC entry 919 (class 1247 OID 16498)
 -- Name: clinic_verification_status_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -65,7 +65,7 @@ CREATE TYPE public.clinic_verification_status_enum AS ENUM (
 ALTER TYPE public.clinic_verification_status_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 986 (class 1247 OID 17232)
+-- TOC entry 1000 (class 1247 OID 17232)
 -- Name: clinic_veterinarian_status_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -79,7 +79,7 @@ CREATE TYPE public.clinic_veterinarian_status_enum AS ENUM (
 ALTER TYPE public.clinic_veterinarian_status_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 965 (class 1247 OID 16941)
+-- TOC entry 979 (class 1247 OID 16941)
 -- Name: phone_type_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -92,7 +92,36 @@ CREATE TYPE public.phone_type_enum AS ENUM (
 ALTER TYPE public.phone_type_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 1007 (class 1247 OID 17652)
+-- TOC entry 1030 (class 1247 OID 17870)
+-- Name: room_status_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TYPE public.room_status_enum AS ENUM (
+    'vacant',
+    'occupied',
+    'maintenance'
+);
+
+
+ALTER TYPE public.room_status_enum OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 1027 (class 1247 OID 17861)
+-- Name: room_type_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TYPE public.room_type_enum AS ENUM (
+    'intensive_care',
+    'observation',
+    'standard',
+    'isolation'
+);
+
+
+ALTER TYPE public.room_type_enum OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 1021 (class 1247 OID 17652)
 -- Name: transaction_type; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -109,7 +138,7 @@ CREATE TYPE public.transaction_type AS ENUM (
 ALTER TYPE public.transaction_type OWNER TO "petlystAdmin";
 
 --
--- TOC entry 896 (class 1247 OID 16471)
+-- TOC entry 913 (class 1247 OID 16471)
 -- Name: user_type_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -123,7 +152,7 @@ CREATE TYPE public.user_type_enum AS ENUM (
 ALTER TYPE public.user_type_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 899 (class 1247 OID 16478)
+-- TOC entry 916 (class 1247 OID 16478)
 -- Name: veterinarian_verification_status_enum; Type: TYPE; Schema: public; Owner: petlystAdmin
 --
 
@@ -137,7 +166,7 @@ CREATE TYPE public.veterinarian_verification_status_enum AS ENUM (
 ALTER TYPE public.veterinarian_verification_status_enum OWNER TO "petlystAdmin";
 
 --
--- TOC entry 271 (class 1255 OID 17629)
+-- TOC entry 288 (class 1255 OID 17629)
 -- Name: update_timestamp_column(); Type: FUNCTION; Schema: public; Owner: petlystAdmin
 --
 
@@ -158,7 +187,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 247 (class 1259 OID 16902)
+-- TOC entry 245 (class 1259 OID 16902)
 -- Name: additional_services; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -173,7 +202,7 @@ CREATE TABLE public.additional_services (
 ALTER TABLE public.additional_services OWNER TO "petlystAdmin";
 
 --
--- TOC entry 246 (class 1259 OID 16901)
+-- TOC entry 244 (class 1259 OID 16901)
 -- Name: additional_services_additional_service_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -189,8 +218,8 @@ CREATE SEQUENCE public.additional_services_additional_service_id_seq
 ALTER SEQUENCE public.additional_services_additional_service_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4734 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 4871 (class 0 OID 0)
+-- Dependencies: 244
 -- Name: additional_services_additional_service_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -198,7 +227,7 @@ ALTER SEQUENCE public.additional_services_additional_service_id_seq OWNED BY pub
 
 
 --
--- TOC entry 239 (class 1259 OID 16842)
+-- TOC entry 237 (class 1259 OID 16842)
 -- Name: animal_types; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -212,7 +241,7 @@ CREATE TABLE public.animal_types (
 ALTER TABLE public.animal_types OWNER TO "petlystAdmin";
 
 --
--- TOC entry 238 (class 1259 OID 16841)
+-- TOC entry 236 (class 1259 OID 16841)
 -- Name: animal_types_animal_type_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -228,8 +257,8 @@ CREATE SEQUENCE public.animal_types_animal_type_id_seq
 ALTER SEQUENCE public.animal_types_animal_type_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4735 (class 0 OID 0)
--- Dependencies: 238
+-- TOC entry 4872 (class 0 OID 0)
+-- Dependencies: 236
 -- Name: animal_types_animal_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -278,7 +307,7 @@ CREATE SEQUENCE public.appointments_appointment_id_seq
 ALTER SEQUENCE public.appointments_appointment_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4736 (class 0 OID 0)
+-- TOC entry 4873 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: appointments_appointment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
@@ -287,7 +316,7 @@ ALTER SEQUENCE public.appointments_appointment_id_seq OWNED BY public.appointmen
 
 
 --
--- TOC entry 249 (class 1259 OID 16914)
+-- TOC entry 247 (class 1259 OID 16914)
 -- Name: clinic_additional_services; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -302,7 +331,7 @@ CREATE TABLE public.clinic_additional_services (
 ALTER TABLE public.clinic_additional_services OWNER TO "petlystAdmin";
 
 --
--- TOC entry 248 (class 1259 OID 16913)
+-- TOC entry 246 (class 1259 OID 16913)
 -- Name: clinic_additional_services_clinic_additional_service_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -318,8 +347,8 @@ CREATE SEQUENCE public.clinic_additional_services_clinic_additional_service_id_s
 ALTER SEQUENCE public.clinic_additional_services_clinic_additional_service_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4737 (class 0 OID 0)
--- Dependencies: 248
+-- TOC entry 4874 (class 0 OID 0)
+-- Dependencies: 246
 -- Name: clinic_additional_services_clinic_additional_service_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -343,7 +372,7 @@ CREATE TABLE public.clinic_albums (
 ALTER TABLE public.clinic_albums OWNER TO "petlystAdmin";
 
 --
--- TOC entry 241 (class 1259 OID 16852)
+-- TOC entry 239 (class 1259 OID 16852)
 -- Name: clinic_animal_types; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -358,7 +387,7 @@ CREATE TABLE public.clinic_animal_types (
 ALTER TABLE public.clinic_animal_types OWNER TO "petlystAdmin";
 
 --
--- TOC entry 240 (class 1259 OID 16851)
+-- TOC entry 238 (class 1259 OID 16851)
 -- Name: clinic_animal_types_clinic_animal_type_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -374,8 +403,8 @@ CREATE SEQUENCE public.clinic_animal_types_clinic_animal_type_id_seq
 ALTER SEQUENCE public.clinic_animal_types_clinic_animal_type_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4738 (class 0 OID 0)
--- Dependencies: 240
+-- TOC entry 4875 (class 0 OID 0)
+-- Dependencies: 238
 -- Name: clinic_animal_types_clinic_animal_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -383,7 +412,50 @@ ALTER SEQUENCE public.clinic_animal_types_clinic_animal_type_id_seq OWNED BY pub
 
 
 --
--- TOC entry 237 (class 1259 OID 16806)
+-- TOC entry 270 (class 1259 OID 17878)
+-- Name: clinic_hospitalization_rooms; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.clinic_hospitalization_rooms (
+    id integer NOT NULL,
+    clinic_id integer NOT NULL,
+    room_name character varying(100) NOT NULL,
+    room_type public.room_type_enum NOT NULL,
+    room_status public.room_status_enum DEFAULT 'vacant'::public.room_status_enum,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.clinic_hospitalization_rooms OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 269 (class 1259 OID 17877)
+-- Name: clinic_hospitalization_rooms_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.clinic_hospitalization_rooms_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.clinic_hospitalization_rooms_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4876 (class 0 OID 0)
+-- Dependencies: 269
+-- Name: clinic_hospitalization_rooms_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.clinic_hospitalization_rooms_id_seq OWNED BY public.clinic_hospitalization_rooms.id;
+
+
+--
+-- TOC entry 235 (class 1259 OID 16806)
 -- Name: clinic_locations; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -401,7 +473,7 @@ CREATE TABLE public.clinic_locations (
 ALTER TABLE public.clinic_locations OWNER TO "petlystAdmin";
 
 --
--- TOC entry 236 (class 1259 OID 16805)
+-- TOC entry 234 (class 1259 OID 16805)
 -- Name: clinic_locations_location_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -417,8 +489,8 @@ CREATE SEQUENCE public.clinic_locations_location_id_seq
 ALTER SEQUENCE public.clinic_locations_location_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4739 (class 0 OID 0)
--- Dependencies: 236
+-- TOC entry 4877 (class 0 OID 0)
+-- Dependencies: 234
 -- Name: clinic_locations_location_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -426,7 +498,7 @@ ALTER SEQUENCE public.clinic_locations_location_id_seq OWNED BY public.clinic_lo
 
 
 --
--- TOC entry 245 (class 1259 OID 16882)
+-- TOC entry 243 (class 1259 OID 16882)
 -- Name: clinic_medical_services; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -441,7 +513,7 @@ CREATE TABLE public.clinic_medical_services (
 ALTER TABLE public.clinic_medical_services OWNER TO "petlystAdmin";
 
 --
--- TOC entry 244 (class 1259 OID 16881)
+-- TOC entry 242 (class 1259 OID 16881)
 -- Name: clinic_medical_services_clinic_medical_service_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -457,8 +529,8 @@ CREATE SEQUENCE public.clinic_medical_services_clinic_medical_service_id_seq
 ALTER SEQUENCE public.clinic_medical_services_clinic_medical_service_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4740 (class 0 OID 0)
--- Dependencies: 244
+-- TOC entry 4878 (class 0 OID 0)
+-- Dependencies: 242
 -- Name: clinic_medical_services_clinic_medical_service_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -466,7 +538,7 @@ ALTER SEQUENCE public.clinic_medical_services_clinic_medical_service_id_seq OWNE
 
 
 --
--- TOC entry 265 (class 1259 OID 17573)
+-- TOC entry 263 (class 1259 OID 17573)
 -- Name: clinic_patients; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -482,7 +554,7 @@ CREATE TABLE public.clinic_patients (
 ALTER TABLE public.clinic_patients OWNER TO "petlystAdmin";
 
 --
--- TOC entry 266 (class 1259 OID 17578)
+-- TOC entry 264 (class 1259 OID 17578)
 -- Name: clinic_patients_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -498,8 +570,8 @@ CREATE SEQUENCE public.clinic_patients_id_seq
 ALTER SEQUENCE public.clinic_patients_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4741 (class 0 OID 0)
--- Dependencies: 266
+-- TOC entry 4879 (class 0 OID 0)
+-- Dependencies: 264
 -- Name: clinic_patients_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -507,7 +579,7 @@ ALTER SEQUENCE public.clinic_patients_id_seq OWNED BY public.clinic_patients.id;
 
 
 --
--- TOC entry 251 (class 1259 OID 16955)
+-- TOC entry 249 (class 1259 OID 16955)
 -- Name: clinic_phone_numbers; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -524,7 +596,7 @@ CREATE TABLE public.clinic_phone_numbers (
 ALTER TABLE public.clinic_phone_numbers OWNER TO "petlystAdmin";
 
 --
--- TOC entry 250 (class 1259 OID 16954)
+-- TOC entry 248 (class 1259 OID 16954)
 -- Name: clinic_phone_numbers_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -540,8 +612,8 @@ CREATE SEQUENCE public.clinic_phone_numbers_id_seq
 ALTER SEQUENCE public.clinic_phone_numbers_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4742 (class 0 OID 0)
--- Dependencies: 250
+-- TOC entry 4880 (class 0 OID 0)
+-- Dependencies: 248
 -- Name: clinic_phone_numbers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -549,7 +621,7 @@ ALTER SEQUENCE public.clinic_phone_numbers_id_seq OWNED BY public.clinic_phone_n
 
 
 --
--- TOC entry 235 (class 1259 OID 16774)
+-- TOC entry 233 (class 1259 OID 16774)
 -- Name: clinic_social_media; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -564,7 +636,7 @@ CREATE TABLE public.clinic_social_media (
 ALTER TABLE public.clinic_social_media OWNER TO "petlystAdmin";
 
 --
--- TOC entry 234 (class 1259 OID 16773)
+-- TOC entry 232 (class 1259 OID 16773)
 -- Name: clinic_social_media_link_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -580,8 +652,8 @@ CREATE SEQUENCE public.clinic_social_media_link_id_seq
 ALTER SEQUENCE public.clinic_social_media_link_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4743 (class 0 OID 0)
--- Dependencies: 234
+-- TOC entry 4881 (class 0 OID 0)
+-- Dependencies: 232
 -- Name: clinic_social_media_link_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -589,7 +661,7 @@ ALTER SEQUENCE public.clinic_social_media_link_id_seq OWNED BY public.clinic_soc
 
 
 --
--- TOC entry 262 (class 1259 OID 17240)
+-- TOC entry 260 (class 1259 OID 17240)
 -- Name: clinic_veterinarians; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -607,7 +679,7 @@ CREATE TABLE public.clinic_veterinarians (
 ALTER TABLE public.clinic_veterinarians OWNER TO "petlystAdmin";
 
 --
--- TOC entry 261 (class 1259 OID 17239)
+-- TOC entry 259 (class 1259 OID 17239)
 -- Name: clinic_veterinarians_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -623,8 +695,8 @@ CREATE SEQUENCE public.clinic_veterinarians_id_seq
 ALTER SEQUENCE public.clinic_veterinarians_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4744 (class 0 OID 0)
--- Dependencies: 261
+-- TOC entry 4882 (class 0 OID 0)
+-- Dependencies: 259
 -- Name: clinic_veterinarians_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -648,7 +720,7 @@ CREATE SEQUENCE public.clinicalbum_clinic_album_photo_id_seq
 ALTER SEQUENCE public.clinicalbum_clinic_album_photo_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4745 (class 0 OID 0)
+-- TOC entry 4883 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: clinicalbum_clinic_album_photo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
@@ -657,7 +729,7 @@ ALTER SEQUENCE public.clinicalbum_clinic_album_photo_id_seq OWNED BY public.clin
 
 
 --
--- TOC entry 230 (class 1259 OID 16642)
+-- TOC entry 228 (class 1259 OID 16642)
 -- Name: reviews; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -678,7 +750,7 @@ CREATE TABLE public.reviews (
 ALTER TABLE public.reviews OWNER TO "petlystAdmin";
 
 --
--- TOC entry 229 (class 1259 OID 16641)
+-- TOC entry 227 (class 1259 OID 16641)
 -- Name: clinicreviews_clinic_review_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -694,8 +766,8 @@ CREATE SEQUENCE public.clinicreviews_clinic_review_id_seq
 ALTER SEQUENCE public.clinicreviews_clinic_review_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4746 (class 0 OID 0)
--- Dependencies: 229
+-- TOC entry 4884 (class 0 OID 0)
+-- Dependencies: 227
 -- Name: clinicreviews_clinic_review_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -741,7 +813,7 @@ CREATE TABLE public.clinics (
 ALTER TABLE public.clinics OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4747 (class 0 OID 0)
+-- TOC entry 4885 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: COLUMN clinics.slug; Type: COMMENT; Schema: public; Owner: petlystAdmin
 --
@@ -766,7 +838,7 @@ CREATE SEQUENCE public.clinics_clinic_id_seq
 ALTER SEQUENCE public.clinics_clinic_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4748 (class 0 OID 0)
+-- TOC entry 4886 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: clinics_clinic_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
@@ -775,7 +847,56 @@ ALTER SEQUENCE public.clinics_clinic_id_seq OWNED BY public.clinics.clinic_id;
 
 
 --
--- TOC entry 231 (class 1259 OID 16701)
+-- TOC entry 276 (class 1259 OID 17961)
+-- Name: diagnoses; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.diagnoses (
+    diagnosis_id integer NOT NULL,
+    examination_id integer NOT NULL,
+    diagnosis_type character varying(20) NOT NULL,
+    diagnosis_code character varying(50),
+    diagnosis_name character varying(200) NOT NULL,
+    description text,
+    diagnosis_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    severity character varying(20),
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT diagnoses_diagnosis_type_check CHECK (((diagnosis_type)::text = ANY ((ARRAY['standard'::character varying, 'custom'::character varying])::text[]))),
+    CONSTRAINT diagnoses_severity_check CHECK (((severity)::text = ANY ((ARRAY['mild'::character varying, 'moderate'::character varying, 'severe'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.diagnoses OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 275 (class 1259 OID 17960)
+-- Name: diagnoses_diagnosis_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.diagnoses_diagnosis_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.diagnoses_diagnosis_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4887 (class 0 OID 0)
+-- Dependencies: 275
+-- Name: diagnoses_diagnosis_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.diagnoses_diagnosis_id_seq OWNED BY public.diagnoses.diagnosis_id;
+
+
+--
+-- TOC entry 229 (class 1259 OID 16701)
 -- Name: emergency_contacts; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -790,7 +911,57 @@ CREATE TABLE public.emergency_contacts (
 ALTER TABLE public.emergency_contacts OWNER TO "petlystAdmin";
 
 --
--- TOC entry 268 (class 1259 OID 17613)
+-- TOC entry 274 (class 1259 OID 17933)
+-- Name: examinations; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.examinations (
+    examination_id integer NOT NULL,
+    pet_id integer NOT NULL,
+    vet_id integer NOT NULL,
+    examination_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    status character varying(20) NOT NULL,
+    temperature numeric(5,2),
+    heart_rate integer,
+    respiratory_rate integer,
+    weight numeric(6,2),
+    notes text,
+    appointment_id integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT examinations_status_check CHECK (((status)::text = ANY ((ARRAY['started'::character varying, 'in_progress'::character varying, 'completed'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.examinations OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 273 (class 1259 OID 17932)
+-- Name: examinations_examination_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.examinations_examination_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.examinations_examination_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4888 (class 0 OID 0)
+-- Dependencies: 273
+-- Name: examinations_examination_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.examinations_examination_id_seq OWNED BY public.examinations.examination_id;
+
+
+--
+-- TOC entry 266 (class 1259 OID 17613)
 -- Name: inventory_categories; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -810,7 +981,7 @@ CREATE TABLE public.inventory_categories (
 ALTER TABLE public.inventory_categories OWNER TO "petlystAdmin";
 
 --
--- TOC entry 269 (class 1259 OID 17631)
+-- TOC entry 267 (class 1259 OID 17631)
 -- Name: inventory_items; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -839,7 +1010,7 @@ CREATE TABLE public.inventory_items (
 ALTER TABLE public.inventory_items OWNER TO "petlystAdmin";
 
 --
--- TOC entry 270 (class 1259 OID 17665)
+-- TOC entry 268 (class 1259 OID 17665)
 -- Name: inventory_transactions; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -864,7 +1035,7 @@ CREATE TABLE public.inventory_transactions (
 ALTER TABLE public.inventory_transactions OWNER TO "petlystAdmin";
 
 --
--- TOC entry 243 (class 1259 OID 16872)
+-- TOC entry 241 (class 1259 OID 16872)
 -- Name: medical_services; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -879,7 +1050,7 @@ CREATE TABLE public.medical_services (
 ALTER TABLE public.medical_services OWNER TO "petlystAdmin";
 
 --
--- TOC entry 242 (class 1259 OID 16871)
+-- TOC entry 240 (class 1259 OID 16871)
 -- Name: medical_services_medical_service_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -895,8 +1066,8 @@ CREATE SEQUENCE public.medical_services_medical_service_id_seq
 ALTER SEQUENCE public.medical_services_medical_service_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4749 (class 0 OID 0)
--- Dependencies: 242
+-- TOC entry 4889 (class 0 OID 0)
+-- Dependencies: 240
 -- Name: medical_services_medical_service_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -904,7 +1075,56 @@ ALTER SEQUENCE public.medical_services_medical_service_id_seq OWNED BY public.me
 
 
 --
--- TOC entry 233 (class 1259 OID 16712)
+-- TOC entry 287 (class 1259 OID 18084)
+-- Name: medications; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.medications (
+    medication_id integer NOT NULL,
+    treatment_id integer NOT NULL,
+    inventory_item_id character varying(36) NOT NULL,
+    dosage character varying(100) NOT NULL,
+    frequency character varying(100) NOT NULL,
+    route character varying(50) NOT NULL,
+    start_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    end_date timestamp without time zone,
+    notes text,
+    quantity_used numeric(10,2) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT medications_route_check CHECK (((route)::text = ANY ((ARRAY['oral'::character varying, 'topical'::character varying, 'injection'::character varying, 'intravenous'::character varying, 'other'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.medications OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 286 (class 1259 OID 18083)
+-- Name: medications_medication_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.medications_medication_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.medications_medication_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4890 (class 0 OID 0)
+-- Dependencies: 286
+-- Name: medications_medication_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.medications_medication_id_seq OWNED BY public.medications.medication_id;
+
+
+--
+-- TOC entry 231 (class 1259 OID 16712)
 -- Name: password_reset_tokens; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -922,7 +1142,7 @@ CREATE TABLE public.password_reset_tokens (
 ALTER TABLE public.password_reset_tokens OWNER TO "petlystAdmin";
 
 --
--- TOC entry 232 (class 1259 OID 16711)
+-- TOC entry 230 (class 1259 OID 16711)
 -- Name: password_reset_tokens_reset_token_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -938,8 +1158,8 @@ CREATE SEQUENCE public.password_reset_tokens_reset_token_id_seq
 ALTER SEQUENCE public.password_reset_tokens_reset_token_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4750 (class 0 OID 0)
--- Dependencies: 232
+-- TOC entry 4891 (class 0 OID 0)
+-- Dependencies: 230
 -- Name: password_reset_tokens_reset_token_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -947,7 +1167,51 @@ ALTER SEQUENCE public.password_reset_tokens_reset_token_id_seq OWNED BY public.p
 
 
 --
--- TOC entry 264 (class 1259 OID 17337)
+-- TOC entry 272 (class 1259 OID 17895)
+-- Name: pet_hospitalizations; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.pet_hospitalizations (
+    id integer NOT NULL,
+    room_id integer NOT NULL,
+    pet_id integer NOT NULL,
+    admission_date timestamp without time zone NOT NULL,
+    expected_discharge_date timestamp without time zone,
+    actual_discharge_date timestamp without time zone,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.pet_hospitalizations OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 271 (class 1259 OID 17894)
+-- Name: pet_hospitalizations_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.pet_hospitalizations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.pet_hospitalizations_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4892 (class 0 OID 0)
+-- Dependencies: 271
+-- Name: pet_hospitalizations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.pet_hospitalizations_id_seq OWNED BY public.pet_hospitalizations.id;
+
+
+--
+-- TOC entry 262 (class 1259 OID 17337)
 -- Name: pet_owner_favorite_clinics; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -962,7 +1226,7 @@ CREATE TABLE public.pet_owner_favorite_clinics (
 ALTER TABLE public.pet_owner_favorite_clinics OWNER TO "petlystAdmin";
 
 --
--- TOC entry 263 (class 1259 OID 17336)
+-- TOC entry 261 (class 1259 OID 17336)
 -- Name: pet_owner_favorite_clinics_favorite_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -978,8 +1242,8 @@ CREATE SEQUENCE public.pet_owner_favorite_clinics_favorite_id_seq
 ALTER SEQUENCE public.pet_owner_favorite_clinics_favorite_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4751 (class 0 OID 0)
--- Dependencies: 263
+-- TOC entry 4893 (class 0 OID 0)
+-- Dependencies: 261
 -- Name: pet_owner_favorite_clinics_favorite_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1040,7 +1304,7 @@ CREATE SEQUENCE public.pets_pet_id_seq
 ALTER SEQUENCE public.pets_pet_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4752 (class 0 OID 0)
+-- TOC entry 4894 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: pets_pet_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
@@ -1049,24 +1313,183 @@ ALTER SEQUENCE public.pets_pet_id_seq OWNED BY public.pets.pet_id;
 
 
 --
--- TOC entry 228 (class 1259 OID 16628)
+-- TOC entry 283 (class 1259 OID 18034)
+-- Name: protocol_medications; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.protocol_medications (
+    id integer NOT NULL,
+    protocol_id integer NOT NULL,
+    step_id integer,
+    inventory_item_id character varying(36) NOT NULL,
+    dosage character varying(100) NOT NULL,
+    frequency character varying(100) NOT NULL,
+    route character varying(50) NOT NULL,
+    duration character varying(100),
+    notes text
+);
+
+
+ALTER TABLE public.protocol_medications OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 282 (class 1259 OID 18033)
+-- Name: protocol_medications_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.protocol_medications_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.protocol_medications_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4895 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: protocol_medications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.protocol_medications_id_seq OWNED BY public.protocol_medications.id;
+
+
+--
+-- TOC entry 281 (class 1259 OID 18020)
+-- Name: protocol_steps; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.protocol_steps (
+    step_id integer NOT NULL,
+    protocol_id integer NOT NULL,
+    step_order integer NOT NULL,
+    step_name character varying(200) NOT NULL,
+    description text,
+    duration character varying(100)
+);
+
+
+ALTER TABLE public.protocol_steps OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 280 (class 1259 OID 18019)
+-- Name: protocol_steps_step_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.protocol_steps_step_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.protocol_steps_step_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4896 (class 0 OID 0)
+-- Dependencies: 280
+-- Name: protocol_steps_step_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.protocol_steps_step_id_seq OWNED BY public.protocol_steps.step_id;
+
+
+--
+-- TOC entry 277 (class 1259 OID 17979)
+-- Name: standard_diagnoses; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.standard_diagnoses (
+    code character varying(50) NOT NULL,
+    name character varying(200) NOT NULL,
+    description text,
+    category character varying(100),
+    species character varying(50) NOT NULL,
+    is_active boolean DEFAULT true
+);
+
+
+ALTER TABLE public.standard_diagnoses OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 279 (class 1259 OID 18008)
+-- Name: treatment_protocols; Type: TABLE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE TABLE public.treatment_protocols (
+    protocol_id integer NOT NULL,
+    protocol_name character varying(200) NOT NULL,
+    target_condition character varying(200) NOT NULL,
+    description text,
+    species character varying(50) NOT NULL,
+    follow_up_days integer,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.treatment_protocols OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 278 (class 1259 OID 18007)
+-- Name: treatment_protocols_protocol_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
+--
+
+CREATE SEQUENCE public.treatment_protocols_protocol_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.treatment_protocols_protocol_id_seq OWNER TO "petlystAdmin";
+
+--
+-- TOC entry 4897 (class 0 OID 0)
+-- Dependencies: 278
+-- Name: treatment_protocols_protocol_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
+--
+
+ALTER SEQUENCE public.treatment_protocols_protocol_id_seq OWNED BY public.treatment_protocols.protocol_id;
+
+
+--
+-- TOC entry 285 (class 1259 OID 18058)
 -- Name: treatments; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
 CREATE TABLE public.treatments (
     treatment_id integer NOT NULL,
-    appointment_id integer NOT NULL,
-    description text NOT NULL,
-    actions text,
-    materials text,
-    diagnosis text
+    diagnosis_id integer NOT NULL,
+    treatment_type character varying(50) NOT NULL,
+    treatment_name character varying(200) NOT NULL,
+    description text,
+    start_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    end_date timestamp without time zone,
+    status character varying(20) NOT NULL,
+    notes text,
+    outcome character varying(20),
+    protocol_id integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT treatments_outcome_check CHECK (((outcome)::text = ANY ((ARRAY['successful'::character varying, 'unsuccessful'::character varying, 'monitoring'::character varying])::text[]))),
+    CONSTRAINT treatments_status_check CHECK (((status)::text = ANY ((ARRAY['planned'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'cancelled'::character varying])::text[]))),
+    CONSTRAINT treatments_treatment_type_check CHECK (((treatment_type)::text = ANY ((ARRAY['medication'::character varying, 'procedure'::character varying, 'surgery'::character varying, 'other'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.treatments OWNER TO "petlystAdmin";
 
 --
--- TOC entry 227 (class 1259 OID 16627)
+-- TOC entry 284 (class 1259 OID 18057)
 -- Name: treatments_treatment_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1082,8 +1505,8 @@ CREATE SEQUENCE public.treatments_treatment_id_seq
 ALTER SEQUENCE public.treatments_treatment_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4753 (class 0 OID 0)
--- Dependencies: 227
+-- TOC entry 4898 (class 0 OID 0)
+-- Dependencies: 284
 -- Name: treatments_treatment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1091,7 +1514,7 @@ ALTER SEQUENCE public.treatments_treatment_id_seq OWNED BY public.treatments.tre
 
 
 --
--- TOC entry 267 (class 1259 OID 17596)
+-- TOC entry 265 (class 1259 OID 17596)
 -- Name: user_tokens; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1142,7 +1565,7 @@ CREATE SEQUENCE public.users_user_id_seq
 ALTER SEQUENCE public.users_user_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4754 (class 0 OID 0)
+-- TOC entry 4899 (class 0 OID 0)
 -- Dependencies: 215
 -- Name: users_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
@@ -1151,7 +1574,7 @@ ALTER SEQUENCE public.users_user_id_seq OWNED BY public.users.user_id;
 
 
 --
--- TOC entry 259 (class 1259 OID 17173)
+-- TOC entry 257 (class 1259 OID 17173)
 -- Name: veterinarian_albums; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1166,7 +1589,7 @@ CREATE TABLE public.veterinarian_albums (
 ALTER TABLE public.veterinarian_albums OWNER TO "petlystAdmin";
 
 --
--- TOC entry 258 (class 1259 OID 17172)
+-- TOC entry 256 (class 1259 OID 17172)
 -- Name: veterinarian_album_veterinarian_album_photo_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1182,8 +1605,8 @@ CREATE SEQUENCE public.veterinarian_album_veterinarian_album_photo_id_seq
 ALTER SEQUENCE public.veterinarian_album_veterinarian_album_photo_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4755 (class 0 OID 0)
--- Dependencies: 258
+-- TOC entry 4900 (class 0 OID 0)
+-- Dependencies: 256
 -- Name: veterinarian_album_veterinarian_album_photo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1191,7 +1614,7 @@ ALTER SEQUENCE public.veterinarian_album_veterinarian_album_photo_id_seq OWNED B
 
 
 --
--- TOC entry 260 (class 1259 OID 17189)
+-- TOC entry 258 (class 1259 OID 17189)
 -- Name: veterinarian_albums_veterinarian_album_photo_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1206,8 +1629,8 @@ CREATE SEQUENCE public.veterinarian_albums_veterinarian_album_photo_id_seq
 ALTER SEQUENCE public.veterinarian_albums_veterinarian_album_photo_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4756 (class 0 OID 0)
--- Dependencies: 260
+-- TOC entry 4901 (class 0 OID 0)
+-- Dependencies: 258
 -- Name: veterinarian_albums_veterinarian_album_photo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1215,7 +1638,7 @@ ALTER SEQUENCE public.veterinarian_albums_veterinarian_album_photo_id_seq OWNED 
 
 
 --
--- TOC entry 255 (class 1259 OID 17104)
+-- TOC entry 253 (class 1259 OID 17104)
 -- Name: veterinarian_certifications; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1233,7 +1656,7 @@ CREATE TABLE public.veterinarian_certifications (
 ALTER TABLE public.veterinarian_certifications OWNER TO "petlystAdmin";
 
 --
--- TOC entry 254 (class 1259 OID 17103)
+-- TOC entry 252 (class 1259 OID 17103)
 -- Name: veterinarian_certifications_certification_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1249,8 +1672,8 @@ CREATE SEQUENCE public.veterinarian_certifications_certification_id_seq
 ALTER SEQUENCE public.veterinarian_certifications_certification_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4757 (class 0 OID 0)
--- Dependencies: 254
+-- TOC entry 4902 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: veterinarian_certifications_certification_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1258,7 +1681,7 @@ ALTER SEQUENCE public.veterinarian_certifications_certification_id_seq OWNED BY 
 
 
 --
--- TOC entry 253 (class 1259 OID 17083)
+-- TOC entry 251 (class 1259 OID 17083)
 -- Name: veterinarian_education; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1277,7 +1700,7 @@ CREATE TABLE public.veterinarian_education (
 ALTER TABLE public.veterinarian_education OWNER TO "petlystAdmin";
 
 --
--- TOC entry 252 (class 1259 OID 17082)
+-- TOC entry 250 (class 1259 OID 17082)
 -- Name: veterinarian_education_education_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1293,8 +1716,8 @@ CREATE SEQUENCE public.veterinarian_education_education_id_seq
 ALTER SEQUENCE public.veterinarian_education_education_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4758 (class 0 OID 0)
--- Dependencies: 252
+-- TOC entry 4903 (class 0 OID 0)
+-- Dependencies: 250
 -- Name: veterinarian_education_education_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1302,7 +1725,7 @@ ALTER SEQUENCE public.veterinarian_education_education_id_seq OWNED BY public.ve
 
 
 --
--- TOC entry 257 (class 1259 OID 17124)
+-- TOC entry 255 (class 1259 OID 17124)
 -- Name: veterinarian_expertise; Type: TABLE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1317,7 +1740,7 @@ CREATE TABLE public.veterinarian_expertise (
 ALTER TABLE public.veterinarian_expertise OWNER TO "petlystAdmin";
 
 --
--- TOC entry 256 (class 1259 OID 17123)
+-- TOC entry 254 (class 1259 OID 17123)
 -- Name: veterinarian_expertise_expertise_id_seq; Type: SEQUENCE; Schema: public; Owner: petlystAdmin
 --
 
@@ -1333,8 +1756,8 @@ CREATE SEQUENCE public.veterinarian_expertise_expertise_id_seq
 ALTER SEQUENCE public.veterinarian_expertise_expertise_id_seq OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4759 (class 0 OID 0)
--- Dependencies: 256
+-- TOC entry 4904 (class 0 OID 0)
+-- Dependencies: 254
 -- Name: veterinarian_expertise_expertise_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: petlystAdmin
 --
 
@@ -1363,7 +1786,7 @@ CREATE TABLE public.veterinarians (
 ALTER TABLE public.veterinarians OWNER TO "petlystAdmin";
 
 --
--- TOC entry 4345 (class 2604 OID 16905)
+-- TOC entry 4394 (class 2604 OID 16905)
 -- Name: additional_services additional_service_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1371,7 +1794,7 @@ ALTER TABLE ONLY public.additional_services ALTER COLUMN additional_service_id S
 
 
 --
--- TOC entry 4337 (class 2604 OID 16845)
+-- TOC entry 4386 (class 2604 OID 16845)
 -- Name: animal_types animal_type_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1379,7 +1802,7 @@ ALTER TABLE ONLY public.animal_types ALTER COLUMN animal_type_id SET DEFAULT nex
 
 
 --
--- TOC entry 4323 (class 2604 OID 16605)
+-- TOC entry 4373 (class 2604 OID 16605)
 -- Name: appointments appointment_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1387,7 +1810,7 @@ ALTER TABLE ONLY public.appointments ALTER COLUMN appointment_id SET DEFAULT nex
 
 
 --
--- TOC entry 4347 (class 2604 OID 16917)
+-- TOC entry 4396 (class 2604 OID 16917)
 -- Name: clinic_additional_services clinic_additional_service_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1395,7 +1818,7 @@ ALTER TABLE ONLY public.clinic_additional_services ALTER COLUMN clinic_additiona
 
 
 --
--- TOC entry 4321 (class 2604 OID 16590)
+-- TOC entry 4371 (class 2604 OID 16590)
 -- Name: clinic_albums clinic_album_photo_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1403,7 +1826,7 @@ ALTER TABLE ONLY public.clinic_albums ALTER COLUMN clinic_album_photo_id SET DEF
 
 
 --
--- TOC entry 4339 (class 2604 OID 16855)
+-- TOC entry 4388 (class 2604 OID 16855)
 -- Name: clinic_animal_types clinic_animal_type_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1411,7 +1834,15 @@ ALTER TABLE ONLY public.clinic_animal_types ALTER COLUMN clinic_animal_type_id S
 
 
 --
--- TOC entry 4336 (class 2604 OID 16809)
+-- TOC entry 4430 (class 2604 OID 17881)
+-- Name: clinic_hospitalization_rooms id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_hospitalization_rooms ALTER COLUMN id SET DEFAULT nextval('public.clinic_hospitalization_rooms_id_seq'::regclass);
+
+
+--
+-- TOC entry 4385 (class 2604 OID 16809)
 -- Name: clinic_locations location_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1419,7 +1850,7 @@ ALTER TABLE ONLY public.clinic_locations ALTER COLUMN location_id SET DEFAULT ne
 
 
 --
--- TOC entry 4343 (class 2604 OID 16885)
+-- TOC entry 4392 (class 2604 OID 16885)
 -- Name: clinic_medical_services clinic_medical_service_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1427,7 +1858,7 @@ ALTER TABLE ONLY public.clinic_medical_services ALTER COLUMN clinic_medical_serv
 
 
 --
--- TOC entry 4368 (class 2604 OID 17579)
+-- TOC entry 4417 (class 2604 OID 17579)
 -- Name: clinic_patients id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1435,7 +1866,7 @@ ALTER TABLE ONLY public.clinic_patients ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 4349 (class 2604 OID 16958)
+-- TOC entry 4398 (class 2604 OID 16958)
 -- Name: clinic_phone_numbers id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1443,7 +1874,7 @@ ALTER TABLE ONLY public.clinic_phone_numbers ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 4335 (class 2604 OID 16777)
+-- TOC entry 4384 (class 2604 OID 16777)
 -- Name: clinic_social_media link_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1451,7 +1882,7 @@ ALTER TABLE ONLY public.clinic_social_media ALTER COLUMN link_id SET DEFAULT nex
 
 
 --
--- TOC entry 4361 (class 2604 OID 17243)
+-- TOC entry 4410 (class 2604 OID 17243)
 -- Name: clinic_veterinarians id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1459,7 +1890,7 @@ ALTER TABLE ONLY public.clinic_veterinarians ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 4317 (class 2604 OID 16573)
+-- TOC entry 4367 (class 2604 OID 16573)
 -- Name: clinics clinic_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1467,7 +1898,23 @@ ALTER TABLE ONLY public.clinics ALTER COLUMN clinic_id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 4341 (class 2604 OID 16875)
+-- TOC entry 4441 (class 2604 OID 17964)
+-- Name: diagnoses diagnosis_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.diagnoses ALTER COLUMN diagnosis_id SET DEFAULT nextval('public.diagnoses_diagnosis_id_seq'::regclass);
+
+
+--
+-- TOC entry 4437 (class 2604 OID 17936)
+-- Name: examinations examination_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.examinations ALTER COLUMN examination_id SET DEFAULT nextval('public.examinations_examination_id_seq'::regclass);
+
+
+--
+-- TOC entry 4390 (class 2604 OID 16875)
 -- Name: medical_services medical_service_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1475,7 +1922,15 @@ ALTER TABLE ONLY public.medical_services ALTER COLUMN medical_service_id SET DEF
 
 
 --
--- TOC entry 4331 (class 2604 OID 16715)
+-- TOC entry 4456 (class 2604 OID 18087)
+-- Name: medications medication_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.medications ALTER COLUMN medication_id SET DEFAULT nextval('public.medications_medication_id_seq'::regclass);
+
+
+--
+-- TOC entry 4380 (class 2604 OID 16715)
 -- Name: password_reset_tokens reset_token_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1483,7 +1938,15 @@ ALTER TABLE ONLY public.password_reset_tokens ALTER COLUMN reset_token_id SET DE
 
 
 --
--- TOC entry 4366 (class 2604 OID 17340)
+-- TOC entry 4434 (class 2604 OID 17898)
+-- Name: pet_hospitalizations id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.pet_hospitalizations ALTER COLUMN id SET DEFAULT nextval('public.pet_hospitalizations_id_seq'::regclass);
+
+
+--
+-- TOC entry 4415 (class 2604 OID 17340)
 -- Name: pet_owner_favorite_clinics favorite_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1491,7 +1954,7 @@ ALTER TABLE ONLY public.pet_owner_favorite_clinics ALTER COLUMN favorite_id SET 
 
 
 --
--- TOC entry 4316 (class 2604 OID 16559)
+-- TOC entry 4366 (class 2604 OID 16559)
 -- Name: pets pet_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1499,7 +1962,23 @@ ALTER TABLE ONLY public.pets ALTER COLUMN pet_id SET DEFAULT nextval('public.pet
 
 
 --
--- TOC entry 4329 (class 2604 OID 16645)
+-- TOC entry 4451 (class 2604 OID 18037)
+-- Name: protocol_medications id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_medications ALTER COLUMN id SET DEFAULT nextval('public.protocol_medications_id_seq'::regclass);
+
+
+--
+-- TOC entry 4450 (class 2604 OID 18023)
+-- Name: protocol_steps step_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_steps ALTER COLUMN step_id SET DEFAULT nextval('public.protocol_steps_step_id_seq'::regclass);
+
+
+--
+-- TOC entry 4378 (class 2604 OID 16645)
 -- Name: reviews clinic_review_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1507,7 +1986,15 @@ ALTER TABLE ONLY public.reviews ALTER COLUMN clinic_review_id SET DEFAULT nextva
 
 
 --
--- TOC entry 4328 (class 2604 OID 16631)
+-- TOC entry 4446 (class 2604 OID 18011)
+-- Name: treatment_protocols protocol_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.treatment_protocols ALTER COLUMN protocol_id SET DEFAULT nextval('public.treatment_protocols_protocol_id_seq'::regclass);
+
+
+--
+-- TOC entry 4452 (class 2604 OID 18061)
 -- Name: treatments treatment_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1515,7 +2002,7 @@ ALTER TABLE ONLY public.treatments ALTER COLUMN treatment_id SET DEFAULT nextval
 
 
 --
--- TOC entry 4309 (class 2604 OID 16521)
+-- TOC entry 4359 (class 2604 OID 16521)
 -- Name: users user_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1523,7 +2010,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 
 
 --
--- TOC entry 4359 (class 2604 OID 17190)
+-- TOC entry 4408 (class 2604 OID 17190)
 -- Name: veterinarian_albums veterinarian_album_photo_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1531,7 +2018,7 @@ ALTER TABLE ONLY public.veterinarian_albums ALTER COLUMN veterinarian_album_phot
 
 
 --
--- TOC entry 4355 (class 2604 OID 17107)
+-- TOC entry 4404 (class 2604 OID 17107)
 -- Name: veterinarian_certifications certification_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1539,7 +2026,7 @@ ALTER TABLE ONLY public.veterinarian_certifications ALTER COLUMN certification_i
 
 
 --
--- TOC entry 4352 (class 2604 OID 17086)
+-- TOC entry 4401 (class 2604 OID 17086)
 -- Name: veterinarian_education education_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1547,7 +2034,7 @@ ALTER TABLE ONLY public.veterinarian_education ALTER COLUMN education_id SET DEF
 
 
 --
--- TOC entry 4357 (class 2604 OID 17127)
+-- TOC entry 4406 (class 2604 OID 17127)
 -- Name: veterinarian_expertise expertise_id; Type: DEFAULT; Schema: public; Owner: petlystAdmin
 --
 
@@ -1555,8 +2042,8 @@ ALTER TABLE ONLY public.veterinarian_expertise ALTER COLUMN expertise_id SET DEF
 
 
 --
--- TOC entry 4705 (class 0 OID 16902)
--- Dependencies: 247
+-- TOC entry 4823 (class 0 OID 16902)
+-- Dependencies: 245
 -- Data for Name: additional_services; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1581,8 +2068,8 @@ COPY public.additional_services (additional_service_id, service_name, service_de
 
 
 --
--- TOC entry 4697 (class 0 OID 16842)
--- Dependencies: 239
+-- TOC entry 4815 (class 0 OID 16842)
+-- Dependencies: 237
 -- Data for Name: animal_types; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1609,26 +2096,32 @@ COPY public.animal_types (animal_type_id, animal_type_name, created_at) FROM std
 
 
 --
--- TOC entry 4684 (class 0 OID 16602)
+-- TOC entry 4804 (class 0 OID 16602)
 -- Dependencies: 226
 -- Data for Name: appointments; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.appointments (appointment_id, video_meeting, pet_id, meeting_url, appointment_start_hour, appointment_status, notes, appointment_end_hour, meeting_password, appointment_date, clinic_id, pet_owner_id, created_at, updated_at) FROM stdin;
-71	f	59	\N	2025-04-30 14:00:00	completed	Hera - 14:00 - 30 April - Saraçhane	2025-04-30 14:20:00	\N	2025-04-30	74	43	2025-04-30 10:57:29.131982	2025-04-30 14:34:57.293185
-77	f	59	Room-ID-379-057-902-599-219	2025-05-02 16:20:00	completed	Bu da 2 Mayıs için olan randevu	2025-05-02 16:40:00	\N	2025-05-02	74	43	2025-05-01 13:47:36.068262	2025-05-01 13:47:36.068262
-76	f	59	Room-ID-706-282-886-495-165	2025-05-01 20:00:00	completed	Onur Hera Randevu Request Desktop Anal Sonda Takımı 	2025-05-01 20:20:00	\N	2025-05-01	74	43	2025-05-01 13:45:24.619023	2025-05-01 13:45:24.619023
-79	t	83	Room-ID-653-976-090-107-703	2025-05-01 12:40:00	confirmed	Gjh	2025-05-01 13:00:00	\N	2025-05-01	74	23	2025-05-01 20:55:33.314675	2025-05-01 20:55:33.314675
-80	t	84	Room-ID-324-540-066-816-542	2025-05-06 16:00:00	pending		2025-05-06 16:20:00	\N	2025-05-06	74	23	2025-05-01 21:00:23.764107	2025-05-01 21:00:23.764107
-78	t	83	Room-ID-090-494-237-129-300	2025-05-01 12:30:00	canceled	Hrhr	2025-05-01 13:00:00	\N	2025-05-01	76	23	2025-05-01 20:54:34.286477	2025-05-01 20:54:34.286477
+87	f	89	Room-ID-374-801-213-975-095	2025-05-04 10:00:00	pending	10.00	2025-05-04 10:30:00	\N	2025-05-04	79	54	2025-05-03 19:15:28.186905	2025-05-03 19:15:28.186905
+88	f	89	Room-ID-256-777-493-418-340	2025-05-04 10:00:00	pending	10.00	2025-05-04 10:20:00	\N	2025-05-04	78	54	2025-05-03 19:15:42.504988	2025-05-03 19:15:42.504988
+76	f	59	Room-ID-706-282-886-495-165	2025-05-01 20:00:00	canceled	Onur Hera Randevu Request Desktop Anal Sonda Takımı 	2025-05-01 20:20:00	\N	2025-05-01	74	43	2025-05-01 13:45:24.619023	2025-05-01 13:45:24.619023
 70	f	59	\N	2025-04-29 16:30:00	canceled	Hera - 16:30 - 29 April - Eryaman	2025-04-29 17:00:00	\N	2025-04-29	75	43	2025-04-30 10:57:29.131982	2025-04-30 11:01:46.980426
 75	f	59	\N	2025-04-30 16:00:00	canceled	Hera - 30 April - Eryaman - New Column Data Check	2025-04-30 16:30:00	\N	2025-04-30	75	43	2025-04-30 11:03:08.745085	2025-04-30 11:05:20.338324
+78	t	83	Room-ID-090-494-237-129-300	2025-05-01 12:30:00	canceled	Updated from PostgreSQL at 2025-05-02T08:00:00.016Z	2025-05-01 13:00:00	\N	2025-05-01	76	23	2025-05-01 20:54:34.286477	2025-05-02 10:29:07.141
+71	f	59	\N	2025-04-30 14:00:00	canceled	Hera - 14:00 - 30 April - Saraçhane	2025-04-30 14:20:00	\N	2025-04-30	74	43	2025-04-30 10:57:29.131982	2025-05-02 10:29:07.192
+77	f	59	Room-ID-379-057-902-599-219	2025-05-02 16:20:00	completed	Bu da 2 Mayıs için olan randevu	2025-05-02 16:40:00	\N	2025-05-02	74	43	2025-05-01 13:47:36.068262	2025-05-02 10:29:07.09
+79	t	83	Room-ID-653-976-090-107-703	2025-05-01 12:40:00	confirmed	Gjh	2025-05-01 13:00:00	\N	2025-05-01	74	23	2025-05-01 20:55:33.314675	2025-05-01 20:55:33.314675
+82	f	65	Room-ID-489-307-790-926-502	2025-05-03 18:00:00	completed	Pablo - Saraçhane - 3 May - 18:00	2025-05-03 18:20:00	\N	2025-05-03	74	51	2025-05-03 11:40:21.749744	2025-05-03 11:40:21.749744
+83	f	59	Room-ID-682-673-379-558-086	2025-05-04 11:30:00	confirmed	Hera - 11:30 - 4 May - Eryaman	2025-05-04 12:00:00	\N	2025-05-04	75	43	2025-05-03 14:48:03.977914	2025-05-03 14:50:19.975212
+84	f	65	Room-ID-204-406-947-733-321	2025-05-04 12:00:00	confirmed	Pablo - 12:00 - 4 May - Eryaman	2025-05-04 12:30:00	\N	2025-05-04	75	51	2025-05-03 14:49:10.455211	2025-05-03 14:50:20.966513
+85	f	89	Room-ID-244-827-704-944-087	2025-05-05 11:00:00	canceled	Ben eko geliyorum	2025-05-05 12:00:00	\N	2025-05-05	80	54	2025-05-03 19:10:51.613986	2025-05-03 19:11:27.946073
+86	t	89	Room-ID-569-484-414-732-703	2025-05-04 10:20:00	canceled	geliyorum\n	2025-05-04 10:40:00	\N	2025-05-04	78	54	2025-05-03 19:14:35.933944	2025-05-03 19:14:51.628036
 \.
 
 
 --
--- TOC entry 4707 (class 0 OID 16914)
--- Dependencies: 249
+-- TOC entry 4825 (class 0 OID 16914)
+-- Dependencies: 247
 -- Data for Name: clinic_additional_services; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1680,7 +2173,7 @@ COPY public.clinic_additional_services (clinic_additional_service_id, clinic_id,
 
 
 --
--- TOC entry 4682 (class 0 OID 16587)
+-- TOC entry 4802 (class 0 OID 16587)
 -- Dependencies: 224
 -- Data for Name: clinic_albums; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
@@ -1735,8 +2228,8 @@ COPY public.clinic_albums (clinic_album_photo_id, clinic_id, clinic_album_photo_
 
 
 --
--- TOC entry 4699 (class 0 OID 16852)
--- Dependencies: 241
+-- TOC entry 4817 (class 0 OID 16852)
+-- Dependencies: 239
 -- Data for Name: clinic_animal_types; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1789,24 +2282,38 @@ COPY public.clinic_animal_types (clinic_animal_type_id, clinic_id, animal_type_i
 
 
 --
--- TOC entry 4695 (class 0 OID 16806)
--- Dependencies: 237
+-- TOC entry 4848 (class 0 OID 17878)
+-- Dependencies: 270
+-- Data for Name: clinic_hospitalization_rooms; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.clinic_hospitalization_rooms (id, clinic_id, room_name, room_type, room_status, created_at, updated_at) FROM stdin;
+4	75	ICU 1	intensive_care	maintenance	2025-05-03 11:07:07.083138	2025-05-03 11:43:30.189352
+5	75	Isolation 1	isolation	vacant	2025-05-03 11:43:46.470639	2025-05-03 11:43:46.470639
+3	75	Observation 1	observation	occupied	2025-05-02 21:47:56.912308	2025-05-03 16:05:41.931968
+6	74	ICU 1	intensive_care	occupied	2025-05-03 17:04:25.949809	2025-05-03 17:04:49.719685
+\.
+
+
+--
+-- TOC entry 4813 (class 0 OID 16806)
+-- Dependencies: 235
 -- Data for Name: clinic_locations; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.clinic_locations (location_id, clinic_id, province, district, clinic_address, latitude, longitude) FROM stdin;
 49	75	Ankara	Etimesgut	Şehit Osman Avcı, 45. Sk. No:2, 06820 Etimesgut/Ankara, Türkiye	39.9783281	32.6492646
 50	76	Ankara	Çankaya	Bahçelievler, 36. Sk. No:15/1, 06490 Bahçelievler/Ankara, Türkiye	39.9266619	32.8258076
-52	78	Ankara	Çankaya	Oğuzlar, 1388. Sk. No:15, 06520 Çankaya/Ankara, Türkiye	39.9048307	32.8184476
 53	79	Ankara	Çankaya	İşçi Blokları, 1506. Cd. No:26, 06530 Çankaya/Ankara, Türkiye	39.8900888	32.8041675
 48	74	Ankara	Çankaya	Ön Cebeci, Umut Sk. No:6, 06590 Çankaya/Ankara, Türkiye	39.9258639	32.8664377
 54	80	Ankara	Etimesgut	Alsancak, 2127. Sk. No:8, 06790 Etimesgut/Ankara, Türkiye	39.9381385	32.6543930
+52	78	İstanbul	Kadıköy	Oğuzlar, 1388. Sk. No:15, 06520 Çankaya/Ankara, Türkiye	39.9048307	32.8184476
 \.
 
 
 --
--- TOC entry 4703 (class 0 OID 16882)
--- Dependencies: 245
+-- TOC entry 4821 (class 0 OID 16882)
+-- Dependencies: 243
 -- Data for Name: clinic_medical_services; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1869,20 +2376,21 @@ COPY public.clinic_medical_services (clinic_medical_service_id, clinic_id, medic
 
 
 --
--- TOC entry 4723 (class 0 OID 17573)
--- Dependencies: 265
+-- TOC entry 4841 (class 0 OID 17573)
+-- Dependencies: 263
 -- Data for Name: clinic_patients; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.clinic_patients (id, clinic_id, pet_id, created_at, updated_at) FROM stdin;
-1	75	59	2025-04-29 08:02:35.667527	2025-04-29 08:02:35.667527
 2	74	59	2025-04-30 14:34:57.39862	2025-04-30 14:34:57.39862
+3	75	59	2025-05-03 14:50:20.085823	2025-05-03 14:50:20.085823
+4	75	65	2025-05-03 14:50:21.074533	2025-05-03 14:50:21.074533
 \.
 
 
 --
--- TOC entry 4709 (class 0 OID 16955)
--- Dependencies: 251
+-- TOC entry 4827 (class 0 OID 16955)
+-- Dependencies: 249
 -- Data for Name: clinic_phone_numbers; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1901,8 +2409,8 @@ COPY public.clinic_phone_numbers (id, clinic_id, phone_number, phone_type, creat
 
 
 --
--- TOC entry 4693 (class 0 OID 16774)
--- Dependencies: 235
+-- TOC entry 4811 (class 0 OID 16774)
+-- Dependencies: 233
 -- Data for Name: clinic_social_media; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1921,8 +2429,8 @@ COPY public.clinic_social_media (link_id, clinic_id, platform, url) FROM stdin;
 
 
 --
--- TOC entry 4720 (class 0 OID 17240)
--- Dependencies: 262
+-- TOC entry 4838 (class 0 OID 17240)
+-- Dependencies: 260
 -- Data for Name: clinic_veterinarians; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1941,24 +2449,34 @@ COPY public.clinic_veterinarians (id, clinic_id, veterinarian_id, status, is_cli
 
 
 --
--- TOC entry 4680 (class 0 OID 16570)
+-- TOC entry 4800 (class 0 OID 16570)
 -- Dependencies: 222
 -- Data for Name: clinics; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.clinics (clinic_id, clinic_name, clinic_email, clinic_operator_id, clinic_description, opening_time, closing_time, clinic_created_at, clinic_updated_at, clinic_verification_status, establishment_year, establishment_month, show_phone_number, allow_direct_messages, clinic_creation_status, tax_identification_number, veterinary_license_number, show_mail_address, allow_online_meetings, available_days, emergency_available_days, clinic_time_slots, is_open_24_7, clinic_type, clinic_address, slug) FROM stdin;
-79	Novavet Veterinary Clinic	novavet@gmail.com	38	Novavet is a next-generation veterinary clinic dedicated to redefining pet healthcare. With a focus on innovation, precision, and compassionate service, we offer intelligent solutions for modern pet owners. At Novavet, every visit is powered by trust, care, and cutting-edge veterinary expertise.	10:00:00	18:00:00	2025-04-06 17:26:24.06476	2025-04-06 17:26:24.06476	verified	2023	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	30	Yes	veterinary_clinic	bursa 	novavet-veterinary-clinic
-75	Eryaman Animal Hospital	eryamanveteriner@gmail.com	27	Eryaman Veterinary Hospital is a state-of-the-art medical facility dedicated to providing comprehensive healthcare for pets, offering a wide range of services including routine check-ups, vaccinations, surgical procedures, emergency care, and specialized treatments. With a team of experienced veterinarians, advanced medical equipment, and a compassionate approach, we are committed to ensuring the highest quality of care for your beloved animal companions, delivering professional and personalized veterinary services that address both preventive health needs and complex medical conditions in a modern, hygienic, and welcoming environment.	09:30:00	17:00:00	2025-03-28 13:55:00.61498	2025-03-28 13:55:00.61498	verified	2023	8	t	t	complete	ERYAMANVET	VETLICENSE	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,f,f}	30	No	animal_hospital	ankara nata vega	eryaman-animal-hospital
-76	Vetica Veterinary Clinic	vetica@gmail.com	36	baskan sunu bi siliyom ekran gözükmüyo cok uzunlar aq	09:00:00	17:00:00	2025-04-06 16:32:59.232874	2025-04-06 16:32:59.232874	verified	2010	5	t	t	complete	1111111111	1234567890	t	t	{t,t,t,t,t,f,f}	{t,t,t,t,t,t,t}	30	No	veterinary_clinic	adana	vetica-veterinary-clinic
-74	Saraçhane Animal Hospital	umutdncr@gmail.com	25	İmamoğlu	06:20:00	21:20:00	2025-03-23 23:12:46.181559	2025-04-26 00:47:14.479893	verified	2025	3	t	t	complete	2222222222	5555555555	t	t	{f,t,t,t,t,t,t}	{t,t,f,f,f,t,t}	20	No	animal_hospital	Bilkent Tepe Market	sarahane-animal-hospital
-80	Erdem Ege Veterinary Clinic	umutdncr@gmail.com	50	Erdem EgeErdem EgeErdem EgeErdem EgeErdem EgeErdem Ege	10:00:00	17:00:00	2025-04-26 17:26:49.877203	2025-04-26 17:26:49.877203	verified	2025	3	t	t	complete	1234567890	2222222222	t	t	{t,t,t,t,t,f,f}	{f,f,f,f,f,t,t}	60	No	veterinary_clinic	\N	erdem-ege-veterinary-clinic
-78	Petworks Veterinary Clinic	petworks@gmail.com	37	Petworks is a forward-thinking veterinary clinic where technology and compassionate care come together. We provide integrated health services for pets with a focus on smart diagnostics, seamless communication, and personalized treatment. At Petworks, we believe every connection matters — between pets, their owners, and the care they receive.	09:40:00	17:40:00	2025-04-06 17:05:17.417878	2025-04-06 17:12:32.833316	verified	2019	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	20	Yes	veterinary_clinic	uşak	petworks-veterinary-clinic
+79	Novavet Veterinary Clinic	novavet@gmail.com	38	Novavet is a next-generation veterinary clinic dedicated to redefining pet healthcare. With a focus on innovation, precision, and compassionate service, we offer intelligent solutions for modern pet owners. At Novavet, every visit is powered by trust, care, and cutting-edge veterinary expertise.	10:00:00	18:00:00	2025-04-06 17:26:24.06476	2025-04-06 17:26:24.06476	verified	2023	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	30	Yes	veterinary_clinic	Çankaya	novavet-veterinary-clinic
+75	Eryaman Animal Hospital	eryamanveteriner@gmail.com	27	Eryaman Veterinary Hospital is a state-of-the-art medical facility dedicated to providing comprehensive healthcare for pets, offering a wide range of services including routine check-ups, vaccinations, surgical procedures, emergency care, and specialized treatments. With a team of experienced veterinarians, advanced medical equipment, and a compassionate approach, we are committed to ensuring the highest quality of care for your beloved animal companions, delivering professional and personalized veterinary services that address both preventive health needs and complex medical conditions in a modern, hygienic, and welcoming environment.	09:30:00	17:00:00	2025-03-28 13:55:00.61498	2025-03-28 13:55:00.61498	verified	2023	8	t	t	complete	ERYAMANVET	VETLICENSE	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,f,f}	30	No	animal_hospital	Çankaya	eryaman-animal-hospital
+76	Vetica Veterinary Clinic	vetica@gmail.com	36	baskan sunu bi siliyom ekran gözükmüyo cok uzunlar aq	09:00:00	17:00:00	2025-04-06 16:32:59.232874	2025-04-06 16:32:59.232874	verified	2010	5	t	t	complete	1111111111	1234567890	t	t	{t,t,t,t,t,f,f}	{t,t,t,t,t,t,t}	30	No	veterinary_clinic	Yenimahalle	vetica-veterinary-clinic
+74	Saraçhane Animal Hospital	umutdncr@gmail.com	25	İmamoğlu	06:20:00	21:20:00	2025-03-23 23:12:46.181559	2025-04-26 00:47:14.479893	verified	2025	3	t	t	complete	2222222222	5555555555	t	t	{f,t,t,t,t,t,t}	{t,t,f,f,f,t,t}	20	No	animal_hospital	Etimesgut	sarahane-animal-hospital
+80	Erdem Ege Veterinary Clinic	umutdncr@gmail.com	50	Erdem EgeErdem EgeErdem EgeErdem EgeErdem EgeErdem Ege	10:00:00	17:00:00	2025-04-26 17:26:49.877203	2025-04-26 17:26:49.877203	verified	2025	3	t	t	complete	1234567890	2222222222	t	t	{t,t,t,t,t,f,f}	{f,f,f,f,f,t,t}	60	No	veterinary_clinic	Keçiören	erdem-ege-veterinary-clinic
+78	Petworks Veterinary Clinic	petworks@gmail.com	37	Petworks is a forward-thinking veterinary clinic where technology and compassionate care come together. We provide integrated health services for pets with a focus on smart diagnostics, seamless communication, and personalized treatment. At Petworks, we believe every connection matters — between pets, their owners, and the care they receive.	09:40:00	17:40:00	2025-04-06 17:05:17.417878	2025-04-06 17:12:32.833316	verified	2019	11	t	t	complete	1234567890	1234567890	t	t	{t,t,t,t,t,t,t}	{t,t,t,t,t,t,t}	20	Yes	veterinary_clinic	Polatlı	petworks-veterinary-clinic
 \.
 
 
 --
--- TOC entry 4689 (class 0 OID 16701)
--- Dependencies: 231
+-- TOC entry 4854 (class 0 OID 17961)
+-- Dependencies: 276
+-- Data for Name: diagnoses; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.diagnoses (diagnosis_id, examination_id, diagnosis_type, diagnosis_code, diagnosis_name, description, diagnosis_date, severity, notes, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4807 (class 0 OID 16701)
+-- Dependencies: 229
 -- Data for Name: emergency_contacts; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -1967,43 +2485,58 @@ COPY public.emergency_contacts (pet_id, pet_name, emergency_contact_name, emerge
 
 
 --
--- TOC entry 4726 (class 0 OID 17613)
--- Dependencies: 268
+-- TOC entry 4852 (class 0 OID 17933)
+-- Dependencies: 274
+-- Data for Name: examinations; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.examinations (examination_id, pet_id, vet_id, examination_date, status, temperature, heart_rate, respiratory_rate, weight, notes, appointment_id, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4844 (class 0 OID 17613)
+-- Dependencies: 266
 -- Data for Name: inventory_categories; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.inventory_categories (id, name, description, parent_id, clinic_id, created_at, updated_at, created_by, is_active) FROM stdin;
-cat-1746032571142	Geçici Kategori	Eksik veri için otomatik oluşturuldu	\N	75	2025-05-01 21:51:46.868963	2025-05-01 21:51:46.868963	27	t
-cat-1746137632111	Alt Kategori	Alt kategori açıklaması	cat-1746137575186	75	2025-05-01 22:13:52.063224	2025-05-01 22:13:52.063224	27	t
-cat-1746137575186	Güncellenmiş Kategori	Güncellenmiş açıklama	\N	75	2025-05-01 22:12:55.171527	2025-05-01 22:14:47.325665	27	t
+cat-1746190810888	Medikal	Medikal Eşyalar Üst Grubu	\N	75	2025-05-02 13:00:10.858545	2025-05-02 13:00:10.858545	27	t
+cat-1746190827498	İlaçlar	İlaçlar Alt Grubu	cat-1746190810888	75	2025-05-02 13:00:27.468698	2025-05-02 13:00:27.468698	27	t
+cat-1746201322590	Yarraklar	Yarraklar Üst Grubu	\N	75	2025-05-02 15:55:22.351302	2025-05-02 20:43:49.282135	27	t
+cat-1746297911248	Onurlar		\N	75	2025-05-03 18:45:10.543331	2025-05-03 18:45:10.543331	27	t
+cat-1746297922430	Güngörler		cat-1746297911248	75	2025-05-03 18:45:21.723476	2025-05-03 18:45:21.723476	27	t
 \.
 
 
 --
--- TOC entry 4727 (class 0 OID 17631)
--- Dependencies: 269
+-- TOC entry 4845 (class 0 OID 17631)
+-- Dependencies: 267
 -- Data for Name: inventory_items; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.inventory_items (id, name, sku, category_id, description, unit_type, current_quantity, min_quantity, purchase_price, sale_price, location, expiry_date, batch_number, clinic_id, created_at, updated_at, created_by, is_active) FROM stdin;
-item-1746137752869	Test Ürün	TST-001	cat-1746137575186	Test ürün açıklaması	adet	100	20	5000	7500	Depo-A	2025-12-31	B001	75	2025-05-01 22:15:52.821129	2025-05-01 22:15:52.821129	27	t
+item-1746191754351	Amoksilin 500gr	AMOKSILIN-SKU	cat-1746190827498	Amoksilin Açıklama	Unit	10	10	20	25	Cabinet	2026-12-30	AMOKSILINBATCH	75	2025-05-02 13:15:54.307083	2025-05-02 15:48:52.430936	27	t
 \.
 
 
 --
--- TOC entry 4728 (class 0 OID 17665)
--- Dependencies: 270
+-- TOC entry 4846 (class 0 OID 17665)
+-- Dependencies: 268
 -- Data for Name: inventory_transactions; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.inventory_transactions (id, inventory_item_id, transaction_type, quantity, unit_price, total_price, transaction_date, batch_number, expiry_date, notes, performed_by_user_id, reference_id, clinic_id, created_at) FROM stdin;
-trans-1746137752930	item-1746137752869	purchase	100	\N	\N	2025-05-01 22:15:52.880182	\N	\N	Initial stock entry	27	\N	75	2025-05-01 22:15:52.880182
+trans-1746191754423	item-1746191754351	purchase	10	\N	\N	2025-05-02 13:15:54.37553	\N	\N	Initial stock entry	27	\N	75	2025-05-02 13:15:54.37553
+trans-1746193581622	item-1746191754351	adjustment	5	\N	\N	2025-05-02 13:46:21.539081	\N	\N	Quantity adjusted via item edit	27	\N	75	2025-05-02 13:46:21.539081
+trans-1746200563552	item-1746191754351	purchase	5	200	1000	2025-05-02 15:42:43.339385	AMOKSILINBATCH	2026-12-31		27	\N	75	2025-05-02 15:42:43.339385
+trans-1746200932662	item-1746191754351	usage	10	\N	\N	2025-05-02 15:48:52.430936		2027-12-30		27	\N	75	2025-05-02 15:48:52.430936
 \.
 
 
 --
--- TOC entry 4701 (class 0 OID 16872)
--- Dependencies: 243
+-- TOC entry 4819 (class 0 OID 16872)
+-- Dependencies: 241
 -- Data for Name: medical_services; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2036,8 +2569,18 @@ COPY public.medical_services (medical_service_id, service_name, service_category
 
 
 --
--- TOC entry 4691 (class 0 OID 16712)
--- Dependencies: 233
+-- TOC entry 4865 (class 0 OID 18084)
+-- Dependencies: 287
+-- Data for Name: medications; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.medications (medication_id, treatment_id, inventory_item_id, dosage, frequency, route, start_date, end_date, notes, quantity_used, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4809 (class 0 OID 16712)
+-- Dependencies: 231
 -- Data for Name: password_reset_tokens; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2046,8 +2589,20 @@ COPY public.password_reset_tokens (reset_token_id, user_id, user_email, reset_co
 
 
 --
--- TOC entry 4722 (class 0 OID 17337)
--- Dependencies: 264
+-- TOC entry 4850 (class 0 OID 17895)
+-- Dependencies: 272
+-- Data for Name: pet_hospitalizations; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.pet_hospitalizations (id, room_id, pet_id, admission_date, expected_discharge_date, actual_discharge_date, created_at, updated_at) FROM stdin;
+3	3	65	2025-05-03 00:00:00	2025-05-06 00:00:00	\N	2025-05-03 16:05:41.931968	2025-05-03 16:05:41.931968
+4	6	59	2025-05-03 00:00:00	2025-05-06 00:00:00	\N	2025-05-03 17:04:49.719685	2025-05-03 17:04:49.719685
+\.
+
+
+--
+-- TOC entry 4840 (class 0 OID 17337)
+-- Dependencies: 262
 -- Data for Name: pet_owner_favorite_clinics; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2055,11 +2610,13 @@ COPY public.pet_owner_favorite_clinics (favorite_id, pet_owner_id, clinic_id, cr
 13	48	75	2025-04-25 08:19:58.533676+00
 15	43	75	2025-04-26 17:10:30.676211+00
 16	51	75	2025-04-27 14:38:10.876334+00
+17	54	79	2025-05-03 19:17:50.700926+00
+18	54	78	2025-05-03 19:17:51.593913+00
 \.
 
 
 --
--- TOC entry 4676 (class 0 OID 16545)
+-- TOC entry 4796 (class 0 OID 16545)
 -- Dependencies: 218
 -- Data for Name: pet_owners; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
@@ -2075,27 +2632,53 @@ COPY public.pet_owners (pet_owner_id) FROM stdin;
 48
 51
 52
+54
 \.
 
 
 --
--- TOC entry 4678 (class 0 OID 16556)
+-- TOC entry 4798 (class 0 OID 16556)
 -- Dependencies: 220
 -- Data for Name: pets; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.pets (pet_id, pet_owner_id, pet_name, pet_breed, pet_photo, pet_gender, pet_species, pet_birth_day, pet_birth_month, pet_birth_year, pet_birth_date, chip_number) FROM stdin;
 59	43	Hera	Cocker Spaniel	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-43/hera.png	Female	Dog	15	9	2021	\N	123456789098766
-83	23	Bitter	Chocolate 	\N	\N	dog	\N	\N	\N	2025-04-01	\N
-84	23	Hrhf	 Fnf	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/Hrhf.jpeg	\N	bird	\N	\N	\N	2015-05-02	\N
 64	48	Pamuk	Golden Retriever	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-48/pamuk.png	Female	Dog	28	5	2021	\N	\N
 65	51	Pablo	Poodle	\N	Male	Dog	10	5	2023	\N	\N
+86	23	Çakıl	British Shorthair	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/%C3%87ak%C4%B1l.jpeg	\N	cat	\N	\N	\N	2021-03-10	\N
+83	23	Bitter	Border Collie	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-23/Bitter.jpeg	\N	dog	\N	\N	\N	2024-07-12	\N
+89	54	3	Maine Coon	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-photos/petowner-54/3.png	Male	Cat	1	1	2023	\N	\N
 \.
 
 
 --
--- TOC entry 4688 (class 0 OID 16642)
--- Dependencies: 230
+-- TOC entry 4861 (class 0 OID 18034)
+-- Dependencies: 283
+-- Data for Name: protocol_medications; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.protocol_medications (id, protocol_id, step_id, inventory_item_id, dosage, frequency, route, duration, notes) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4859 (class 0 OID 18020)
+-- Dependencies: 281
+-- Data for Name: protocol_steps; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.protocol_steps (step_id, protocol_id, step_order, step_name, description, duration) FROM stdin;
+1	1	1	İstirahatin sağlanması	Hayvanın diğer köpeklerden izole edilmesi ve dinlenmesinin sağlanması	7-10 gün
+2	1	2	Antibiyotik tedavisi	Sekonder bakteriyel enfeksiyonu önlemek için	7 gün
+3	1	3	Öksürük kesici tedavi	Şiddetli öksürük durumlarında uygulanır	5-7 gün
+4	1	4	Kontrol muayenesi	7 gün sonra iyileşme durumunun değerlendirilmesi	1 gün
+\.
+
+
+--
+-- TOC entry 4806 (class 0 OID 16642)
+-- Dependencies: 228
 -- Data for Name: reviews; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2104,18 +2687,39 @@ COPY public.reviews (clinic_review_id, appointment_id, clinic_id, pet_owner_id, 
 
 
 --
--- TOC entry 4686 (class 0 OID 16628)
--- Dependencies: 228
--- Data for Name: treatments; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+-- TOC entry 4855 (class 0 OID 17979)
+-- Dependencies: 277
+-- Data for Name: standard_diagnoses; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
-COPY public.treatments (treatment_id, appointment_id, description, actions, materials, diagnosis) FROM stdin;
+COPY public.standard_diagnoses (code, name, description, category, species, is_active) FROM stdin;
 \.
 
 
 --
--- TOC entry 4725 (class 0 OID 17596)
--- Dependencies: 267
+-- TOC entry 4857 (class 0 OID 18008)
+-- Dependencies: 279
+-- Data for Name: treatment_protocols; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.treatment_protocols (protocol_id, protocol_name, target_condition, description, species, follow_up_days, is_active, created_at, updated_at) FROM stdin;
+1	Kennel Öksürüğü Tedavisi	Köpeklerde Kennel Öksürüğü	Köpeklerde bulaşıcı tracheobronchitis (kennel öksürüğü) için standart tedavi protokolü	dog	7	t	2025-05-03 20:27:03.505853	2025-05-03 20:27:03.505853
+\.
+
+
+--
+-- TOC entry 4863 (class 0 OID 18058)
+-- Dependencies: 285
+-- Data for Name: treatments; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
+--
+
+COPY public.treatments (treatment_id, diagnosis_id, treatment_type, treatment_name, description, start_date, end_date, status, notes, outcome, protocol_id, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 4843 (class 0 OID 17596)
+-- Dependencies: 265
 -- Data for Name: user_tokens; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2123,16 +2727,25 @@ COPY public.user_tokens (user_id, user_token_expo) FROM stdin;
 23	ExponentPushToken[0IxQL-Cuy9HpnOpAe-ZfzE]
 25	ExponentPushToken[0IxQL-Cuy9HpnOpAe-ZfzE]
 25	ExponentPushToken[n0UcyZPsF8AG1C6H4Vv23H]
+23	ExponentPushToken[W4jvVnLxhZzBYWq1EGmN_8]
+23	ExponentPushToken[Qdl_d4LENYVY7exof8j5rj]
+23	ExponentPushToken[S-jhWNK3ZnQpcdItERr0zL]
+23	ExponentPushToken[ZtisO2Lam6B0I0NHjbolNV]
+23	ExponentPushToken[BrUDbyMHfz9OzL-md6HJoI]
+23	ExponentPushToken[SV-um5NMot68le1Pf2gHaT]
+43	ExponentPushToken[hpcT2kJiNAflybIbuuehtU]
+27	ExponentPushToken[hpcT2kJiNAflybIbuuehtU]
 \.
 
 
 --
--- TOC entry 4674 (class 0 OID 16518)
+-- TOC entry 4794 (class 0 OID 16518)
 -- Dependencies: 216
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.users (user_id, user_type, user_name, user_surname, user_email, user_password, user_phone, user_address, user_profile_photo, user_created_at, user_updated_at) FROM stdin;
+54	pet_owner	Yücel	Çöllü	yucelcll@gm.com	$2b$10$0YlK2AI2m5ZfmzoUVaufv.r15gZNw46./48cAfzTfxQE7oEzSO7kK	(233) 412-3123	xxxasda123	https://petlyst-s3.s3.eu-central-1.amazonaws.com/pet-owner-photos/petowner-54/y-cel-1746299326746.png	2025-05-03 19:00:17.125115	2025-05-03 19:08:48.120028
 24	veterinarian	veteriner	veteriner	veteriner@gmail.com	Veteriner123	\N	\N	\N	2025-03-11 16:45:22.642386	2025-03-11 16:45:22.642386
 25	veterinarian	Korhan	Maral	korhan@gmail.com	$2b$10$K8fnwYm.War.v7AFFXT1Cet57z8qtA7.CUV/LfKQG8QurYnHt1a2W	\N	\N	\N	2025-03-12 15:01:43.600885	2025-03-12 15:01:43.600885
 26	admin	Umut	Yananer	umutdncr@gmail.com	$2b$10$XcGmKKT1Mux5eIGB7BN24.AOWpDRumSSQrG.yxyhtFNXn/hnZa7q2	\N	\N	\N	2025-03-12 15:02:48.836524	2025-03-12 15:02:48.836524
@@ -2163,8 +2776,8 @@ COPY public.users (user_id, user_type, user_name, user_surname, user_email, user
 
 
 --
--- TOC entry 4717 (class 0 OID 17173)
--- Dependencies: 259
+-- TOC entry 4835 (class 0 OID 17173)
+-- Dependencies: 257
 -- Data for Name: veterinarian_albums; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2177,21 +2790,20 @@ COPY public.veterinarian_albums (veterinarian_album_photo_id, veterinarian_id, v
 
 
 --
--- TOC entry 4713 (class 0 OID 17104)
--- Dependencies: 255
+-- TOC entry 4831 (class 0 OID 17104)
+-- Dependencies: 253
 -- Data for Name: veterinarian_certifications; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.veterinarian_certifications (certification_id, veterinarian_id, certification_name, issuing_organization, issue_date, certification_number, created_at) FROM stdin;
-4	25	Veterinary Surgery Specialist	Turkish Board of Veterinarians	2021-11-30	\N	2025-03-31 23:56:13.768918
 5	36	Veterinary Surgery Specialist	Turkish Board of Veterinarians	0002-01-01	ABVP-1234	2025-04-06 16:25:33.812513
 6	27	Veterinary Surgery Specialist	Turkish Board of Veterinarians	2022-09-30	\N	2025-04-26 17:21:17.108385
 \.
 
 
 --
--- TOC entry 4711 (class 0 OID 17083)
--- Dependencies: 253
+-- TOC entry 4829 (class 0 OID 17083)
+-- Dependencies: 251
 -- Data for Name: veterinarian_education; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2204,8 +2816,8 @@ COPY public.veterinarian_education (education_id, veterinarian_id, school_name, 
 
 
 --
--- TOC entry 4715 (class 0 OID 17124)
--- Dependencies: 257
+-- TOC entry 4833 (class 0 OID 17124)
+-- Dependencies: 255
 -- Data for Name: veterinarian_expertise; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
@@ -2266,33 +2878,33 @@ COPY public.veterinarian_expertise (expertise_id, veterinarian_id, expertise_are
 
 
 --
--- TOC entry 4675 (class 0 OID 16530)
+-- TOC entry 4795 (class 0 OID 16530)
 -- Dependencies: 217
 -- Data for Name: veterinarians; Type: TABLE DATA; Schema: public; Owner: petlystAdmin
 --
 
 COPY public.veterinarians (veterinarian_id, veterinarian_graduate_barcode, veterinarian_verification_status, veterinarian_tc_number, veterinarian_created_at, veterinarian_updated_at, biography, preferred_languages, is_profile_public, slug) FROM stdin;
+24	\N	not_verified	b9ea071404d499044df72f9a49d805f0:23bbf7c1945d0c79bd8415bd28dfb4b8	2025-03-11 16:46:18.769778	2025-03-11 16:46:18.769778	\N	\N	f	dr-veteriner-veteriner
 40	KEMALBARCODE	verified	b30faa20863fd848c00e2113d51c4e18:68fa24d74a77f040eec02a6be7110604	2025-04-08 12:03:49.230285	2025-04-08 12:03:49.230285	\N	\N	t	dr-kemal-eray-905bml
 38	EGEHANBARCODE	verified	0087f302072f271b7a499be7ffa10590:a328e75af49842a568c0563a68b85e71	2025-04-06 17:23:30.638374	2025-04-06 17:23:30.638374	\N	\N	f	dr-egehan-zkan
-27	MEHMETBARCODENUMBER	verified	48c0bcb3a4f2eb27e215ef9c96a9d277:8fc53eec5c3f69faa5273c11853ff0e2	2025-03-27 10:21:52.421944	2025-03-31 19:48:26.145876	Dr. Mehmet is a passionate veterinarian dedicated to providing compassionate care for animals of all kinds. With years of experience in small animal medicine, he combines expertise with a gentle approach to ensure every pet receives the best treatment.	{english,german}	f	dr-mehmet-ztrk
+35	\N	not_verified	\N	2025-04-04 17:10:47.279434	2025-04-04 17:10:47.279434	\N	\N	t	dr-saltuk-emre
 50	ERDEMBARCODE	verified	2f93b36b211228ae2cfcd53eebed7198:b93b66add234fedbe184f1d3544678b1	2025-04-26 17:15:48.070691	2025-04-26 17:15:48.070691	\N	\N	t	dr-erdem-ege-n1sks4
+53	\N	not_verified	\N	2025-05-01 13:23:41.970418	2025-05-01 13:35:19.244129	Kendini hayvanlara adamış bir veteriner. Ben Korhan Beyin kardeşi Orhan Bey	{english,turkish,german}	f	dr-orhan-korhan
 49	123213123213131	verified	e0f5f1744d573831fde604ac5e21e899:3d81292ffe609aa3f393a1afa09e751d	2025-04-25 12:24:57.387543	2025-04-25 12:24:57.387543	\N	\N	f	dr-petlyst-vet
 34	KUTLUCANBARCODE	verified	1a5d0cc11c50acf6bc40f32e216fb54d:52463f23229af9629a23ae86cc40f54f	2025-04-03 19:21:25.297825	2025-04-03 19:21:25.297825	\N	\N	t	dr-kutlucan-ztrk
+27	MEHMETBARCODENUMBER	verified	48c0bcb3a4f2eb27e215ef9c96a9d277:8fc53eec5c3f69faa5273c11853ff0e2	2025-03-27 10:21:52.421944	2025-03-31 19:48:26.145876	Dr. Mehmet is a passionate veterinarian dedicated to providing compassionate care for animals of all kinds. With years of experience in small animal medicine, he combines expertise with a gentle approach to ensure every pet receives the best treatment.	{english,german}	t	dr-mehmet-ztrk
 36	OSMANBARCODE	verified	2af08d70a0eb385ff0ceca4a1fb38f62:fdb280f49648d1d96fa1e7f5830db22f	2025-04-06 16:24:40.116182	2025-04-06 16:27:04.420483	Dr. Osman İç is a dedicated veterinary specialist in internal medicine, with a deep focus on diagnosing and managing complex diseases in companion animals. Known for his analytical approach and compassionate care, he strives to improve each patient’s quality of life through precise, evidence-based treatments.	{english,turkish}	t	dr-osman-i
 39	TUNABARCODE	verified	624834a136c655af396ba64ff9ad8d5b:9474747b490ecee5952349621a62a79f	2025-04-08 11:10:26.688737	2025-04-08 11:10:26.688737	\N	\N	f	dr-tuna-ll
 30	TIMURBARCODE	verified	617a47e3060b351b634eb65f0ea0ccad:e0c35035c57947024cedce157225c72c	2025-04-01 00:21:13.72516	2025-04-01 00:21:13.72516	\N	\N	t	dr-timur-canda
-24	\N	not_verified	b9ea071404d499044df72f9a49d805f0:23bbf7c1945d0c79bd8415bd28dfb4b8	2025-03-11 16:46:18.769778	2025-03-11 16:46:18.769778	\N	\N	f	dr-veteriner-veteriner
 33	EYUPBARCODE	verified	e168445633eed980313c951fbdd75ce0:7bbbbc678ebeb213a07ea91cc27c0b72	2025-04-01 14:50:29.451547	2025-04-01 14:50:29.451547	\N	\N	f	dr-eyp-erolu
 25	DENEMEBARCODENUMBER	verified	fffa86d3009aaa41d983335a2c98cad2:dfcc12574b47a548ec343df3573899fe	2025-03-12 15:01:43.660487	2025-03-31 23:32:07.075703	Dr. Korhan is a passionate veterinarian dedicated to providing compassionate care for animals of all kinds. With years of experience in small animal medicine, he combines expertise with a gentle approach to ensure every pet receives the best treatment.	{turkish,azerbaijan,german,english}	t	dr-korhan-maral
 37	ERCANBARCODE	verified	7dbe6b38d23ad9826bc788dde9f0822d:e5ea963bd7db6fa67e66f18485a8b34d	2025-04-06 16:54:24.964489	2025-04-06 16:54:24.964489	\N	\N	f	dr-ercan-erolu
-35	\N	not_verified	\N	2025-04-04 17:10:47.279434	2025-04-04 17:10:47.279434	\N	\N	t	dr-saltuk-emre
-53	\N	not_verified	\N	2025-05-01 13:23:41.970418	2025-05-01 13:35:19.244129	Kendini hayvanlara adamış bir veteriner. Ben Korhan Beyin kardeşi Orhan Bey	{english,turkish,german}	f	dr-orhan-korhan
 \.
 
 
 --
--- TOC entry 4760 (class 0 OID 0)
--- Dependencies: 246
+-- TOC entry 4905 (class 0 OID 0)
+-- Dependencies: 244
 -- Name: additional_services_additional_service_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2300,8 +2912,8 @@ SELECT pg_catalog.setval('public.additional_services_additional_service_id_seq',
 
 
 --
--- TOC entry 4761 (class 0 OID 0)
--- Dependencies: 238
+-- TOC entry 4906 (class 0 OID 0)
+-- Dependencies: 236
 -- Name: animal_types_animal_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2309,17 +2921,17 @@ SELECT pg_catalog.setval('public.animal_types_animal_type_id_seq', 18, true);
 
 
 --
--- TOC entry 4762 (class 0 OID 0)
+-- TOC entry 4907 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: appointments_appointment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.appointments_appointment_id_seq', 80, true);
+SELECT pg_catalog.setval('public.appointments_appointment_id_seq', 88, true);
 
 
 --
--- TOC entry 4763 (class 0 OID 0)
--- Dependencies: 248
+-- TOC entry 4908 (class 0 OID 0)
+-- Dependencies: 246
 -- Name: clinic_additional_services_clinic_additional_service_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2327,8 +2939,8 @@ SELECT pg_catalog.setval('public.clinic_additional_services_clinic_additional_se
 
 
 --
--- TOC entry 4764 (class 0 OID 0)
--- Dependencies: 240
+-- TOC entry 4909 (class 0 OID 0)
+-- Dependencies: 238
 -- Name: clinic_animal_types_clinic_animal_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2336,8 +2948,17 @@ SELECT pg_catalog.setval('public.clinic_animal_types_clinic_animal_type_id_seq',
 
 
 --
--- TOC entry 4765 (class 0 OID 0)
--- Dependencies: 236
+-- TOC entry 4910 (class 0 OID 0)
+-- Dependencies: 269
+-- Name: clinic_hospitalization_rooms_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.clinic_hospitalization_rooms_id_seq', 6, true);
+
+
+--
+-- TOC entry 4911 (class 0 OID 0)
+-- Dependencies: 234
 -- Name: clinic_locations_location_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2345,8 +2966,8 @@ SELECT pg_catalog.setval('public.clinic_locations_location_id_seq', 54, true);
 
 
 --
--- TOC entry 4766 (class 0 OID 0)
--- Dependencies: 244
+-- TOC entry 4912 (class 0 OID 0)
+-- Dependencies: 242
 -- Name: clinic_medical_services_clinic_medical_service_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2354,17 +2975,17 @@ SELECT pg_catalog.setval('public.clinic_medical_services_clinic_medical_service_
 
 
 --
--- TOC entry 4767 (class 0 OID 0)
--- Dependencies: 266
+-- TOC entry 4913 (class 0 OID 0)
+-- Dependencies: 264
 -- Name: clinic_patients_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.clinic_patients_id_seq', 2, true);
+SELECT pg_catalog.setval('public.clinic_patients_id_seq', 4, true);
 
 
 --
--- TOC entry 4768 (class 0 OID 0)
--- Dependencies: 250
+-- TOC entry 4914 (class 0 OID 0)
+-- Dependencies: 248
 -- Name: clinic_phone_numbers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2372,8 +2993,8 @@ SELECT pg_catalog.setval('public.clinic_phone_numbers_id_seq', 61, true);
 
 
 --
--- TOC entry 4769 (class 0 OID 0)
--- Dependencies: 234
+-- TOC entry 4915 (class 0 OID 0)
+-- Dependencies: 232
 -- Name: clinic_social_media_link_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2381,8 +3002,8 @@ SELECT pg_catalog.setval('public.clinic_social_media_link_id_seq', 37, true);
 
 
 --
--- TOC entry 4770 (class 0 OID 0)
--- Dependencies: 261
+-- TOC entry 4916 (class 0 OID 0)
+-- Dependencies: 259
 -- Name: clinic_veterinarians_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2390,7 +3011,7 @@ SELECT pg_catalog.setval('public.clinic_veterinarians_id_seq', 23, true);
 
 
 --
--- TOC entry 4771 (class 0 OID 0)
+-- TOC entry 4917 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: clinicalbum_clinic_album_photo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
@@ -2399,8 +3020,8 @@ SELECT pg_catalog.setval('public.clinicalbum_clinic_album_photo_id_seq', 85, tru
 
 
 --
--- TOC entry 4772 (class 0 OID 0)
--- Dependencies: 229
+-- TOC entry 4918 (class 0 OID 0)
+-- Dependencies: 227
 -- Name: clinicreviews_clinic_review_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2408,7 +3029,7 @@ SELECT pg_catalog.setval('public.clinicreviews_clinic_review_id_seq', 1, false);
 
 
 --
--- TOC entry 4773 (class 0 OID 0)
+-- TOC entry 4919 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: clinics_clinic_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
@@ -2417,8 +3038,26 @@ SELECT pg_catalog.setval('public.clinics_clinic_id_seq', 80, true);
 
 
 --
--- TOC entry 4774 (class 0 OID 0)
--- Dependencies: 242
+-- TOC entry 4920 (class 0 OID 0)
+-- Dependencies: 275
+-- Name: diagnoses_diagnosis_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.diagnoses_diagnosis_id_seq', 1, false);
+
+
+--
+-- TOC entry 4921 (class 0 OID 0)
+-- Dependencies: 273
+-- Name: examinations_examination_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.examinations_examination_id_seq', 1, true);
+
+
+--
+-- TOC entry 4922 (class 0 OID 0)
+-- Dependencies: 240
 -- Name: medical_services_medical_service_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2426,35 +3065,80 @@ SELECT pg_catalog.setval('public.medical_services_medical_service_id_seq', 24, t
 
 
 --
--- TOC entry 4775 (class 0 OID 0)
--- Dependencies: 232
+-- TOC entry 4923 (class 0 OID 0)
+-- Dependencies: 286
+-- Name: medications_medication_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.medications_medication_id_seq', 1, false);
+
+
+--
+-- TOC entry 4924 (class 0 OID 0)
+-- Dependencies: 230
 -- Name: password_reset_tokens_reset_token_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.password_reset_tokens_reset_token_id_seq', 18, true);
+SELECT pg_catalog.setval('public.password_reset_tokens_reset_token_id_seq', 20, true);
 
 
 --
--- TOC entry 4776 (class 0 OID 0)
--- Dependencies: 263
+-- TOC entry 4925 (class 0 OID 0)
+-- Dependencies: 271
+-- Name: pet_hospitalizations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.pet_hospitalizations_id_seq', 4, true);
+
+
+--
+-- TOC entry 4926 (class 0 OID 0)
+-- Dependencies: 261
 -- Name: pet_owner_favorite_clinics_favorite_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.pet_owner_favorite_clinics_favorite_id_seq', 16, true);
+SELECT pg_catalog.setval('public.pet_owner_favorite_clinics_favorite_id_seq', 18, true);
 
 
 --
--- TOC entry 4777 (class 0 OID 0)
+-- TOC entry 4927 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: pets_pet_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.pets_pet_id_seq', 84, true);
+SELECT pg_catalog.setval('public.pets_pet_id_seq', 89, true);
 
 
 --
--- TOC entry 4778 (class 0 OID 0)
--- Dependencies: 227
+-- TOC entry 4928 (class 0 OID 0)
+-- Dependencies: 282
+-- Name: protocol_medications_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.protocol_medications_id_seq', 1, false);
+
+
+--
+-- TOC entry 4929 (class 0 OID 0)
+-- Dependencies: 280
+-- Name: protocol_steps_step_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.protocol_steps_step_id_seq', 4, true);
+
+
+--
+-- TOC entry 4930 (class 0 OID 0)
+-- Dependencies: 278
+-- Name: treatment_protocols_protocol_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
+--
+
+SELECT pg_catalog.setval('public.treatment_protocols_protocol_id_seq', 1, true);
+
+
+--
+-- TOC entry 4931 (class 0 OID 0)
+-- Dependencies: 284
 -- Name: treatments_treatment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2462,17 +3146,17 @@ SELECT pg_catalog.setval('public.treatments_treatment_id_seq', 1, false);
 
 
 --
--- TOC entry 4779 (class 0 OID 0)
+-- TOC entry 4932 (class 0 OID 0)
 -- Dependencies: 215
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 53, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 55, true);
 
 
 --
--- TOC entry 4780 (class 0 OID 0)
--- Dependencies: 258
+-- TOC entry 4933 (class 0 OID 0)
+-- Dependencies: 256
 -- Name: veterinarian_album_veterinarian_album_photo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2480,8 +3164,8 @@ SELECT pg_catalog.setval('public.veterinarian_album_veterinarian_album_photo_id_
 
 
 --
--- TOC entry 4781 (class 0 OID 0)
--- Dependencies: 260
+-- TOC entry 4934 (class 0 OID 0)
+-- Dependencies: 258
 -- Name: veterinarian_albums_veterinarian_album_photo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2489,8 +3173,8 @@ SELECT pg_catalog.setval('public.veterinarian_albums_veterinarian_album_photo_id
 
 
 --
--- TOC entry 4782 (class 0 OID 0)
--- Dependencies: 254
+-- TOC entry 4935 (class 0 OID 0)
+-- Dependencies: 252
 -- Name: veterinarian_certifications_certification_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2498,8 +3182,8 @@ SELECT pg_catalog.setval('public.veterinarian_certifications_certification_id_se
 
 
 --
--- TOC entry 4783 (class 0 OID 0)
--- Dependencies: 252
+-- TOC entry 4936 (class 0 OID 0)
+-- Dependencies: 250
 -- Name: veterinarian_education_education_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2507,8 +3191,8 @@ SELECT pg_catalog.setval('public.veterinarian_education_education_id_seq', 10, t
 
 
 --
--- TOC entry 4784 (class 0 OID 0)
--- Dependencies: 256
+-- TOC entry 4937 (class 0 OID 0)
+-- Dependencies: 254
 -- Name: veterinarian_expertise_expertise_id_seq; Type: SEQUENCE SET; Schema: public; Owner: petlystAdmin
 --
 
@@ -2516,7 +3200,7 @@ SELECT pg_catalog.setval('public.veterinarian_expertise_expertise_id_seq', 54, t
 
 
 --
--- TOC entry 4436 (class 2606 OID 16910)
+-- TOC entry 4520 (class 2606 OID 16910)
 -- Name: additional_services additional_services_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2525,7 +3209,7 @@ ALTER TABLE ONLY public.additional_services
 
 
 --
--- TOC entry 4438 (class 2606 OID 16912)
+-- TOC entry 4522 (class 2606 OID 16912)
 -- Name: additional_services additional_services_service_name_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2534,7 +3218,7 @@ ALTER TABLE ONLY public.additional_services
 
 
 --
--- TOC entry 4420 (class 2606 OID 16850)
+-- TOC entry 4504 (class 2606 OID 16850)
 -- Name: animal_types animal_types_animal_type_name_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2543,7 +3227,7 @@ ALTER TABLE ONLY public.animal_types
 
 
 --
--- TOC entry 4422 (class 2606 OID 16848)
+-- TOC entry 4506 (class 2606 OID 16848)
 -- Name: animal_types animal_types_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2552,7 +3236,7 @@ ALTER TABLE ONLY public.animal_types
 
 
 --
--- TOC entry 4406 (class 2606 OID 16611)
+-- TOC entry 4492 (class 2606 OID 16611)
 -- Name: appointments appointments_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2561,7 +3245,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4440 (class 2606 OID 16922)
+-- TOC entry 4524 (class 2606 OID 16922)
 -- Name: clinic_additional_services clinic_additional_services_clinic_id_additional_service_id_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2570,7 +3254,7 @@ ALTER TABLE ONLY public.clinic_additional_services
 
 
 --
--- TOC entry 4442 (class 2606 OID 16920)
+-- TOC entry 4526 (class 2606 OID 16920)
 -- Name: clinic_additional_services clinic_additional_services_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2579,7 +3263,7 @@ ALTER TABLE ONLY public.clinic_additional_services
 
 
 --
--- TOC entry 4424 (class 2606 OID 16860)
+-- TOC entry 4508 (class 2606 OID 16860)
 -- Name: clinic_animal_types clinic_animal_types_clinic_id_animal_type_id_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2588,7 +3272,7 @@ ALTER TABLE ONLY public.clinic_animal_types
 
 
 --
--- TOC entry 4426 (class 2606 OID 16858)
+-- TOC entry 4510 (class 2606 OID 16858)
 -- Name: clinic_animal_types clinic_animal_types_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2597,7 +3281,25 @@ ALTER TABLE ONLY public.clinic_animal_types
 
 
 --
--- TOC entry 4418 (class 2606 OID 16813)
+-- TOC entry 4568 (class 2606 OID 17888)
+-- Name: clinic_hospitalization_rooms clinic_hospitalization_rooms_clinic_id_room_name_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_hospitalization_rooms
+    ADD CONSTRAINT clinic_hospitalization_rooms_clinic_id_room_name_key UNIQUE (clinic_id, room_name);
+
+
+--
+-- TOC entry 4570 (class 2606 OID 17886)
+-- Name: clinic_hospitalization_rooms clinic_hospitalization_rooms_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_hospitalization_rooms
+    ADD CONSTRAINT clinic_hospitalization_rooms_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4502 (class 2606 OID 16813)
 -- Name: clinic_locations clinic_locations_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2606,7 +3308,7 @@ ALTER TABLE ONLY public.clinic_locations
 
 
 --
--- TOC entry 4432 (class 2606 OID 16890)
+-- TOC entry 4516 (class 2606 OID 16890)
 -- Name: clinic_medical_services clinic_medical_services_clinic_id_medical_service_id_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2615,7 +3317,7 @@ ALTER TABLE ONLY public.clinic_medical_services
 
 
 --
--- TOC entry 4434 (class 2606 OID 16888)
+-- TOC entry 4518 (class 2606 OID 16888)
 -- Name: clinic_medical_services clinic_medical_services_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2624,7 +3326,7 @@ ALTER TABLE ONLY public.clinic_medical_services
 
 
 --
--- TOC entry 4467 (class 2606 OID 17581)
+-- TOC entry 4551 (class 2606 OID 17581)
 -- Name: clinic_patients clinic_patients_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2633,7 +3335,7 @@ ALTER TABLE ONLY public.clinic_patients
 
 
 --
--- TOC entry 4444 (class 2606 OID 16962)
+-- TOC entry 4528 (class 2606 OID 16962)
 -- Name: clinic_phone_numbers clinic_phone_numbers_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2642,7 +3344,7 @@ ALTER TABLE ONLY public.clinic_phone_numbers
 
 
 --
--- TOC entry 4414 (class 2606 OID 16779)
+-- TOC entry 4498 (class 2606 OID 16779)
 -- Name: clinic_social_media clinic_social_media_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2651,7 +3353,7 @@ ALTER TABLE ONLY public.clinic_social_media
 
 
 --
--- TOC entry 4454 (class 2606 OID 17249)
+-- TOC entry 4538 (class 2606 OID 17249)
 -- Name: clinic_veterinarians clinic_veterinarians_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2660,7 +3362,7 @@ ALTER TABLE ONLY public.clinic_veterinarians
 
 
 --
--- TOC entry 4404 (class 2606 OID 16595)
+-- TOC entry 4490 (class 2606 OID 16595)
 -- Name: clinic_albums clinicalbum_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2669,7 +3371,7 @@ ALTER TABLE ONLY public.clinic_albums
 
 
 --
--- TOC entry 4410 (class 2606 OID 16650)
+-- TOC entry 4494 (class 2606 OID 16650)
 -- Name: reviews clinicreviews_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2678,7 +3380,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4399 (class 2606 OID 16580)
+-- TOC entry 4485 (class 2606 OID 16580)
 -- Name: clinics clinics_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2687,7 +3389,7 @@ ALTER TABLE ONLY public.clinics
 
 
 --
--- TOC entry 4401 (class 2606 OID 17308)
+-- TOC entry 4487 (class 2606 OID 17308)
 -- Name: clinics clinics_slug_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2696,7 +3398,25 @@ ALTER TABLE ONLY public.clinics
 
 
 --
--- TOC entry 4473 (class 2606 OID 17622)
+-- TOC entry 4576 (class 2606 OID 17973)
+-- Name: diagnoses diagnoses_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.diagnoses
+    ADD CONSTRAINT diagnoses_pkey PRIMARY KEY (diagnosis_id);
+
+
+--
+-- TOC entry 4574 (class 2606 OID 17944)
+-- Name: examinations examinations_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.examinations
+    ADD CONSTRAINT examinations_pkey PRIMARY KEY (examination_id);
+
+
+--
+-- TOC entry 4557 (class 2606 OID 17622)
 -- Name: inventory_categories inventory_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2705,7 +3425,7 @@ ALTER TABLE ONLY public.inventory_categories
 
 
 --
--- TOC entry 4477 (class 2606 OID 17642)
+-- TOC entry 4561 (class 2606 OID 17642)
 -- Name: inventory_items inventory_items_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2714,7 +3434,7 @@ ALTER TABLE ONLY public.inventory_items
 
 
 --
--- TOC entry 4482 (class 2606 OID 17673)
+-- TOC entry 4566 (class 2606 OID 17673)
 -- Name: inventory_transactions inventory_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2723,7 +3443,7 @@ ALTER TABLE ONLY public.inventory_transactions
 
 
 --
--- TOC entry 4428 (class 2606 OID 16878)
+-- TOC entry 4512 (class 2606 OID 16878)
 -- Name: medical_services medical_services_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2732,7 +3452,7 @@ ALTER TABLE ONLY public.medical_services
 
 
 --
--- TOC entry 4430 (class 2606 OID 16880)
+-- TOC entry 4514 (class 2606 OID 16880)
 -- Name: medical_services medical_services_service_name_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2741,7 +3461,16 @@ ALTER TABLE ONLY public.medical_services
 
 
 --
--- TOC entry 4412 (class 2606 OID 16719)
+-- TOC entry 4588 (class 2606 OID 18095)
+-- Name: medications medications_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.medications
+    ADD CONSTRAINT medications_pkey PRIMARY KEY (medication_id);
+
+
+--
+-- TOC entry 4496 (class 2606 OID 16719)
 -- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2750,7 +3479,16 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 4463 (class 2606 OID 17343)
+-- TOC entry 4572 (class 2606 OID 17902)
+-- Name: pet_hospitalizations pet_hospitalizations_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.pet_hospitalizations
+    ADD CONSTRAINT pet_hospitalizations_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4547 (class 2606 OID 17343)
 -- Name: pet_owner_favorite_clinics pet_owner_favorite_clinics_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2759,7 +3497,7 @@ ALTER TABLE ONLY public.pet_owner_favorite_clinics
 
 
 --
--- TOC entry 4393 (class 2606 OID 16549)
+-- TOC entry 4479 (class 2606 OID 16549)
 -- Name: pet_owners petowners_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2768,7 +3506,7 @@ ALTER TABLE ONLY public.pet_owners
 
 
 --
--- TOC entry 4395 (class 2606 OID 17604)
+-- TOC entry 4481 (class 2606 OID 17604)
 -- Name: pets pets_chip_number_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2777,7 +3515,7 @@ ALTER TABLE ONLY public.pets
 
 
 --
--- TOC entry 4397 (class 2606 OID 16563)
+-- TOC entry 4483 (class 2606 OID 16563)
 -- Name: pets pets_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2786,7 +3524,43 @@ ALTER TABLE ONLY public.pets
 
 
 --
--- TOC entry 4408 (class 2606 OID 16635)
+-- TOC entry 4584 (class 2606 OID 18041)
+-- Name: protocol_medications protocol_medications_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_medications
+    ADD CONSTRAINT protocol_medications_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4582 (class 2606 OID 18027)
+-- Name: protocol_steps protocol_steps_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_steps
+    ADD CONSTRAINT protocol_steps_pkey PRIMARY KEY (step_id);
+
+
+--
+-- TOC entry 4578 (class 2606 OID 17986)
+-- Name: standard_diagnoses standard_diagnoses_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.standard_diagnoses
+    ADD CONSTRAINT standard_diagnoses_pkey PRIMARY KEY (code);
+
+
+--
+-- TOC entry 4580 (class 2606 OID 18018)
+-- Name: treatment_protocols treatment_protocols_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.treatment_protocols
+    ADD CONSTRAINT treatment_protocols_pkey PRIMARY KEY (protocol_id);
+
+
+--
+-- TOC entry 4586 (class 2606 OID 18071)
 -- Name: treatments treatments_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2795,7 +3569,7 @@ ALTER TABLE ONLY public.treatments
 
 
 --
--- TOC entry 4471 (class 2606 OID 17583)
+-- TOC entry 4555 (class 2606 OID 17583)
 -- Name: clinic_patients unique_clinic_pet; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2804,7 +3578,7 @@ ALTER TABLE ONLY public.clinic_patients
 
 
 --
--- TOC entry 4416 (class 2606 OID 16781)
+-- TOC entry 4500 (class 2606 OID 16781)
 -- Name: clinic_social_media unique_clinic_platform; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2813,7 +3587,7 @@ ALTER TABLE ONLY public.clinic_social_media
 
 
 --
--- TOC entry 4465 (class 2606 OID 17345)
+-- TOC entry 4549 (class 2606 OID 17345)
 -- Name: pet_owner_favorite_clinics unique_pet_owner_clinic; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2822,7 +3596,7 @@ ALTER TABLE ONLY public.pet_owner_favorite_clinics
 
 
 --
--- TOC entry 4459 (class 2606 OID 17251)
+-- TOC entry 4543 (class 2606 OID 17251)
 -- Name: clinic_veterinarians unique_veterinarian; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2831,7 +3605,7 @@ ALTER TABLE ONLY public.clinic_veterinarians
 
 
 --
--- TOC entry 4385 (class 2606 OID 16527)
+-- TOC entry 4471 (class 2606 OID 16527)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2840,7 +3614,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4387 (class 2606 OID 16529)
+-- TOC entry 4473 (class 2606 OID 16529)
 -- Name: users users_user_email_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2849,7 +3623,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4452 (class 2606 OID 17180)
+-- TOC entry 4536 (class 2606 OID 17180)
 -- Name: veterinarian_albums veterinarian_album_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2858,7 +3632,7 @@ ALTER TABLE ONLY public.veterinarian_albums
 
 
 --
--- TOC entry 4448 (class 2606 OID 17112)
+-- TOC entry 4532 (class 2606 OID 17112)
 -- Name: veterinarian_certifications veterinarian_certifications_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2867,7 +3641,7 @@ ALTER TABLE ONLY public.veterinarian_certifications
 
 
 --
--- TOC entry 4446 (class 2606 OID 17092)
+-- TOC entry 4530 (class 2606 OID 17092)
 -- Name: veterinarian_education veterinarian_education_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2876,7 +3650,7 @@ ALTER TABLE ONLY public.veterinarian_education
 
 
 --
--- TOC entry 4450 (class 2606 OID 17130)
+-- TOC entry 4534 (class 2606 OID 17130)
 -- Name: veterinarian_expertise veterinarian_expertise_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2885,7 +3659,7 @@ ALTER TABLE ONLY public.veterinarian_expertise
 
 
 --
--- TOC entry 4389 (class 2606 OID 16539)
+-- TOC entry 4475 (class 2606 OID 16539)
 -- Name: veterinarians veterinarians_pkey; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2894,7 +3668,7 @@ ALTER TABLE ONLY public.veterinarians
 
 
 --
--- TOC entry 4391 (class 2606 OID 17213)
+-- TOC entry 4477 (class 2606 OID 17213)
 -- Name: veterinarians veterinarians_slug_key; Type: CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -2903,7 +3677,7 @@ ALTER TABLE ONLY public.veterinarians
 
 
 --
--- TOC entry 4468 (class 1259 OID 17584)
+-- TOC entry 4552 (class 1259 OID 17584)
 -- Name: idx_clinic_patients_clinic_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2911,7 +3685,7 @@ CREATE INDEX idx_clinic_patients_clinic_id ON public.clinic_patients USING btree
 
 
 --
--- TOC entry 4469 (class 1259 OID 17585)
+-- TOC entry 4553 (class 1259 OID 17585)
 -- Name: idx_clinic_patients_pet_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2919,7 +3693,7 @@ CREATE INDEX idx_clinic_patients_pet_id ON public.clinic_patients USING btree (p
 
 
 --
--- TOC entry 4402 (class 1259 OID 17309)
+-- TOC entry 4488 (class 1259 OID 17309)
 -- Name: idx_clinic_slug; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2927,7 +3701,7 @@ CREATE INDEX idx_clinic_slug ON public.clinics USING btree (slug);
 
 
 --
--- TOC entry 4455 (class 1259 OID 17262)
+-- TOC entry 4539 (class 1259 OID 17262)
 -- Name: idx_clinic_veterinarians_clinic_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2935,7 +3709,7 @@ CREATE INDEX idx_clinic_veterinarians_clinic_id ON public.clinic_veterinarians U
 
 
 --
--- TOC entry 4456 (class 1259 OID 17264)
+-- TOC entry 4540 (class 1259 OID 17264)
 -- Name: idx_clinic_veterinarians_status; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2943,7 +3717,7 @@ CREATE INDEX idx_clinic_veterinarians_status ON public.clinic_veterinarians USIN
 
 
 --
--- TOC entry 4457 (class 1259 OID 17263)
+-- TOC entry 4541 (class 1259 OID 17263)
 -- Name: idx_clinic_veterinarians_veterinarian_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2951,7 +3725,7 @@ CREATE INDEX idx_clinic_veterinarians_veterinarian_id ON public.clinic_veterinar
 
 
 --
--- TOC entry 4474 (class 1259 OID 17650)
+-- TOC entry 4558 (class 1259 OID 17650)
 -- Name: idx_inventory_items_category; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2959,7 +3733,7 @@ CREATE INDEX idx_inventory_items_category ON public.inventory_items USING btree 
 
 
 --
--- TOC entry 4475 (class 1259 OID 17762)
+-- TOC entry 4559 (class 1259 OID 17762)
 -- Name: idx_inventory_items_clinic; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2967,7 +3741,7 @@ CREATE INDEX idx_inventory_items_clinic ON public.inventory_items USING btree (c
 
 
 --
--- TOC entry 4478 (class 1259 OID 17680)
+-- TOC entry 4562 (class 1259 OID 17680)
 -- Name: idx_inventory_transactions_clinic; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2975,7 +3749,7 @@ CREATE INDEX idx_inventory_transactions_clinic ON public.inventory_transactions 
 
 
 --
--- TOC entry 4479 (class 1259 OID 17681)
+-- TOC entry 4563 (class 1259 OID 17681)
 -- Name: idx_inventory_transactions_date; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2983,7 +3757,7 @@ CREATE INDEX idx_inventory_transactions_date ON public.inventory_transactions US
 
 
 --
--- TOC entry 4480 (class 1259 OID 17679)
+-- TOC entry 4564 (class 1259 OID 17679)
 -- Name: idx_inventory_transactions_item; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2991,7 +3765,7 @@ CREATE INDEX idx_inventory_transactions_item ON public.inventory_transactions US
 
 
 --
--- TOC entry 4460 (class 1259 OID 17365)
+-- TOC entry 4544 (class 1259 OID 17365)
 -- Name: idx_pet_owner_favorite_clinics_clinic_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -2999,7 +3773,7 @@ CREATE INDEX idx_pet_owner_favorite_clinics_clinic_id ON public.pet_owner_favori
 
 
 --
--- TOC entry 4461 (class 1259 OID 17364)
+-- TOC entry 4545 (class 1259 OID 17364)
 -- Name: idx_pet_owner_favorite_clinics_pet_owner_id; Type: INDEX; Schema: public; Owner: petlystAdmin
 --
 
@@ -3007,7 +3781,7 @@ CREATE INDEX idx_pet_owner_favorite_clinics_pet_owner_id ON public.pet_owner_fav
 
 
 --
--- TOC entry 4528 (class 2620 OID 17630)
+-- TOC entry 4648 (class 2620 OID 17630)
 -- Name: inventory_categories update_inventory_categories_timestamp; Type: TRIGGER; Schema: public; Owner: petlystAdmin
 --
 
@@ -3015,7 +3789,7 @@ CREATE TRIGGER update_inventory_categories_timestamp BEFORE UPDATE ON public.inv
 
 
 --
--- TOC entry 4529 (class 2620 OID 17648)
+-- TOC entry 4649 (class 2620 OID 17648)
 -- Name: inventory_items update_inventory_items_timestamp; Type: TRIGGER; Schema: public; Owner: petlystAdmin
 --
 
@@ -3023,7 +3797,7 @@ CREATE TRIGGER update_inventory_items_timestamp BEFORE UPDATE ON public.inventor
 
 
 --
--- TOC entry 4488 (class 2606 OID 16612)
+-- TOC entry 4594 (class 2606 OID 16612)
 -- Name: appointments appointments_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3032,7 +3806,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4505 (class 2606 OID 16928)
+-- TOC entry 4610 (class 2606 OID 16928)
 -- Name: clinic_additional_services clinic_additional_services_additional_service_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3041,7 +3815,7 @@ ALTER TABLE ONLY public.clinic_additional_services
 
 
 --
--- TOC entry 4506 (class 2606 OID 16923)
+-- TOC entry 4611 (class 2606 OID 16923)
 -- Name: clinic_additional_services clinic_additional_services_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3050,7 +3824,7 @@ ALTER TABLE ONLY public.clinic_additional_services
 
 
 --
--- TOC entry 4501 (class 2606 OID 16866)
+-- TOC entry 4606 (class 2606 OID 16866)
 -- Name: clinic_animal_types clinic_animal_types_animal_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3059,7 +3833,7 @@ ALTER TABLE ONLY public.clinic_animal_types
 
 
 --
--- TOC entry 4502 (class 2606 OID 16861)
+-- TOC entry 4607 (class 2606 OID 16861)
 -- Name: clinic_animal_types clinic_animal_types_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3068,7 +3842,16 @@ ALTER TABLE ONLY public.clinic_animal_types
 
 
 --
--- TOC entry 4500 (class 2606 OID 16814)
+-- TOC entry 4633 (class 2606 OID 17889)
+-- Name: clinic_hospitalization_rooms clinic_hospitalization_rooms_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.clinic_hospitalization_rooms
+    ADD CONSTRAINT clinic_hospitalization_rooms_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(clinic_id);
+
+
+--
+-- TOC entry 4605 (class 2606 OID 16814)
 -- Name: clinic_locations clinic_locations_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3077,7 +3860,7 @@ ALTER TABLE ONLY public.clinic_locations
 
 
 --
--- TOC entry 4503 (class 2606 OID 16891)
+-- TOC entry 4608 (class 2606 OID 16891)
 -- Name: clinic_medical_services clinic_medical_services_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3086,7 +3869,7 @@ ALTER TABLE ONLY public.clinic_medical_services
 
 
 --
--- TOC entry 4504 (class 2606 OID 16896)
+-- TOC entry 4609 (class 2606 OID 16896)
 -- Name: clinic_medical_services clinic_medical_services_medical_service_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3095,7 +3878,7 @@ ALTER TABLE ONLY public.clinic_medical_services
 
 
 --
--- TOC entry 4519 (class 2606 OID 17586)
+-- TOC entry 4624 (class 2606 OID 17586)
 -- Name: clinic_patients clinic_patients_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3104,7 +3887,7 @@ ALTER TABLE ONLY public.clinic_patients
 
 
 --
--- TOC entry 4520 (class 2606 OID 17591)
+-- TOC entry 4625 (class 2606 OID 17591)
 -- Name: clinic_patients clinic_patients_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3113,7 +3896,7 @@ ALTER TABLE ONLY public.clinic_patients
 
 
 --
--- TOC entry 4507 (class 2606 OID 16963)
+-- TOC entry 4612 (class 2606 OID 16963)
 -- Name: clinic_phone_numbers clinic_phone_numbers_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3122,7 +3905,7 @@ ALTER TABLE ONLY public.clinic_phone_numbers
 
 
 --
--- TOC entry 4499 (class 2606 OID 16782)
+-- TOC entry 4604 (class 2606 OID 16782)
 -- Name: clinic_social_media clinic_social_media_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3131,7 +3914,7 @@ ALTER TABLE ONLY public.clinic_social_media
 
 
 --
--- TOC entry 4515 (class 2606 OID 17252)
+-- TOC entry 4620 (class 2606 OID 17252)
 -- Name: clinic_veterinarians clinic_veterinarians_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3140,7 +3923,7 @@ ALTER TABLE ONLY public.clinic_veterinarians
 
 
 --
--- TOC entry 4516 (class 2606 OID 17257)
+-- TOC entry 4621 (class 2606 OID 17257)
 -- Name: clinic_veterinarians clinic_veterinarians_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3149,7 +3932,7 @@ ALTER TABLE ONLY public.clinic_veterinarians
 
 
 --
--- TOC entry 4487 (class 2606 OID 16596)
+-- TOC entry 4593 (class 2606 OID 16596)
 -- Name: clinic_albums clinicalbum_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3158,7 +3941,7 @@ ALTER TABLE ONLY public.clinic_albums
 
 
 --
--- TOC entry 4492 (class 2606 OID 16666)
+-- TOC entry 4597 (class 2606 OID 16666)
 -- Name: reviews clinicreviews_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3167,7 +3950,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4493 (class 2606 OID 16656)
+-- TOC entry 4598 (class 2606 OID 16656)
 -- Name: reviews clinicreviews_clinic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3176,7 +3959,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4494 (class 2606 OID 16661)
+-- TOC entry 4599 (class 2606 OID 16661)
 -- Name: reviews clinicreviews_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3185,7 +3968,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4495 (class 2606 OID 16651)
+-- TOC entry 4600 (class 2606 OID 16651)
 -- Name: reviews clinicreviews_pet_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3194,7 +3977,7 @@ ALTER TABLE ONLY public.reviews
 
 
 --
--- TOC entry 4486 (class 2606 OID 16581)
+-- TOC entry 4592 (class 2606 OID 16581)
 -- Name: clinics clinics_clinic_operator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3203,7 +3986,16 @@ ALTER TABLE ONLY public.clinics
 
 
 --
--- TOC entry 4496 (class 2606 OID 16706)
+-- TOC entry 4639 (class 2606 OID 17974)
+-- Name: diagnoses diagnoses_examination_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.diagnoses
+    ADD CONSTRAINT diagnoses_examination_id_fkey FOREIGN KEY (examination_id) REFERENCES public.examinations(examination_id);
+
+
+--
+-- TOC entry 4601 (class 2606 OID 16706)
 -- Name: emergency_contacts emergencycontacts_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3212,7 +4004,34 @@ ALTER TABLE ONLY public.emergency_contacts
 
 
 --
--- TOC entry 4489 (class 2606 OID 17327)
+-- TOC entry 4636 (class 2606 OID 17955)
+-- Name: examinations examinations_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.examinations
+    ADD CONSTRAINT examinations_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(appointment_id);
+
+
+--
+-- TOC entry 4637 (class 2606 OID 17945)
+-- Name: examinations examinations_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.examinations
+    ADD CONSTRAINT examinations_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(pet_id);
+
+
+--
+-- TOC entry 4638 (class 2606 OID 17950)
+-- Name: examinations examinations_vet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.examinations
+    ADD CONSTRAINT examinations_vet_id_fkey FOREIGN KEY (vet_id) REFERENCES public.veterinarians(veterinarian_id);
+
+
+--
+-- TOC entry 4595 (class 2606 OID 17327)
 -- Name: appointments fk_clinic; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3221,7 +4040,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4517 (class 2606 OID 17351)
+-- TOC entry 4622 (class 2606 OID 17351)
 -- Name: pet_owner_favorite_clinics fk_clinic; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3230,7 +4049,7 @@ ALTER TABLE ONLY public.pet_owner_favorite_clinics
 
 
 --
--- TOC entry 4521 (class 2606 OID 17791)
+-- TOC entry 4626 (class 2606 OID 17791)
 -- Name: inventory_categories fk_inventory_categories_clinic; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3239,7 +4058,7 @@ ALTER TABLE ONLY public.inventory_categories
 
 
 --
--- TOC entry 4522 (class 2606 OID 17796)
+-- TOC entry 4627 (class 2606 OID 17796)
 -- Name: inventory_categories fk_inventory_categories_created_by; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3248,7 +4067,7 @@ ALTER TABLE ONLY public.inventory_categories
 
 
 --
--- TOC entry 4523 (class 2606 OID 17830)
+-- TOC entry 4628 (class 2606 OID 17830)
 -- Name: inventory_categories fk_inventory_categories_parent; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3257,7 +4076,7 @@ ALTER TABLE ONLY public.inventory_categories
 
 
 --
--- TOC entry 4524 (class 2606 OID 17835)
+-- TOC entry 4629 (class 2606 OID 17835)
 -- Name: inventory_items fk_inventory_items_category; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3266,7 +4085,7 @@ ALTER TABLE ONLY public.inventory_items
 
 
 --
--- TOC entry 4525 (class 2606 OID 17768)
+-- TOC entry 4630 (class 2606 OID 17768)
 -- Name: inventory_items fk_inventory_items_clinic; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3275,7 +4094,7 @@ ALTER TABLE ONLY public.inventory_items
 
 
 --
--- TOC entry 4526 (class 2606 OID 17773)
+-- TOC entry 4631 (class 2606 OID 17773)
 -- Name: inventory_items fk_inventory_items_created_by; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3284,7 +4103,7 @@ ALTER TABLE ONLY public.inventory_items
 
 
 --
--- TOC entry 4527 (class 2606 OID 17840)
+-- TOC entry 4632 (class 2606 OID 17840)
 -- Name: inventory_transactions fk_inventory_transactions_item; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3293,7 +4112,7 @@ ALTER TABLE ONLY public.inventory_transactions
 
 
 --
--- TOC entry 4518 (class 2606 OID 17346)
+-- TOC entry 4623 (class 2606 OID 17346)
 -- Name: pet_owner_favorite_clinics fk_pet_owner; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3302,7 +4121,7 @@ ALTER TABLE ONLY public.pet_owner_favorite_clinics
 
 
 --
--- TOC entry 4490 (class 2606 OID 17357)
+-- TOC entry 4596 (class 2606 OID 17357)
 -- Name: appointments fk_pet_owner; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3311,7 +4130,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4510 (class 2606 OID 17118)
+-- TOC entry 4615 (class 2606 OID 17118)
 -- Name: veterinarian_certifications fk_veterinarian_certifications; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3320,7 +4139,7 @@ ALTER TABLE ONLY public.veterinarian_certifications
 
 
 --
--- TOC entry 4508 (class 2606 OID 17098)
+-- TOC entry 4613 (class 2606 OID 17098)
 -- Name: veterinarian_education fk_veterinarian_education; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3329,7 +4148,7 @@ ALTER TABLE ONLY public.veterinarian_education
 
 
 --
--- TOC entry 4512 (class 2606 OID 17136)
+-- TOC entry 4617 (class 2606 OID 17136)
 -- Name: veterinarian_expertise fk_veterinarian_expertise; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3338,7 +4157,25 @@ ALTER TABLE ONLY public.veterinarian_expertise
 
 
 --
--- TOC entry 4497 (class 2606 OID 16725)
+-- TOC entry 4646 (class 2606 OID 18101)
+-- Name: medications medications_inventory_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.medications
+    ADD CONSTRAINT medications_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id);
+
+
+--
+-- TOC entry 4647 (class 2606 OID 18096)
+-- Name: medications medications_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.medications
+    ADD CONSTRAINT medications_treatment_id_fkey FOREIGN KEY (treatment_id) REFERENCES public.treatments(treatment_id);
+
+
+--
+-- TOC entry 4602 (class 2606 OID 16725)
 -- Name: password_reset_tokens password_reset_tokens_user_email_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3347,7 +4184,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 4498 (class 2606 OID 16720)
+-- TOC entry 4603 (class 2606 OID 16720)
 -- Name: password_reset_tokens password_reset_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3356,7 +4193,25 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 4484 (class 2606 OID 16550)
+-- TOC entry 4634 (class 2606 OID 17908)
+-- Name: pet_hospitalizations pet_hospitalizations_pet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.pet_hospitalizations
+    ADD CONSTRAINT pet_hospitalizations_pet_id_fkey FOREIGN KEY (pet_id) REFERENCES public.pets(pet_id);
+
+
+--
+-- TOC entry 4635 (class 2606 OID 17903)
+-- Name: pet_hospitalizations pet_hospitalizations_room_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.pet_hospitalizations
+    ADD CONSTRAINT pet_hospitalizations_room_id_fkey FOREIGN KEY (room_id) REFERENCES public.clinic_hospitalization_rooms(id);
+
+
+--
+-- TOC entry 4590 (class 2606 OID 16550)
 -- Name: pet_owners petowners_pet_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3365,7 +4220,7 @@ ALTER TABLE ONLY public.pet_owners
 
 
 --
--- TOC entry 4485 (class 2606 OID 16564)
+-- TOC entry 4591 (class 2606 OID 16564)
 -- Name: pets pets_pet_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3374,16 +4229,61 @@ ALTER TABLE ONLY public.pets
 
 
 --
--- TOC entry 4491 (class 2606 OID 16636)
--- Name: treatments treatments_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+-- TOC entry 4641 (class 2606 OID 18052)
+-- Name: protocol_medications protocol_medications_inventory_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_medications
+    ADD CONSTRAINT protocol_medications_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id);
+
+
+--
+-- TOC entry 4642 (class 2606 OID 18042)
+-- Name: protocol_medications protocol_medications_protocol_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_medications
+    ADD CONSTRAINT protocol_medications_protocol_id_fkey FOREIGN KEY (protocol_id) REFERENCES public.treatment_protocols(protocol_id);
+
+
+--
+-- TOC entry 4643 (class 2606 OID 18047)
+-- Name: protocol_medications protocol_medications_step_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_medications
+    ADD CONSTRAINT protocol_medications_step_id_fkey FOREIGN KEY (step_id) REFERENCES public.protocol_steps(step_id);
+
+
+--
+-- TOC entry 4640 (class 2606 OID 18028)
+-- Name: protocol_steps protocol_steps_protocol_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.protocol_steps
+    ADD CONSTRAINT protocol_steps_protocol_id_fkey FOREIGN KEY (protocol_id) REFERENCES public.treatment_protocols(protocol_id);
+
+
+--
+-- TOC entry 4644 (class 2606 OID 18072)
+-- Name: treatments treatments_diagnosis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
 ALTER TABLE ONLY public.treatments
-    ADD CONSTRAINT treatments_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(appointment_id);
+    ADD CONSTRAINT treatments_diagnosis_id_fkey FOREIGN KEY (diagnosis_id) REFERENCES public.diagnoses(diagnosis_id);
 
 
 --
--- TOC entry 4514 (class 2606 OID 17181)
+-- TOC entry 4645 (class 2606 OID 18077)
+-- Name: treatments treatments_protocol_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
+--
+
+ALTER TABLE ONLY public.treatments
+    ADD CONSTRAINT treatments_protocol_id_fkey FOREIGN KEY (protocol_id) REFERENCES public.treatment_protocols(protocol_id);
+
+
+--
+-- TOC entry 4619 (class 2606 OID 17181)
 -- Name: veterinarian_albums veterinarian_album_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3392,7 +4292,7 @@ ALTER TABLE ONLY public.veterinarian_albums
 
 
 --
--- TOC entry 4511 (class 2606 OID 17113)
+-- TOC entry 4616 (class 2606 OID 17113)
 -- Name: veterinarian_certifications veterinarian_certifications_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3401,7 +4301,7 @@ ALTER TABLE ONLY public.veterinarian_certifications
 
 
 --
--- TOC entry 4509 (class 2606 OID 17093)
+-- TOC entry 4614 (class 2606 OID 17093)
 -- Name: veterinarian_education veterinarian_education_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3410,7 +4310,7 @@ ALTER TABLE ONLY public.veterinarian_education
 
 
 --
--- TOC entry 4513 (class 2606 OID 17131)
+-- TOC entry 4618 (class 2606 OID 17131)
 -- Name: veterinarian_expertise veterinarian_expertise_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3419,7 +4319,7 @@ ALTER TABLE ONLY public.veterinarian_expertise
 
 
 --
--- TOC entry 4483 (class 2606 OID 16540)
+-- TOC entry 4589 (class 2606 OID 16540)
 -- Name: veterinarians veterinarians_veterinarian_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: petlystAdmin
 --
 
@@ -3427,7 +4327,7 @@ ALTER TABLE ONLY public.veterinarians
     ADD CONSTRAINT veterinarians_veterinarian_id_fkey FOREIGN KEY (veterinarian_id) REFERENCES public.users(user_id);
 
 
--- Completed on 2025-05-02 01:23:47
+-- Completed on 2025-05-04 00:37:32
 
 --
 -- PostgreSQL database dump complete

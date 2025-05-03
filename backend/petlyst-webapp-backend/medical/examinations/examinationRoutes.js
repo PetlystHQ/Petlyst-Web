@@ -2,8 +2,60 @@
 const express = require('express');
 const router = express.Router();
 const examinationModel = require('./examinationModel');
-const authMiddleware = require('../../middleware/authMiddleware');
-const veterinarianMiddleware = require('../../middleware/veterinarianMiddleware');
+const authenticateToken = require('../../middleware/authenticateToken');
+const { checkVerificationStatus } = require('../../middleware/verificationMiddleware');
+const pool = require('../../config/db');
+
+// Middleware for checking if the user is a veterinarian
+const veterinarianMiddleware = async (req, res, next) => {
+  try {
+    // User ID should be available from authenticateToken middleware
+    const userId = req.user.userId;
+    
+    // Check if user is a veterinarian
+    const userQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [userId]);
+    
+    if (!userResult.rows.length || userResult.rows[0].user_type !== 'veterinarian') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only veterinarians can perform this action.'
+      });
+    }
+    
+    // Get veterinarian details for later use
+    const vetQuery = `
+      SELECT * FROM veterinarians WHERE veterinarian_id = $1
+    `;
+    const vetResult = await pool.query(vetQuery, [userId]);
+    
+    if (!vetResult.rows.length) {
+      return res.status(403).json({
+        success: false,
+        message: 'Veterinarian profile not found.'
+      });
+    }
+    
+    // Attach veterinarian info to request
+    req.veterinarian = vetResult.rows[0];
+    next();
+  } catch (error) {
+    console.error('Error in veterinarian middleware:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Middleware for general authentication
+const authMiddleware = [authenticateToken];
+
+// Middleware for veterinarian-specific actions
+const vetAuthMiddleware = [authenticateToken, veterinarianMiddleware];
 
 // Tüm muayeneleri listele (filtreli)
 router.get('/', authMiddleware, async (req, res) => {
@@ -77,7 +129,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // Yeni muayene oluştur
-router.post('/', authMiddleware, veterinarianMiddleware, async (req, res) => {
+router.post('/', vetAuthMiddleware, async (req, res) => {
   try {
     const {
       pet_id,
@@ -130,7 +182,7 @@ router.post('/', authMiddleware, veterinarianMiddleware, async (req, res) => {
 });
 
 // Muayene güncelle
-router.put('/:id', authMiddleware, veterinarianMiddleware, async (req, res) => {
+router.put('/:id', vetAuthMiddleware, async (req, res) => {
   try {
     const examinationId = parseInt(req.params.id);
     const {
@@ -187,7 +239,7 @@ router.put('/:id', authMiddleware, veterinarianMiddleware, async (req, res) => {
 });
 
 // Muayene durumunu güncelle
-router.put('/:id/status', authMiddleware, veterinarianMiddleware, async (req, res) => {
+router.put('/:id/status', vetAuthMiddleware, async (req, res) => {
   try {
     const examinationId = parseInt(req.params.id);
     const { status } = req.body;
@@ -251,6 +303,54 @@ router.get('/pet/:petId', authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching pet examination history',
+      error: error.message
+    });
+  }
+});
+
+// Muayeneyi sil (sadece admin veya veri temizliği için)
+router.delete('/:id', vetAuthMiddleware, async (req, res) => {
+  try {
+    const examinationId = parseInt(req.params.id);
+    
+    // Önce muayenenin mevcut olduğunu kontrol et
+    const existingExamination = await examinationModel.getExamination(examinationId);
+    
+    if (!existingExamination) {
+      return res.status(404).json({
+        success: false,
+        message: 'Examination not found'
+      });
+    }
+    
+    // Sadece muayeneyi yapan veteriner silebilir
+    if (existingExamination.vet_id !== req.veterinarian.veterinarian_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to delete this examination'
+      });
+    }
+    
+    const deletedExamination = await examinationModel.deleteExamination(examinationId);
+    
+    res.json({
+      success: true,
+      message: 'Examination deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting examination:', error);
+    
+    // Eğer teşhisler bağlı olduğu için silinemeyen durum
+    if (error.message === 'Cannot delete examination with associated diagnoses') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting examination',
       error: error.message
     });
   }
