@@ -32,6 +32,7 @@ const inventoryRoutes = require('./inventoryRoutes/inventoryRoutes');
 const hospitalizationRoutes = require('./hospitalization/hospitalizationRoutes');
 const examinationRoutes = require('./medical/examinations/examinationRoutes');
 const diagnosesRoutes = require('./medical/diagnoses/diagnosesRoutes');
+const treatmentRoutes = require('./medical/treatments/treatmentRoutes');
 
 
 // Use routes
@@ -46,6 +47,7 @@ app.use('/api/clinics', inventoryRoutes);
 app.use('/api', hospitalizationRoutes);
 app.use('/api/examinations', examinationRoutes);
 app.use('/api/diagnoses', diagnosesRoutes);
+app.use('/api/treatments', treatmentRoutes);
 
 // Test route
 app.get('/', (req, res) => {
@@ -69,7 +71,8 @@ app.use((req, res) => {
             '/api/hospitalization/admit',
             '/api/hospitalization/[hospitalizationId]/discharge',
             '/api/examinations',
-            '/api/diagnoses'
+            '/api/diagnoses',
+            '/api/treatments'
         ]
     });
 });
@@ -192,4 +195,5 @@ app.listen(PORT, () => {
     console.log('- /api/clinics/[clinicId]/inventory');
     console.log('- /api/examinations');
     console.log('- /api/diagnoses');
+    console.log('- /api/treatments');
 });
