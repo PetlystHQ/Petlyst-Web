@@ -35,7 +35,12 @@ interface Hospitalization {
   clinic_id: string;
 }
 
-const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) => {
+interface PatientHospitalizationProps {
+  clinicId: string;
+  onDataChanged?: () => void;
+}
+
+const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicId, onDataChanged }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'admit'>('current');
   const [currentHospitalizations, setCurrentHospitalizations] = useState<Hospitalization[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
@@ -121,14 +126,22 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
     setError(null);
     
     try {
-      // Assuming there's an endpoint to get patients registered with this clinic
       const response = await axios.get(
         `http://localhost:3000/api/clinics/${clinicId}/patients`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       if (response.data.success) {
-        setClinicPatients(response.data.patients);
+        // The endpoint returns the patient data in the 'pets' property
+        setClinicPatients(response.data.pets.map((pet: any) => ({
+          pet_id: pet.pet_id.toString(),
+          pet_name: pet.pet_name,
+          pet_species: pet.pet_type || pet.pet_species,
+          pet_breed: pet.pet_breed,
+          owner_id: pet.owner_id.toString(),
+          owner_name: `${pet.pet_owner_name} ${pet.pet_owner_surname}`
+        })));
+        console.log('Fetched patients:', response.data.pets);
       } else {
         setError('Failed to fetch clinic patients');
       }
@@ -136,12 +149,8 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
       console.error('Error fetching clinic patients:', err);
       setError(err.response?.data?.message || 'Failed to fetch clinic patients');
       
-      // For demonstration, setting some mock data
-      setClinicPatients([
-        { pet_id: '1', pet_name: 'Max', pet_species: 'Dog', pet_breed: 'Labrador', owner_id: '101', owner_name: 'John Doe' },
-        { pet_id: '2', pet_name: 'Bella', pet_species: 'Cat', pet_breed: 'Persian', owner_id: '102', owner_name: 'Jane Smith' },
-        { pet_id: '3', pet_name: 'Charlie', pet_species: 'Dog', pet_breed: 'Beagle', owner_id: '103', owner_name: 'Mike Johnson' }
-      ]);
+      // No need for mock data anymore as we're now using the correct endpoint
+      setClinicPatients([]);
     } finally {
       setLoading(false);
     }
@@ -170,6 +179,9 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
         // Reset form and fetch updated data
         setActiveTab('current');
         fetchCurrentHospitalizations();
+        
+        // Notify parent component about data change
+        if (onDataChanged) onDataChanged();
       } else {
         setError('Failed to admit patient');
       }
@@ -199,6 +211,9 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
         setShowDischargeModal(false);
         setSelectedHospitalization(null);
         fetchCurrentHospitalizations();
+        
+        // Notify parent component about data change
+        if (onDataChanged) onDataChanged();
       } else {
         setError('Failed to discharge patient');
       }
@@ -385,12 +400,9 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
                               setSelectedHospitalization(hospitalization);
                               setShowDischargeModal(true);
                             }}
-                            className="text-blue-600 hover:text-blue-900 mr-4"
+                            className="text-blue-600 hover:text-blue-900"
                           >
                             Discharge
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900">
-                            Details
                           </button>
                         </td>
                       </tr>
@@ -407,7 +419,7 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
         <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Admit New Patient</h3>
           
-          {availableRooms.length === 0 ? (
+          {!availableRooms || availableRooms.length === 0 ? (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -422,7 +434,7 @@ const PatientHospitalization: React.FC<{ clinicId: string }> = ({ clinicId }) =>
                 </div>
               </div>
             </div>
-          ) : clinicPatients.length === 0 ? (
+          ) : !clinicPatients || clinicPatients.length === 0 ? (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
               <div className="flex">
                 <div className="flex-shrink-0">

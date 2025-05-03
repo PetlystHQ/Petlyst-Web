@@ -21,7 +21,12 @@ interface RoomFormData {
   roomType: 'intensive_care' | 'observation' | 'standard' | 'isolation';
 }
 
-const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
+interface RoomManagementProps {
+  clinicId: string;
+  onDataChanged?: () => void;
+}
+
+const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [isAddingRoom, setIsAddingRoom] = useState(false);
@@ -30,7 +35,6 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState<string>('');
   
   const token = useSelector((state: RootState) => state.auth.token);
 
@@ -42,7 +46,7 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
   // Filter rooms when filtering options change
   useEffect(() => {
     filterRooms();
-  }, [rooms, statusFilter, typeFilter, searchTerm]);
+  }, [rooms, statusFilter, typeFilter]);
   
   // Fetch rooms from API
   const fetchRooms = async () => {
@@ -84,14 +88,6 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
       filtered = filtered.filter(room => room.room_type === typeFilter);
     }
     
-    // Filter by search term
-    if (searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(room => 
-        room.room_name.toLowerCase().includes(term)
-      );
-    }
-    
     setFilteredRooms(filtered);
   };
   
@@ -119,6 +115,9 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
             room.id === editingRoom.id ? response.data.room : room
           ));
           setEditingRoom(null);
+          
+          // Notify parent about data change
+          if (onDataChanged) onDataChanged();
         } else {
           setError('Failed to update room');
         }
@@ -136,6 +135,9 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
         if (response.data.success) {
           setRooms([...rooms, response.data.room]);
           setIsAddingRoom(false);
+          
+          // Notify parent about data change
+          if (onDataChanged) onDataChanged();
         } else {
           setError('Failed to create room');
         }
@@ -167,6 +169,9 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
       
       if (response.data.success) {
         setRooms(rooms.filter(room => room.id !== roomId));
+        
+        // Notify parent about data change
+        if (onDataChanged) onDataChanged();
       } else {
         setError('Failed to delete room');
       }
@@ -196,6 +201,9 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
         setRooms(rooms.map(room => 
           room.id === roomId ? response.data.room : room
         ));
+        
+        // Notify parent about data change
+        if (onDataChanged) onDataChanged();
       } else {
         setError('Failed to update room status');
       }
@@ -227,41 +235,10 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Room Management</h2>
-        <button
-          onClick={() => {
-            setIsAddingRoom(true);
-            setEditingRoom(null);
-          }}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Add Room
-        </button>
-      </div>
-      
-      {/* Filters */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow border border-gray-100">
-        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-          <div className="flex-1">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              id="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by room name..."
-              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-            />
-          </div>
-          
+        
+        {/* Filters and Add Room Button in same row */}
+        <div className="flex space-x-4 items-center">
           <div>
-            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
             <select
               id="status-filter"
               value={statusFilter}
@@ -276,9 +253,6 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
           </div>
           
           <div>
-            <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Room Type
-            </label>
             <select
               id="type-filter"
               value={typeFilter}
@@ -292,6 +266,19 @@ const RoomManagement: React.FC<{ clinicId: string }> = ({ clinicId }) => {
               <option value="isolation">Isolation</option>
             </select>
           </div>
+          
+          <button
+            onClick={() => {
+              setIsAddingRoom(true);
+              setEditingRoom(null);
+            }}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Room
+          </button>
         </div>
       </div>
       

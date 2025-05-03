@@ -656,7 +656,7 @@ const PetRecords: React.FC = () => {
                 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-500">Last Visit</p>
+                    <p className="text-sm text-gray-500">Visit</p>
                     <p className="font-medium text-gray-800">
                       {selectedPet.last_visit_date ? formatDate(selectedPet.last_visit_date) : 'No visits recorded'}
                     </p>
@@ -809,7 +809,7 @@ const PetRecords: React.FC = () => {
               
               <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-gray-500">Last Visit</p>
+                  <p className="text-xs text-gray-500">Visit</p>
                   <p className="text-sm font-medium">
                     {pet.last_visit_date ? formatDate(pet.last_visit_date) : 'N/A'}
                   </p>
