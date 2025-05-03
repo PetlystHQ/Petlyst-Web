@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import RoomManagement from './RoomManagement';
 import PatientHospitalization from './PatientHospitalization';
+import RoomHistory from './RoomHistory';
 
 interface HospitalizationStats {
   totalRooms: number;
@@ -27,55 +28,66 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
   
   const token = useSelector((state: RootState) => state.auth.token);
 
+  // Sekme değiştiğinde veya ilk yüklemede verileri çek
   useEffect(() => {
-    const fetchHospitalizationStats = async () => {
-      if (!token || !clinicId) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch rooms for statistics
-        const roomsResponse = await axios.get(
-          `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        
-        // Fetch current hospitalizations
-        const hospitalizationsResponse = await axios.get(
-          `http://localhost:3000/api/clinics/${clinicId}/hospitalization/current`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        
-        if (roomsResponse.data.success && hospitalizationsResponse.data.success) {
-          const rooms = roomsResponse.data.rooms;
-          const hospitalizations = hospitalizationsResponse.data.hospitalizations;
-          
-          // Calculate statistics
-          const totalRooms = rooms.length;
-          const occupiedRooms = rooms.filter((room: any) => room.room_status === 'occupied').length;
-          const maintenanceRooms = rooms.filter((room: any) => room.room_status === 'maintenance').length;
-          const availableRooms = rooms.filter((room: any) => room.room_status === 'vacant').length;
-          const currentHospitalizations = hospitalizations.length;
-          
-          setStats({
-            totalRooms,
-            occupiedRooms,
-            availableRooms,
-            maintenanceRooms,
-            currentHospitalizations
-          });
-        }
-      } catch (err: any) {
-        console.error('Error fetching hospitalization stats:', err);
-        setError(err.response?.data?.message || 'Failed to fetch hospitalization statistics');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (activeTab === 'overview') {
+      fetchHospitalizationStats();
+    }
+  }, [activeTab, clinicId, token]);
+  
+  const fetchHospitalizationStats = async () => {
+    if (!token || !clinicId) return;
     
-    fetchHospitalizationStats();
-  }, [clinicId, token]);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch rooms for statistics
+      const roomsResponse = await axios.get(
+        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      // Fetch current hospitalizations
+      const hospitalizationsResponse = await axios.get(
+        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/current`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (roomsResponse.data.success && hospitalizationsResponse.data.success) {
+        const rooms = roomsResponse.data.rooms;
+        const hospitalizations = hospitalizationsResponse.data.hospitalizations;
+        
+        // Calculate statistics
+        const totalRooms = rooms.length;
+        const occupiedRooms = rooms.filter((room: any) => room.room_status === 'occupied').length;
+        const maintenanceRooms = rooms.filter((room: any) => room.room_status === 'maintenance').length;
+        const availableRooms = rooms.filter((room: any) => room.room_status === 'vacant').length;
+        const currentHospitalizations = hospitalizations.length;
+        
+        setStats({
+          totalRooms,
+          occupiedRooms,
+          availableRooms,
+          maintenanceRooms,
+          currentHospitalizations
+        });
+      }
+    } catch (err: any) {
+      console.error('Error fetching hospitalization stats:', err);
+      setError(err.response?.data?.message || 'Failed to fetch hospitalization statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Diğer sekmelerden Overview'e geri dönüldüğünde verileri yenileme
+  const handleTabChange = (tab: 'overview' | 'rooms' | 'patients' | 'history') => {
+    setActiveTab(tab);
+    if (tab === 'overview') {
+      fetchHospitalizationStats();
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -140,7 +152,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 font-medium">Under Maintenance</p>
+                      <p className="text-sm text-gray-600 font-medium">Maintenance</p>
                       <p className="text-3xl font-bold text-gray-600">{stats.maintenanceRooms}</p>
                     </div>
                   </div>
@@ -168,7 +180,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
               <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div 
-                  onClick={() => setActiveTab('rooms')}
+                  onClick={() => handleTabChange('rooms')}
                   className="bg-white p-6 rounded-lg shadow border border-blue-100 hover:border-blue-300 hover:shadow-md cursor-pointer transition-all"
                 >
                   <div className="flex items-center mb-4">
@@ -183,7 +195,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
                 </div>
                 
                 <div 
-                  onClick={() => setActiveTab('patients')}
+                  onClick={() => handleTabChange('patients')}
                   className="bg-white p-6 rounded-lg shadow border border-green-100 hover:border-green-300 hover:shadow-md cursor-pointer transition-all"
                 >
                   <div className="flex items-center mb-4">
@@ -198,7 +210,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
                 </div>
                 
                 <div 
-                  onClick={() => setActiveTab('history')}
+                  onClick={() => handleTabChange('history')}
                   className="bg-white p-6 rounded-lg shadow border border-purple-100 hover:border-purple-300 hover:shadow-md cursor-pointer transition-all"
                 >
                   <div className="flex items-center mb-4">
@@ -238,18 +250,11 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
           </div>
         );
       case 'rooms':
-        return <RoomManagement clinicId={clinicId} />;
+        return <RoomManagement clinicId={clinicId} onDataChanged={fetchHospitalizationStats} />;
       case 'patients':
-        return <PatientHospitalization clinicId={clinicId} />;
+        return <PatientHospitalization clinicId={clinicId} onDataChanged={fetchHospitalizationStats} />;
       case 'history':
-        return (
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-4">Hospitalization History</h2>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <p className="text-gray-600">This feature will be implemented soon.</p>
-            </div>
-          </div>
-        );
+        return <RoomHistory clinicId={clinicId} />;
       default:
         return null;
     }
@@ -265,7 +270,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex -mb-px space-x-8" aria-label="Tabs">
           <button
-            onClick={() => setActiveTab('overview')}
+            onClick={() => handleTabChange('overview')}
             className={`${
               activeTab === 'overview'
                 ? 'border-blue-500 text-blue-600'
@@ -279,7 +284,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
           </button>
           
           <button
-            onClick={() => setActiveTab('rooms')}
+            onClick={() => handleTabChange('rooms')}
             className={`${
               activeTab === 'rooms'
                 ? 'border-blue-500 text-blue-600'
@@ -293,7 +298,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
           </button>
           
           <button
-            onClick={() => setActiveTab('patients')}
+            onClick={() => handleTabChange('patients')}
             className={`${
               activeTab === 'patients'
                 ? 'border-blue-500 text-blue-600'
@@ -307,7 +312,7 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
           </button>
           
           <button
-            onClick={() => setActiveTab('history')}
+            onClick={() => handleTabChange('history')}
             className={`${
               activeTab === 'history'
                 ? 'border-blue-500 text-blue-600'
