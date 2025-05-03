@@ -30,6 +30,8 @@ const petOwnerRoutes = require('./petOwnerRoutes/petOwnerRoutes');
 const appointmentRoutes = require('./appointmentRoutes/appointmentRoutes');
 const inventoryRoutes = require('./inventoryRoutes/inventoryRoutes');
 const hospitalizationRoutes = require('./hospitalization/hospitalizationRoutes');
+const examinationRoutes = require('./medical/examinations/examinationRoutes');
+
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -41,6 +43,7 @@ app.use('/api/pet-owners', petOwnerRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/clinics', inventoryRoutes);
 app.use('/api', hospitalizationRoutes);
+app.use('/api/examinations', examinationRoutes);
 
 // Test route
 app.get('/', (req, res) => {
