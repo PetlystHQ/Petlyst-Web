@@ -115,19 +115,19 @@ async function listExaminations(filters, limit, offset) {
         
         // Date filters
         if (filters.start_date) {
-            query += ` AND e.examination_date >= $${paramIndex}`;
+            query += ` AND e.created_at >= $${paramIndex}`;
             queryParams.push(filters.start_date);
             paramIndex++;
         }
         
         if (filters.end_date) {
-            query += ` AND e.examination_date <= $${paramIndex}`;
+            query += ` AND e.created_at <= $${paramIndex}`;
             queryParams.push(filters.end_date);
             paramIndex++;
         }
         
         // Add order by, limit and offset
-        query += ` ORDER BY e.examination_date DESC LIMIT $${paramIndex} OFFSET $${paramIndex+1}`;
+        query += ` ORDER BY e.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex+1}`;
         queryParams.push(limit, offset);
         
         const result = await pool.query(query, queryParams);
@@ -243,7 +243,7 @@ async function getPetExaminationHistory(petId) {
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
              WHERE e.pet_id = $1
-             ORDER BY e.examination_date DESC`,
+             ORDER BY e.created_at DESC`,
             [petId]
         );
         return result.rows;
