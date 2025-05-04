@@ -126,6 +126,57 @@ const ManagementDashboard: React.FC = () => {
       .replace(/\s+Animal\s+Hospital$/i, '');
   };
 
+  // Check for tab parameter in URL when component mounts
+  useEffect(() => {
+    try {
+      // Get the tab parameter from the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      
+      console.log('Tab parameter in URL:', tabParam);
+      
+      // List of valid tabs
+      const validTabs = [
+        'dashboard', 'appointment-requests', 'upcoming-appointments', 'past-appointments', 
+        'pet-records', 'inventory', 'hospitalization', 'examinations', 'staff', 
+        'medical-history'
+      ];
+      
+      // If tab parameter exists and it's a valid tab, set it as active
+      if (tabParam && validTabs.includes(tabParam)) {
+        console.log('Setting active tab to:', tabParam);
+        setActiveTab(tabParam);
+        
+        // If the tab is examinations, ensure any data from localStorage is processed
+        if (tabParam === 'examinations') {
+          console.log('Tab is examinations, checking localStorage for pet ID');
+          const petId = localStorage.getItem('startExamForPet');
+          if (petId) {
+            console.log('Found pet ID in localStorage for examination:', petId);
+          }
+        }
+        
+        // Clean URL by removing the tab parameter without refreshing the page
+        // Use setTimeout to ensure the state is updated before changing the URL
+        setTimeout(() => {
+          try {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('tab');
+            window.history.replaceState({}, '', newUrl);
+          } catch (e) {
+            console.error('Error cleaning URL:', e);
+          }
+        }, 100);
+      } else if (tabParam) {
+        console.warn('Invalid tab parameter:', tabParam);
+        // Redirect to default tab
+        setActiveTab('dashboard');
+      }
+    } catch (error) {
+      console.error('Error handling tab parameter:', error);
+    }
+  }, []);
+
   // Listen for examination start event
   useEffect(() => {
     const handleStartExamination = (event: Event) => {
@@ -133,7 +184,7 @@ const ManagementDashboard: React.FC = () => {
       const petId = customEvent.detail?.petId;
       
       if (petId) {
-        console.log('Starting examination for pet ID:', petId);
+        console.log('ManagementDashboard: Received startExamination event with pet ID:', petId);
         setActiveTab('examinations');
         localStorage.setItem('startExamForPet', petId);
       }
@@ -747,25 +798,6 @@ const ManagementDashboard: React.FC = () => {
       navigate('/');
     }
   }, [unauthorized, navigate]);
-
-  // Check for tab parameter in URL when component mounts
-  useEffect(() => {
-    // Get the tab parameter from the URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    
-    // If tab parameter exists and it's a valid tab, set it as active
-    if (tabParam && ['dashboard', 'appointment-requests', 'upcoming-appointments', 'past-appointments', 
-                     'pet-records', 'inventory', 'hospitalization', 'examinations', 'staff', 
-                     'medical-history'].includes(tabParam)) {
-      setActiveTab(tabParam);
-      
-      // Clean URL by removing the tab parameter without refreshing the page
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('tab');
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, []);
 
   // Create styles to hide the DefaultHeader
   useEffect(() => {
