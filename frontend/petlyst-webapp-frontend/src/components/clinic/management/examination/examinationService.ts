@@ -49,51 +49,108 @@ export interface UpdateExaminationData {
   respiratory_rate?: number;
   weight?: number;
   notes?: string;
+  appointment_id?: number;
 }
+
+// Helper for logging API calls with context
+const logApiCall = (method: string, endpoint: string, data?: any) => {
+  console.log(`API ${method} - ${endpoint}`, data ? { data } : '');
+};
+
+// Helper for handling API errors
+const handleApiCallError = (error: any, context: string) => {
+  if (error.response) {
+    console.error(`API Error (${context}) - Response:`, {
+      status: error.response.status,
+      data: error.response.data,
+      headers: error.response.headers,
+    });
+  } else if (error.request) {
+    console.error(`API Error (${context}) - Request:`, error.request);
+  } else {
+    console.error(`API Error (${context}):`, error.message);
+  }
+  throw error;
+};
 
 const examinationService = {
   // List examinations with filters
   async listExaminations(filters: ExaminationFilters) {
-    const response = await axiosInstance.get('/examinations', {
-      params: filters
-    });
-    return response.data;
+    try {
+      logApiCall('GET', '/examinations', filters);
+      const response = await axiosInstance.get('/examinations', {
+        params: filters
+      });
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'listExaminations');
+    }
   },
 
   // Get specific examination
   async getExamination(examinationId: number) {
-    const response = await axiosInstance.get(`/examinations/${examinationId}`);
-    return response.data;
+    try {
+      logApiCall('GET', `/examinations/${examinationId}`);
+      const response = await axiosInstance.get(`/examinations/${examinationId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'getExamination');
+    }
   },
 
   // Create new examination
   async createExamination(examinationData: CreateExaminationData) {
-    const response = await axiosInstance.post('/examinations', examinationData);
-    return response.data;
+    try {
+      logApiCall('POST', '/examinations', examinationData);
+      const response = await axiosInstance.post('/examinations', examinationData);
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'createExamination');
+    }
   },
 
   // Update examination
   async updateExamination(examinationId: number, updateData: UpdateExaminationData) {
-    const response = await axiosInstance.put(`/examinations/${examinationId}`, updateData);
-    return response.data;
+    try {
+      logApiCall('PUT', `/examinations/${examinationId}`, updateData);
+      const response = await axiosInstance.put(`/examinations/${examinationId}`, updateData);
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'updateExamination');
+    }
   },
 
   // Update examination status
   async updateExaminationStatus(examinationId: number, status: 'started' | 'in_progress' | 'completed') {
-    const response = await axiosInstance.put(`/examinations/${examinationId}/status`, { status });
-    return response.data;
+    try {
+      logApiCall('PUT', `/examinations/${examinationId}/status`, { status });
+      const response = await axiosInstance.put(`/examinations/${examinationId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'updateExaminationStatus');
+    }
   },
 
   // Get pet examination history
   async getPetExaminationHistory(petId: number) {
-    const response = await axiosInstance.get(`/examinations/pet/${petId}`);
-    return response.data;
+    try {
+      logApiCall('GET', `/examinations/pet/${petId}`);
+      const response = await axiosInstance.get(`/examinations/pet/${petId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'getPetExaminationHistory');
+    }
   },
 
   // Delete examination
   async deleteExamination(examinationId: number) {
-    const response = await axiosInstance.delete(`/examinations/${examinationId}`);
-    return response.data;
+    try {
+      logApiCall('DELETE', `/examinations/${examinationId}`);
+      const response = await axiosInstance.delete(`/examinations/${examinationId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiCallError(error, 'deleteExamination');
+    }
   }
 };
 

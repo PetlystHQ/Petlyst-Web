@@ -93,7 +93,7 @@ const AppContent: React.FC = () => {
             <EditClinicPage />
           </ProtectedClinicRoute>
         } />
-        <Route path="/management-dashboard" element={
+        <Route path="/management-dashboard/:clinicId" element={
           <ProtectedRoute allowedUserType="veterinarian">
             <ManagementDashboard />
           </ProtectedRoute>

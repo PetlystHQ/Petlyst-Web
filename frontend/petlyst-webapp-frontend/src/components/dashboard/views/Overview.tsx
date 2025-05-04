@@ -302,7 +302,7 @@ export const Overview: React.FC<OverviewProps> = ({
                 <button
                   onClick={() => {
                     localStorage.setItem('selectedClinicId', firstClinic.clinic_id);
-                    navigate('/management-dashboard');
+                    navigate(`/management-dashboard/${firstClinic.clinic_id}`);
                   }}
                   className="flex items-center justify-center text-sm font-medium px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 transition-colors"
                 >

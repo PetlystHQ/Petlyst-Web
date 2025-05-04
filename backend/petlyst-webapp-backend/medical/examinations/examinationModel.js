@@ -74,14 +74,20 @@ async function getExamination(examinationId) {
 // List examinations with various filters
 async function listExaminations(filters, limit, offset) {
     try {
+        console.log('ExaminationModel - Listing examinations with filters:', filters);
+        
+        // Limit and offset default values if not provided
+        limit = limit || 20;
+        offset = offset || 0;
+        
         let query = `
             SELECT e.*, 
                    p.pet_name, p.pet_species, p.pet_breed,
                    CONCAT(u.user_name, ' ', u.user_surname) as veterinarian_name
             FROM examinations e
             JOIN pets p ON e.pet_id = p.pet_id
-            JOIN veterinarians v ON e.vet_id = v.veterinarian_id
-            JOIN users u ON v.veterinarian_id = u.user_id
+            LEFT JOIN veterinarians v ON e.vet_id = v.veterinarian_id
+            LEFT JOIN users u ON v.veterinarian_id = u.user_id
             WHERE 1=1
         `;
         
@@ -107,12 +113,6 @@ async function listExaminations(filters, limit, offset) {
             paramIndex++;
         }
         
-        if (filters.clinic_id) {
-            query += ` AND v.clinic_id = $${paramIndex}`;
-            queryParams.push(filters.clinic_id);
-            paramIndex++;
-        }
-        
         // Date filters
         if (filters.start_date) {
             query += ` AND e.created_at >= $${paramIndex}`;
@@ -126,15 +126,28 @@ async function listExaminations(filters, limit, offset) {
             paramIndex++;
         }
         
+        // Get the total count before applying limit and offset for pagination
+        const countQuery = `SELECT COUNT(*) FROM (${query}) as count_query`;
+        const countResult = await pool.query(countQuery, queryParams);
+        const totalCount = parseInt(countResult.rows[0].count);
+        
         // Add order by, limit and offset
         query += ` ORDER BY e.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex+1}`;
         queryParams.push(limit, offset);
         
+        console.log('Final SQL query:', {
+            text: query,
+            params: queryParams
+        });
+        
         const result = await pool.query(query, queryParams);
+        console.log(`Examinations found: ${result.rows.length}`);
+        
         return result.rows;
     } catch (error) {
         console.error('Error listing examinations:', error);
-        throw error;
+        // Return empty array instead of throwing to prevent frontend from crashing
+        return [];
     }
 }
 

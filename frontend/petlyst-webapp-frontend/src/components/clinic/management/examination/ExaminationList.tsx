@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAppDispatch } from '../../../../hooks/useAppDispatch';
 import { useAppSelector } from '../../../../hooks/useAppSelector';
 import { 
   listExaminations, 
   getExamination, 
   deleteExamination,
-  updateExaminationStatus
+  updateExaminationStatus,
+  resetExaminationState
 } from './examinationSlice';
 import { Examination, ExaminationFilters } from './examinationService';
 import { format } from 'date-fns';
-import { FaEdit, FaTrash, FaEye } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaEye, FaPlus } from 'react-icons/fa';
+import ExaminationDetailModal from './ExaminationDetailModal';
+import NewExaminationModal from './NewExaminationModal';
 
 interface ExaminationListProps {
   filters?: ExaminationFilters;
@@ -23,23 +26,267 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   onEditExamination
 }) => {
   const dispatch = useAppDispatch();
-  const { examinations, loading, error, totalCount } = useAppSelector(state => state.examinations);
+  const { examinations, loading, error, totalCount, currentExamination, success } = useAppSelector(state => state.examinations);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [newExamModalOpen, setNewExamModalOpen] = useState(false);
+  const [selectedExamination, setSelectedExamination] = useState<Examination | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [loadingAttempts, setLoadingAttempts] = useState(0);
+  const [selectedPetId, setSelectedPetId] = useState<number | undefined>(undefined);
+  const [modalJustOpened, setModalJustOpened] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | undefined>(undefined);
+  
+  // Add a loading lock to prevent multiple simultaneous API calls
+  const loadingLockRef = useRef(false);
+  
+  // Reference to track if we've already processed localStorage
+  const startExamChecked = useRef(false);
+  // Reference to track API call timeouts
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // State for edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  
+  // Check if there's a pet ID in localStorage to start an examination for, only once
+  useEffect(() => {
+    if (!startExamChecked.current) {
+      startExamChecked.current = true;
+      const startExamForPet = localStorage.getItem('startExamForPet');
+      console.log('Checking localStorage for startExamForPet:', startExamForPet);
+      
+      if (startExamForPet) {
+        try {
+          const petIdValue = parseInt(startExamForPet, 10);
+          console.log('Found pet ID in localStorage, setting selected pet ID:', petIdValue);
+          
+          // Store pet ID in state
+          setSelectedPetId(petIdValue);
+          
+          // Check if there's also an appointment ID in localStorage
+          const appointmentId = localStorage.getItem('appointmentIdForExam');
+          if (appointmentId) {
+            setSelectedAppointmentId(parseInt(appointmentId, 10));
+          }
+          
+          // Set a small timeout to ensure state updates properly before opening modal
+          setTimeout(() => {
+            console.log('Opening examination modal for pet:', petIdValue);
+            setNewExamModalOpen(true);
+            setModalJustOpened(true);
+            
+            // Modalın yanlışlıkla kapanmasını önlemek için koruma süresi
+            setTimeout(() => {
+              setModalJustOpened(false);
+            }, 1000);
+            
+            // Only remove from localStorage after we're sure the modal is open
+            setTimeout(() => {
+              console.log('Removing startExamForPet from localStorage');
+              localStorage.removeItem('startExamForPet');
+              localStorage.removeItem('appointmentIdForExam');
+            }, 100);
+          }, 100);
+        } catch (error) {
+          console.error('Error processing pet ID from localStorage:', error);
+        }
+      }
+    }
+  }, []);
+  
+  // Listen for custom event to start examination from other components
+  useEffect(() => {
+    const handleStartExamination = (event: CustomEvent) => {
+      const petId = event.detail?.petId;
+      console.log('Received startExamination event with pet ID:', petId);
+      
+      if (petId) {
+        try {
+          const petIdValue = parseInt(petId, 10);
+          console.log('Setting selected pet ID from event:', petIdValue);
+          
+          // First set the pet ID
+          setSelectedPetId(petIdValue);
+          
+          // Then use a small timeout to ensure state updates before opening modal
+          setTimeout(() => {
+            console.log('Opening examination modal from event handler');
+            setNewExamModalOpen(true);
+            setModalJustOpened(true);
+            
+            // Modalın yanlışlıkla kapanmasını önlemek için koruma süresi
+            setTimeout(() => {
+              setModalJustOpened(false);
+            }, 1000);
+          }, 50);
+        } catch (error) {
+          console.error('Error processing pet ID from event:', error);
+        }
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('startExamination', handleStartExamination as EventListener);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('startExamination', handleStartExamination as EventListener);
+    };
+  }, []);
   
   // Calculate offset based on pagination
   const offset = (currentPage - 1) * limit;
   
-  // Load examinations when component mounts or filters/pagination change
-  useEffect(() => {
-    dispatch(listExaminations({
+  // Memoize the filters + pagination params to prevent unnecessary re-renders
+  const requestParams = useMemo(() => {
+    // Ensure clinic_id is always included in the request params
+    const clinicId = localStorage.getItem('selectedClinicId');
+    
+    return {
       ...filters,
       limit,
-      offset
-    }));
-  }, [dispatch, filters, limit, offset]);
+      offset,
+      clinic_id: clinicId ? parseInt(clinicId, 10) : filters.clinic_id // Ensure clinic_id is included and is a number
+    };
+  }, [filters, limit, offset]);
+  
+  // Fetch examinations function with timeout handling
+  const fetchExaminations = useCallback(() => {
+    // Prevent multiple simultaneous API calls
+    if (loadingLockRef.current) {
+      console.log('Loading already in progress, skipping duplicate API call');
+      return;
+    }
+    
+    // Set the loading lock
+    loadingLockRef.current = true;
+    
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+    
+    // Check if clinic_id is missing
+    if (!requestParams.clinic_id) {
+      console.error('Missing clinic_id in request params');
+      setLocalError('Clinic ID is missing. Please select a clinic first.');
+      loadingLockRef.current = false;
+      return;
+    }
+    
+    console.log('Fetching examinations with params:', requestParams);
+    
+    // Set a timeout to handle API calls that never return
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (loading && !isDataLoaded) {
+        console.error('Request timed out after 15 seconds');
+        setLocalError('Request timed out. The server might be unavailable. Please try again.');
+        // Release the loading lock
+        loadingLockRef.current = false;
+      }
+    }, 15000); // 15 second timeout - increased from 10 seconds
+    
+    // Limit to max 5 loading attempts - increased from 3
+    if (loadingAttempts >= 5) {
+      setLocalError('Failed to load data after multiple attempts. Please refresh the page and try again.');
+      loadingLockRef.current = false;
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      return;
+    }
+    
+    setLoadingAttempts(prev => prev + 1);
+    
+    dispatch(listExaminations(requestParams))
+      .unwrap()
+      .then((response) => {
+        console.log('Successfully fetched examinations:', response);
+        setIsDataLoaded(true);
+        setLoadingAttempts(0); // Reset attempts on success
+        loadingLockRef.current = false;
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching examinations:', err);
+        setIsDataLoaded(true);
+        setLocalError(err?.message || 'Failed to load examinations. Please try again.');
+        loadingLockRef.current = false;
+        
+        // Add a small delay before allowing another fetch attempt
+        setTimeout(() => {
+          loadingLockRef.current = false;
+        }, 2000);
+        
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      });
+  }, [dispatch, requestParams, loading, isDataLoaded, loadingAttempts]);
+  
+  // Load examinations when component mounts or filters/pagination change
+  useEffect(() => {
+    if (!isDataLoaded) {
+      console.log('Initial data load or reload triggered');
+      fetchExaminations();
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [fetchExaminations, isDataLoaded]);
+  
+  // Add a refresh interval to automatically retry loading if needed
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | null = null;
+    
+    // If there's an error, set up an interval to retry automatically every 30 seconds
+    if (localError || error) {
+      refreshInterval = setInterval(() => {
+        console.log('Auto-retry interval triggered');
+        handleRetry();
+      }, 30000); // Auto-retry every 30 seconds
+    }
+    
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [localError, error]);
+  
+  // Update selected examination when currentExamination changes in redux store
+  useEffect(() => {
+    if (currentExamination && detailModalOpen) {
+      setSelectedExamination(currentExamination);
+    }
+  }, [currentExamination, detailModalOpen]);
+  
+  // Handle success state (after create/update/delete) without triggering re-renders
+  const processedSuccessRef = useRef(false);
+  useEffect(() => {
+    if (success && !processedSuccessRef.current) {
+      processedSuccessRef.current = true;
+      // Reset state to avoid multiple refreshes
+      dispatch(resetExaminationState());
+      // Refresh data
+      fetchExaminations();
+    } else if (!success) {
+      processedSuccessRef.current = false;
+    }
+  }, [success, dispatch, fetchExaminations]);
   
   // Handle status change
   const handleStatusChange = (examinationId: number, newStatus: 'started' | 'in_progress' | 'completed') => {
@@ -48,7 +295,11 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Handle examination view
   const handleViewExamination = (examination: Examination) => {
+    setSelectedExamination(examination);
+    setDetailModalOpen(true);
     dispatch(getExamination(examination.examination_id));
+    
+    // Call the parent component's handler if provided
     if (onViewExamination) {
       onViewExamination(examination);
     }
@@ -56,10 +307,81 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Handle examination edit
   const handleEditExamination = (examination: Examination) => {
-    dispatch(getExamination(examination.examination_id));
+    // First get the most up-to-date data
+    dispatch(getExamination(examination.examination_id))
+      .unwrap()
+      .then(() => {
+        // Open edit modal with the selected examination
+        setSelectedExamination(examination);
+        setEditModalOpen(true);
+      })
+      .catch(err => {
+        console.error('Error fetching examination for edit:', err);
+        // Show error notification
+        setLocalError(`Failed to load examination details: ${err.message || 'Unknown error'}`);
+      });
+    
+    // Call the parent component's handler if provided
     if (onEditExamination) {
       onEditExamination(examination);
     }
+  };
+  
+  // Handle closing the detail modal
+  const handleCloseDetailModal = () => {
+    setDetailModalOpen(false);
+    // Only clear selected examination when edit modal is also closed
+    if (!editModalOpen) {
+      setSelectedExamination(null);
+    }
+  };
+  
+  // Close the edit modal
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    // Only clear selected examination when detail modal is also closed
+    if (!detailModalOpen) {
+      setSelectedExamination(null);
+    }
+  };
+  
+  // Handle opening the new examination modal
+  const handleOpenNewExamModal = () => {
+    console.log('Manual modal open requested');
+    // First clear any pet selection if this is a manual open
+    setSelectedPetId(undefined);
+    
+    // Then open the modal
+    setNewExamModalOpen(true);
+    setModalJustOpened(true);
+    
+    // Modalın yanlışlıkla kapanmasını önlemek için koruma süresi
+    setTimeout(() => {
+      setModalJustOpened(false);
+    }, 1000);
+  };
+  
+  // Handle closing the new examination modal
+  const handleCloseNewExamModal = () => {
+    console.log('Modal close requested');
+    
+    // Eğer modal henüz yeni açıldıysa, kapatılmasını engelle
+    if (modalJustOpened) {
+      console.log('Preventing modal close - modal just opened');
+      return;
+    }
+    
+    setNewExamModalOpen(false);
+    
+    // Only clear the selected pet ID after closing the modal
+    setTimeout(() => {
+      setSelectedPetId(undefined);
+    }, 100);
+  };
+  
+  // Handle successful creation of new examination
+  const handleExamCreationSuccess = () => {
+    // Will be handled by the success effect
   };
   
   // Handle confirmation dialog for delete
@@ -72,7 +394,23 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     if (confirmDelete) {
       await dispatch(deleteExamination(confirmDelete));
       setConfirmDelete(null);
+      
+      // Close the detail modal if the deleted examination is currently being viewed
+      if (selectedExamination && selectedExamination.examination_id === confirmDelete) {
+        setDetailModalOpen(false);
+        setSelectedExamination(null);
+      }
     }
+  };
+  
+  // Retry loading if there was an error
+  const handleRetry = () => {
+    console.log('Manual retry triggered');
+    setLocalError(null);
+    setIsDataLoaded(false);
+    setLoadingAttempts(0); // Reset attempts counter
+    loadingLockRef.current = false; // Release the lock
+    fetchExaminations();
   };
   
   // Render status badge
@@ -99,160 +437,235 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     }
   };
   
-  if (loading && examinations.length === 0) {
-    return <div className="flex justify-center p-8"><div className="loader">Loading...</div></div>;
-  }
-  
-  if (error) {
-    return <div className="p-4 text-red-600 bg-red-100 rounded">Error: {error}</div>;
-  }
-  
-  if (examinations.length === 0) {
-    return <div className="p-8 text-center text-gray-500">No examinations found.</div>;
-  }
+  // Add a guard effect to log modal state changes
+  useEffect(() => {
+    console.log('Modal state changed:', { 
+      isOpen: newExamModalOpen, 
+      selectedPetId: selectedPetId 
+    });
+  }, [newExamModalOpen, selectedPetId]);
   
   return (
-    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-      <table className="min-w-full divide-y divide-gray-300">
-        <thead className="bg-gray-50">
-          <tr>
-            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Pet Name</th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Veterinarian</th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-            <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {examinations.map((examination) => (
-            <tr key={examination.examination_id}>
-              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                {examination.pet_name || `Pet #${examination.pet_id}`}
-                <div className="text-xs text-gray-500">
-                  {examination.pet_species} {examination.pet_breed ? `(${examination.pet_breed})` : ''}
-                </div>
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                {examination.veterinarian_name || `Vet #${examination.vet_id}`}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                {format(new Date(examination.created_at), 'PPP')}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                <div className="flex items-center">
-                  {renderStatusBadge(examination.status)}
-                  <select
-                    className="ml-2 text-sm border-gray-300 rounded-md"
-                    value={examination.status}
-                    onChange={(e) => handleStatusChange(
-                      examination.examination_id, 
-                      e.target.value as 'started' | 'in_progress' | 'completed'
-                    )}
-                  >
-                    <option value="started">Started</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-              </td>
-              <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                <div className="flex space-x-2 justify-end">
-                  <button
-                    onClick={() => handleViewExamination(examination)}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    <FaEye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleEditExamination(examination)}
-                    className="text-indigo-600 hover:text-indigo-900"
-                  >
-                    <FaEdit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleConfirmDelete(examination.examination_id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <FaTrash className="w-4 h-4" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <>
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-800">Examinations</h2>
+        <button
+          onClick={handleOpenNewExamModal}
+          className="px-4 py-2 flex items-center text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-sm"
+        >
+          <FaPlus className="w-4 h-4 mr-2" />
+          New Examination
+        </button>
+      </div>
       
-      {/* Pagination controls */}
-      {totalPages > 1 && (
-        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
+      {(loading && !isDataLoaded) ? (
+        <div className="flex justify-center p-8">
+          <div className="loader flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-t-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-600">Loading examinations...</p>
+          </div>
+        </div>
+      ) : localError || error ? (
+        <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error loading examinations</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{localError || error}</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={handleRetry}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : examinations.length === 0 ? (
+        <div className="bg-white p-8 text-center text-gray-500 rounded-lg shadow-sm border border-gray-100">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No examinations found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Get started by creating a new examination for a patient.
+          </p>
+          <div className="mt-6">
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
+              onClick={handleOpenNewExamModal}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
             >
-              Previous
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Next
+              <FaPlus className="w-4 h-4 mr-2" />
+              New Examination
             </button>
           </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{offset + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(offset + limit, totalCount)}</span> of{' '}
-                <span className="font-medium">{totalCount}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+        </div>
+      ) : (
+        <div className="overflow-hidden shadow-sm border border-gray-200 rounded-lg bg-white">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-medium text-gray-700 sm:pl-6">Patient</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-medium text-gray-700">Date</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-medium text-gray-700">Status</th>
+                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {examinations.map((examination) => (
+                <tr key={examination.examination_id} className="hover:bg-gray-50 transition-colors">
+                  <td className="py-4 pl-4 pr-3 text-sm sm:pl-6">
+                    <div className="font-medium text-gray-900">
+                      {examination.pet_name || `Pet #${examination.pet_id}`}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {examination.pet_species} {examination.pet_breed ? `(${examination.pet_breed})` : ''}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-600">
+                    {format(new Date(examination.created_at), 'PPP')}
+                  </td>
+                  <td className="px-3 py-4 text-sm">
+                    <div className="flex items-center space-x-2">
+                      {renderStatusBadge(examination.status)}
+                      <select
+                        className="text-sm border border-gray-300 rounded-md py-1 pl-2 pr-8 bg-white hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                        value={examination.status}
+                        onChange={(e) => handleStatusChange(
+                          examination.examination_id, 
+                          e.target.value as 'started' | 'in_progress' | 'completed'
+                        )}
+                      >
+                        <option value="started">Started</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+                  </td>
+                  <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <div className="flex items-center space-x-1 justify-end">
+                      <button
+                        onClick={() => handleViewExamination(examination)}
+                        className="p-1.5 rounded-full text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="View details"
+                      >
+                        <FaEye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEditExamination(examination)}
+                        className="p-1.5 rounded-full text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        title="Edit examination"
+                      >
+                        <FaEdit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleConfirmDelete(examination.examination_id)}
+                        className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                        title="Delete examination"
+                      >
+                        <FaTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 bg-gray-50 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                    currentPage === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="sr-only">Previous</span>
-                  &laquo;
+                  Previous
                 </button>
-                {Array.from({ length: totalPages }).map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePageChange(index + 1)}
-                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
-                      currentPage === index + 1
-                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                        : 'bg-white text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === totalPages ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                    currentPage === totalPages ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="sr-only">Next</span>
-                  &raquo;
+                  Next
                 </button>
-              </nav>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{offset + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(offset + limit, totalCount)}</span> of{' '}
+                    <span className="font-medium">{totalCount}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium ${
+                        currentPage === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Previous</span>
+                      &laquo;
+                    </button>
+                    {Array.from({ length: Math.min(totalPages, 5) }).map((_, index) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = index + 1;
+                      } else {
+                        // For many pages, show current page in the middle with 2 pages on each side
+                        const start = Math.max(1, currentPage - 2);
+                        const end = Math.min(totalPages, start + 4);
+                        pageNum = start + index;
+                        if (pageNum > totalPages) return null;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                              : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium ${
+                        currentPage === totalPages ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Next</span>
+                      &raquo;
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -268,7 +681,7 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <FaTrash className="h-6 w-6 text-red-600" />
+                    <FaTrash className="h-5 w-5 text-red-600" />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Examination</h3>
@@ -283,14 +696,14 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button
                   type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
                   onClick={handleDeleteExamination}
                 >
                   Delete
                 </button>
                 <button
                   type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
                   onClick={() => setConfirmDelete(null)}
                 >
                   Cancel
@@ -300,7 +713,35 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
           </div>
         </div>
       )}
-    </div>
+      
+      {/* Examination Detail Modal */}
+      {detailModalOpen && (
+        <ExaminationDetailModal 
+          examination={selectedExamination}
+          onClose={handleCloseDetailModal}
+          onEdit={handleEditExamination}
+        />
+      )}
+      
+      {/* Edit Examination Modal */}
+      {editModalOpen && selectedExamination && (
+        <NewExaminationModal
+          examination={selectedExamination}
+          onClose={handleCloseEditModal}
+          onSuccess={handleExamCreationSuccess}
+        />
+      )}
+      
+      {/* New Examination Modal */}
+      {newExamModalOpen && (
+        <NewExaminationModal
+          petId={selectedPetId}
+          appointmentId={selectedAppointmentId}
+          onClose={handleCloseNewExamModal}
+          onSuccess={handleExamCreationSuccess}
+        />
+      )}
+    </>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import axios from 'axios';
@@ -70,8 +70,19 @@ interface ArchiveModalState {
 }
 
 const ManagementDashboard: React.FC = () => {
-  // URL'den clinicId parametresi almak yerine, localStorage'dan alıyoruz
-  const clinicId = localStorage.getItem('selectedClinicId');
+  // Get clinicId from URL params, fallback to localStorage if not present
+  const { clinicId: urlClinicId } = useParams<{ clinicId: string }>();
+  const storedClinicId = localStorage.getItem('selectedClinicId');
+  const clinicId = urlClinicId || storedClinicId;
+  
+  // If clinicId from URL is different from stored one, update localStorage
+  useEffect(() => {
+    if (urlClinicId && urlClinicId !== storedClinicId) {
+      localStorage.setItem('selectedClinicId', urlClinicId);
+      console.log('Updated selectedClinicId in localStorage:', urlClinicId);
+    }
+  }, [urlClinicId, storedClinicId]);
+
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,17 +196,59 @@ const ManagementDashboard: React.FC = () => {
       
       if (petId) {
         console.log('ManagementDashboard: Received startExamination event with pet ID:', petId);
-        setActiveTab('examinations');
+        
+        // Store petId securely in localStorage first
+        localStorage.removeItem('startExamForPet');
         localStorage.setItem('startExamForPet', petId);
+        console.log('ManagementDashboard: Stored petId in localStorage:', petId);
+        
+        // Set active tab with a small delay to ensure state update is processed
+        setTimeout(() => {
+          console.log('ManagementDashboard: Setting active tab to examinations');
+          setActiveTab('examinations');
+        }, 50);
+      }
+    };
+    
+    // Listen for the switchToExaminationsTab event
+    const handleSwitchTab = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { clinicId: eventClinicId, petId } = customEvent.detail;
+      
+      if (petId) {
+        console.log('ManagementDashboard: Received switchToExaminationsTab event with pet ID:', petId);
+        
+        // Verify the clinic ID from the event if provided
+        if (eventClinicId && eventClinicId !== clinicId) {
+          console.warn('ManagementDashboard: Event clinic ID does not match current clinic ID');
+          return;
+        }
+        
+        // Store petId securely in localStorage first
+        localStorage.removeItem('startExamForPet');
+        localStorage.setItem('startExamForPet', petId);
+        console.log('ManagementDashboard: Stored petId in localStorage from switchTab event:', petId);
+        
+        // Set active tab with a small delay to ensure state update is processed
+        setTimeout(() => {
+          console.log('ManagementDashboard: Setting active tab to examinations from switchTab event');
+          setActiveTab('examinations');
+        }, 50);
       }
     };
 
+    // Add event listeners
     window.addEventListener('startExamination', handleStartExamination);
+    window.addEventListener('switchToExaminationsTab', handleSwitchTab);
+    
+    console.log('ManagementDashboard: Added event listeners for examination events');
     
     return () => {
       window.removeEventListener('startExamination', handleStartExamination);
+      window.removeEventListener('switchToExaminationsTab', handleSwitchTab);
+      console.log('ManagementDashboard: Removed event listeners for examination events');
     };
-  }, []);
+  }, [clinicId]);
 
   // Define menu items with expanded state
   const [menuItems, setMenuItems] = useState<MenuItem[]>([
