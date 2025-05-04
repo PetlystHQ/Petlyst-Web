@@ -60,31 +60,42 @@ const vetAuthMiddleware = [authenticateToken, veterinarianMiddleware];
 // Tüm muayeneleri listele (filtreli)
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    console.log('Examination list requested with params:', req.query);
+    
     const { 
       pet_id, 
       vet_id, 
-      status, 
-      clinic_id,
+      status,
       start_date,
       end_date,
       limit = 20, 
       offset = 0 
     } = req.query;
     
+    // Make sure we have proper defaults and type handling
     const filters = {
       pet_id: pet_id ? parseInt(pet_id) : undefined,
       vet_id: vet_id ? parseInt(vet_id) : undefined,
       status,
-      clinic_id: clinic_id ? parseInt(clinic_id) : undefined,
       start_date,
       end_date
     };
     
+    // NOTE: We've removed the clinic_id filter and query since the column doesn't exist
+    
+    // Convert to numbers
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
+    
+    console.log('Final examination filters:', filters);
+    
     const examinations = await examinationModel.listExaminations(
       filters, 
-      parseInt(limit), 
-      parseInt(offset)
+      limitNum, 
+      offsetNum
     );
+    
+    console.log(`Found ${examinations.length} examinations`);
     
     res.json({
       success: true,
@@ -351,6 +362,46 @@ router.delete('/:id', vetAuthMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting examination',
+      error: error.message
+    });
+  }
+});
+
+// Bir hayvanın (pet) randevularını getiren endpoint
+router.get('/pet-appointments/:petId', authMiddleware, async (req, res) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    
+    // Veritabanından pet_id'ye göre randevuları çek
+    const query = `
+      SELECT 
+        appointment_id, 
+        appointment_date,
+        appointment_start_hour,
+        appointment_end_hour,
+        appointment_status AS status,
+        notes,
+        clinic_id,
+        video_meeting,
+        meeting_url,
+        meeting_password
+      FROM appointments 
+      WHERE pet_id = $1 
+      AND (appointment_status = 'confirmed' OR appointment_status = 'completed') 
+      ORDER BY appointment_date DESC, appointment_start_hour DESC
+    `;
+    
+    const result = await pool.query(query, [petId]);
+    
+    res.json({
+      success: true,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching pet appointments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pet appointments',
       error: error.message
     });
   }

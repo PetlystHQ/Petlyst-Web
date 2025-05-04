@@ -493,27 +493,63 @@ const PetRecords: React.FC = () => {
       return;
     }
     
-    // Store pet ID in localStorage first, then close modal and redirect
     try {
-      // First, ensure we clear any previous values
-      localStorage.removeItem('startExamForPet');
+      // Store pet ID in localStorage with a delay to ensure persistence
+      const storeAndDispatch = () => {
+        console.log('Storing pet ID in localStorage and dispatching event:', petId);
+        
+        // First, ensure we clear any previous values
+        localStorage.removeItem('startExamForPet');
+        
+        // Then set the new value
+        localStorage.setItem('startExamForPet', petId);
+        
+        // Close the pet details modal if it's open
+        if (isModalOpen) {
+          closePetModal();
+        }
+        
+        // Get the current URL
+        const currentUrl = window.location.href;
+        const isOnDashboard = currentUrl.includes(`/management-dashboard/${clinicId}`);
+        const isOnExaminationsTab = currentUrl.includes('tab=examinations');
+        
+        // If already on the examinations tab, just dispatch the direct event
+        if (isOnDashboard && isOnExaminationsTab) {
+          console.log('Already on examinations tab, dispatching examination event');
+          
+          // Use setTimeout to ensure UI updates before dispatching event
+          setTimeout(() => {
+            // Dispatch the event to trigger modal opening
+            const examEvent = new CustomEvent('startExamination', { 
+              detail: { petId }
+            });
+            window.dispatchEvent(examEvent);
+            console.log('Dispatched startExamination event');
+          }, 100);
+        } 
+        // If on dashboard but not on examinations tab
+        else if (isOnDashboard) {
+          console.log('On dashboard but not on examinations tab, switching tabs');
+          
+          // Dispatch event to switch tabs
+          const switchTabEvent = new CustomEvent('switchToExaminationsTab', {
+            detail: { clinicId, petId }
+          });
+          window.dispatchEvent(switchTabEvent);
+        }
+        // If not on dashboard at all
+        else {
+          console.log('Not on dashboard, navigating to examinations tab');
+          
+          // Navigate to the examinations tab
+          window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
+        }
+      };
       
-      // Then set the new value
-      localStorage.setItem('startExamForPet', petId);
-      console.log('Pet ID saved to localStorage:', petId);
+      // Execute with a small delay to ensure clean execution
+      setTimeout(storeAndDispatch, 50);
       
-      // Close modal
-      closePetModal();
-      
-      // Dispatch custom event before redirecting
-      const examEvent = new CustomEvent('startExamination', { 
-        detail: { petId }
-      });
-      window.dispatchEvent(examEvent);
-      console.log('Dispatched startExamination event');
-      
-      // Redirect directly to the examinations tab (do this last)
-      window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
     } catch (error) {
       console.error('Error during examination start:', error);
       alert('Failed to start examination. Please try again.');

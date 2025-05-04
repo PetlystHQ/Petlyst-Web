@@ -28,14 +28,47 @@ const initialState: ExaminationState = {
   totalCount: 0
 };
 
+// Helper to handle API errors consistently
+const handleApiError = (error: any): string => {
+  console.error('API Error:', error);
+  
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    // that falls out of the range of 2xx
+    console.error('Error response:', error.response.data);
+    return error.response.data?.message || 
+           `Server error: ${error.response.status} ${error.response.statusText}`;
+  } else if (error.request) {
+    // The request was made but no response was received
+    console.error('Error request:', error.request);
+    return 'No response received from server. Please check your connection.';
+  } else {
+    // Something happened in setting up the request that triggered an Error
+    return error.message || 'An unknown error occurred';
+  }
+};
+
 // Async thunks
 export const listExaminations = createAsyncThunk(
   'examinations/list',
   async (filters: ExaminationFilters, { rejectWithValue }) => {
     try {
-      return await examinationService.listExaminations(filters);
+      const response = await examinationService.listExaminations(filters);
+      
+      // Validate the response structure
+      if (!response || !response.success) {
+        return rejectWithValue(response?.message || 'Failed to fetch examinations');
+      }
+      
+      // Ensure the response has the required properties
+      if (!Array.isArray(response.examinations)) {
+        console.error('Invalid response structure:', response);
+        return rejectWithValue('Invalid response structure from the server');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch examinations');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -44,9 +77,15 @@ export const getExamination = createAsyncThunk(
   'examinations/get',
   async (examinationId: number, { rejectWithValue }) => {
     try {
-      return await examinationService.getExamination(examinationId);
+      const response = await examinationService.getExamination(examinationId);
+      
+      if (!response || !response.success || !response.examination) {
+        return rejectWithValue(response?.message || 'Failed to fetch examination');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch examination');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -55,9 +94,15 @@ export const createExamination = createAsyncThunk(
   'examinations/create',
   async (examinationData: CreateExaminationData, { rejectWithValue }) => {
     try {
-      return await examinationService.createExamination(examinationData);
+      const response = await examinationService.createExamination(examinationData);
+      
+      if (!response || !response.success || !response.examination) {
+        return rejectWithValue(response?.message || 'Failed to create examination');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create examination');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -66,9 +111,15 @@ export const updateExamination = createAsyncThunk(
   'examinations/update',
   async ({ examinationId, updateData }: { examinationId: number, updateData: UpdateExaminationData }, { rejectWithValue }) => {
     try {
-      return await examinationService.updateExamination(examinationId, updateData);
+      const response = await examinationService.updateExamination(examinationId, updateData);
+      
+      if (!response || !response.success || !response.examination) {
+        return rejectWithValue(response?.message || 'Failed to update examination');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update examination');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -77,9 +128,15 @@ export const updateExaminationStatus = createAsyncThunk(
   'examinations/updateStatus',
   async ({ examinationId, status }: { examinationId: number, status: 'started' | 'in_progress' | 'completed' }, { rejectWithValue }) => {
     try {
-      return await examinationService.updateExaminationStatus(examinationId, status);
+      const response = await examinationService.updateExaminationStatus(examinationId, status);
+      
+      if (!response || !response.success || !response.examination) {
+        return rejectWithValue(response?.message || 'Failed to update examination status');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update examination status');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -88,9 +145,15 @@ export const getPetExaminationHistory = createAsyncThunk(
   'examinations/petHistory',
   async (petId: number, { rejectWithValue }) => {
     try {
-      return await examinationService.getPetExaminationHistory(petId);
+      const response = await examinationService.getPetExaminationHistory(petId);
+      
+      if (!response || !response.success || !Array.isArray(response.examinations)) {
+        return rejectWithValue(response?.message || 'Failed to fetch pet examination history');
+      }
+      
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch pet examination history');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -99,9 +162,18 @@ export const deleteExamination = createAsyncThunk(
   'examinations/delete',
   async (examinationId: number, { rejectWithValue }) => {
     try {
-      return await examinationService.deleteExamination(examinationId);
+      const response = await examinationService.deleteExamination(examinationId);
+      
+      if (!response || !response.success) {
+        return rejectWithValue(response?.message || 'Failed to delete examination');
+      }
+      
+      return { 
+        success: true, 
+        examinationId 
+      };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete examination');
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
@@ -126,31 +198,37 @@ const examinationSlice = createSlice({
       .addCase(listExaminations.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
       .addCase(listExaminations.fulfilled, (state, action: PayloadAction<{ success: boolean, examinations: Examination[], count: number }>) => {
         state.loading = false;
         state.examinations = action.payload.examinations;
         state.totalCount = action.payload.count;
         state.success = true;
+        state.error = null;
       })
       .addCase(listExaminations.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       })
       
       // Get examination
       .addCase(getExamination.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
       .addCase(getExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
         state.loading = false;
         state.currentExamination = action.payload.examination;
         state.success = true;
+        state.error = null;
       })
       .addCase(getExamination.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       })
       
       // Create examination
@@ -164,6 +242,7 @@ const examinationSlice = createSlice({
         state.examinations = [action.payload.examination, ...state.examinations];
         state.currentExamination = action.payload.examination;
         state.success = true;
+        state.error = null;
       })
       .addCase(createExamination.rejected, (state, action) => {
         state.loading = false;
@@ -175,6 +254,7 @@ const examinationSlice = createSlice({
       .addCase(updateExamination.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
       .addCase(updateExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
         state.loading = false;
@@ -185,16 +265,19 @@ const examinationSlice = createSlice({
         );
         state.currentExamination = action.payload.examination;
         state.success = true;
+        state.error = null;
       })
       .addCase(updateExamination.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       })
       
       // Update examination status
       .addCase(updateExaminationStatus.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
       .addCase(updateExaminationStatus.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
         state.loading = false;
@@ -205,45 +288,55 @@ const examinationSlice = createSlice({
         );
         state.currentExamination = action.payload.examination;
         state.success = true;
+        state.error = null;
       })
       .addCase(updateExaminationStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       })
       
       // Get pet examination history
       .addCase(getPetExaminationHistory.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
       .addCase(getPetExaminationHistory.fulfilled, (state, action: PayloadAction<{ success: boolean, examinations: Examination[], count: number }>) => {
         state.loading = false;
         state.petExaminations = action.payload.examinations;
         state.success = true;
+        state.error = null;
       })
       .addCase(getPetExaminationHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       })
       
       // Delete examination
       .addCase(deleteExamination.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.success = false;
       })
-      .addCase(deleteExamination.fulfilled, (state, action: PayloadAction<{ success: boolean }>) => {
+      .addCase(deleteExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examinationId?: number }>) => {
         state.loading = false;
-        if (state.currentExamination) {
+        if (action.payload.examinationId && state.currentExamination) {
           state.examinations = state.examinations.filter(
-            exam => exam.examination_id !== state.currentExamination?.examination_id
+            exam => exam.examination_id !== action.payload.examinationId
           );
-          state.currentExamination = null;
+          if (state.currentExamination.examination_id === action.payload.examinationId) {
+            state.currentExamination = null;
+          }
         }
         state.success = true;
+        state.error = null;
       })
       .addCase(deleteExamination.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.success = false;
       });
   }
 });
