@@ -1,9 +1,27 @@
-// examinationService.ts
 import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 
-const API_BASE_URL = '/api/examinations';
+// Interfaces based on the backend model
+export interface Examination {
+  examination_id: number;
+  pet_id: number;
+  pet_name?: string;
+  pet_species?: string;
+  pet_breed?: string;
+  vet_id: number;
+  veterinarian_name?: string;
+  appointment_id: number | null;
+  status: 'started' | 'in_progress' | 'completed';
+  temperature: number | null;
+  heart_rate: number | null;
+  respiratory_rate: number | null;
+  weight: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export interface ExaminationFilter {
+export interface ExaminationFilters {
   pet_id?: number;
   vet_id?: number;
   status?: string;
@@ -14,168 +32,69 @@ export interface ExaminationFilter {
   offset?: number;
 }
 
-export interface ExaminationData {
+export interface CreateExaminationData {
   pet_id: number;
-  appointment_id?: number | null;
-  temperature?: number | null;
-  heart_rate?: number | null;
-  respiratory_rate?: number | null;
-  weight?: number | null;
-  notes?: string | null;
+  appointment_id?: number;
+  temperature?: number;
+  heart_rate?: number;
+  respiratory_rate?: number;
+  weight?: number;
+  notes?: string;
 }
 
-export interface Examination {
-  examination_id: number;
-  pet_id: number;
-  vet_id: number;
-  appointment_id?: number | null;
-  status: 'started' | 'in_progress' | 'completed';
-  temperature?: number | null;
-  heart_rate?: number | null;
-  respiratory_rate?: number | null;
-  weight?: number | null;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  pet_name: string;
-  pet_species: string;
-  pet_breed: string;
-  veterinarian_name: string;
+export interface UpdateExaminationData {
+  status?: 'started' | 'in_progress' | 'completed';
+  temperature?: number;
+  heart_rate?: number;
+  respiratory_rate?: number;
+  weight?: number;
+  notes?: string;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  examination?: Examination;
-  examinations?: Examination[];
-  count?: number;
-  error?: string;
-  [key: string]: any;
-}
-
-// Helper function to get auth token
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  };
-};
-
-export const examinationService = {
-  // Get all examinations (filtered)
-  async getExaminations(filters: ExaminationFilter = {}): Promise<ApiResponse<Examination[]>> {
-    try {
-      const response = await axios.get<ApiResponse<Examination[]>>(API_BASE_URL, { 
-        params: filters,
-        ...getAuthHeaders()
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'An error occurred while making the request' };
-    }
+const examinationService = {
+  // List examinations with filters
+  async listExaminations(filters: ExaminationFilters) {
+    const response = await axiosInstance.get('/examinations', {
+      params: filters
+    });
+    return response.data;
   },
 
-  // Get a single examination detail
-  async getExamination(examinationId: number): Promise<ApiResponse<Examination>> {
-    try {
-      const response = await axios.get<ApiResponse<Examination>>(
-        `${API_BASE_URL}/${examinationId}`,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error retrieving examination details' };
-    }
+  // Get specific examination
+  async getExamination(examinationId: number) {
+    const response = await axiosInstance.get(`/examinations/${examinationId}`);
+    return response.data;
   },
 
-  // Create a new examination
-  async createExamination(examinationData: ExaminationData): Promise<ApiResponse<Examination>> {
-    try {
-      const response = await axios.post<ApiResponse<Examination>>(
-        API_BASE_URL, 
-        examinationData,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error creating examination' };
-    }
+  // Create new examination
+  async createExamination(examinationData: CreateExaminationData) {
+    const response = await axiosInstance.post('/examinations', examinationData);
+    return response.data;
   },
 
-  // Update examination information
-  async updateExamination(examinationId: number, updateData: Partial<ExaminationData>): Promise<ApiResponse<Examination>> {
-    try {
-      const response = await axios.put<ApiResponse<Examination>>(
-        `${API_BASE_URL}/${examinationId}`, 
-        updateData,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error updating examination' };
-    }
+  // Update examination
+  async updateExamination(examinationId: number, updateData: UpdateExaminationData) {
+    const response = await axiosInstance.put(`/examinations/${examinationId}`, updateData);
+    return response.data;
   },
 
   // Update examination status
-  async updateExaminationStatus(examinationId: number, status: 'started' | 'in_progress' | 'completed'): Promise<ApiResponse<Examination>> {
-    try {
-      const response = await axios.put<ApiResponse<Examination>>(
-        `${API_BASE_URL}/${examinationId}/status`, 
-        { status },
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error updating status' };
-    }
+  async updateExaminationStatus(examinationId: number, status: 'started' | 'in_progress' | 'completed') {
+    const response = await axiosInstance.put(`/examinations/${examinationId}/status`, { status });
+    return response.data;
   },
 
-  // Get examination history for a pet
-  async getPetExaminationHistory(petId: number): Promise<ApiResponse<Examination[]>> {
-    try {
-      const response = await axios.get<ApiResponse<Examination[]>>(
-        `${API_BASE_URL}/pet/${petId}`,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error retrieving examination history' };
-    }
+  // Get pet examination history
+  async getPetExaminationHistory(petId: number) {
+    const response = await axiosInstance.get(`/examinations/pet/${petId}`);
+    return response.data;
   },
 
   // Delete examination
-  async deleteExamination(examinationId: number): Promise<ApiResponse<any>> {
-    try {
-      const response = await axios.delete<ApiResponse<any>>(
-        `${API_BASE_URL}/${examinationId}`,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw error.response.data;
-      }
-      throw { success: false, message: error.message || 'Error deleting examination' };
-    }
+  async deleteExamination(examinationId: number) {
+    const response = await axiosInstance.delete(`/examinations/${examinationId}`);
+    return response.data;
   }
 };
+
+export default examinationService;

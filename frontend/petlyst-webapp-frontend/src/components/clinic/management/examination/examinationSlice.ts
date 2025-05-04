@@ -1,302 +1,252 @@
-// examinationSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { examinationService, Examination, ExaminationFilter, ExaminationData, ApiResponse } from './examinationService';
+import examinationService, { 
+  Examination,
+  ExaminationFilters,
+  CreateExaminationData,
+  UpdateExaminationData
+} from './examinationService';
 
+// Define the state interface
 interface ExaminationState {
   examinations: Examination[];
-  examination: Examination | null;
+  currentExamination: Examination | null;
   petExaminations: Examination[];
-  loading: {
-    list: boolean;
-    details: boolean;
-    create: boolean;
-    update: boolean;
-    delete: boolean;
-  };
+  loading: boolean;
   error: string | null;
   success: boolean;
   totalCount: number;
 }
 
+// Initial state
 const initialState: ExaminationState = {
   examinations: [],
-  examination: null,
+  currentExamination: null,
   petExaminations: [],
-  loading: {
-    list: false,
-    details: false,
-    create: false,
-    update: false,
-    delete: false
-  },
+  loading: false,
   error: null,
   success: false,
   totalCount: 0
 };
 
 // Async thunks
-export const fetchExaminations = createAsyncThunk<
-  ApiResponse<Examination[]>,
-  ExaminationFilter,
-  { rejectValue: string }
->(
-  'examinations/fetchExaminations',
-  async (filters: ExaminationFilter, { rejectWithValue }) => {
+export const listExaminations = createAsyncThunk(
+  'examinations/list',
+  async (filters: ExaminationFilters, { rejectWithValue }) => {
     try {
-      return await examinationService.getExaminations(filters);
+      return await examinationService.listExaminations(filters);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error retrieving examinations');
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch examinations');
     }
   }
 );
 
-export const fetchExamination = createAsyncThunk<
-  ApiResponse<Examination>,
-  number,
-  { rejectValue: string }
->(
-  'examinations/fetchExamination',
-  async (id: number, { rejectWithValue }) => {
+export const getExamination = createAsyncThunk(
+  'examinations/get',
+  async (examinationId: number, { rejectWithValue }) => {
     try {
-      return await examinationService.getExamination(id);
+      return await examinationService.getExamination(examinationId);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error retrieving examination details');
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch examination');
     }
   }
 );
 
-export const createExamination = createAsyncThunk<
-  ApiResponse<Examination>,
-  ExaminationData,
-  { rejectValue: string }
->(
-  'examinations/createExamination',
-  async (examinationData: ExaminationData, { rejectWithValue }) => {
+export const createExamination = createAsyncThunk(
+  'examinations/create',
+  async (examinationData: CreateExaminationData, { rejectWithValue }) => {
     try {
       return await examinationService.createExamination(examinationData);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error creating examination');
+      return rejectWithValue(error.response?.data?.message || 'Failed to create examination');
     }
   }
 );
 
-export const updateExamination = createAsyncThunk<
-  ApiResponse<Examination>,
-  { id: number; data: Partial<ExaminationData> },
-  { rejectValue: string }
->(
-  'examinations/updateExamination',
-  async ({ id, data }, { rejectWithValue }) => {
+export const updateExamination = createAsyncThunk(
+  'examinations/update',
+  async ({ examinationId, updateData }: { examinationId: number, updateData: UpdateExaminationData }, { rejectWithValue }) => {
     try {
-      return await examinationService.updateExamination(id, data);
+      return await examinationService.updateExamination(examinationId, updateData);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error updating examination');
+      return rejectWithValue(error.response?.data?.message || 'Failed to update examination');
     }
   }
 );
 
-export const updateExaminationStatus = createAsyncThunk<
-  ApiResponse<Examination>,
-  { id: number; status: 'started' | 'in_progress' | 'completed' },
-  { rejectValue: string }
->(
+export const updateExaminationStatus = createAsyncThunk(
   'examinations/updateStatus',
-  async ({ id, status }, { rejectWithValue }) => {
+  async ({ examinationId, status }: { examinationId: number, status: 'started' | 'in_progress' | 'completed' }, { rejectWithValue }) => {
     try {
-      return await examinationService.updateExaminationStatus(id, status);
+      return await examinationService.updateExaminationStatus(examinationId, status);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error updating examination status');
+      return rejectWithValue(error.response?.data?.message || 'Failed to update examination status');
     }
   }
 );
 
-export const fetchPetExaminationHistory = createAsyncThunk<
-  ApiResponse<Examination[]>,
-  number,
-  { rejectValue: string }
->(
-  'examinations/fetchPetHistory',
+export const getPetExaminationHistory = createAsyncThunk(
+  'examinations/petHistory',
   async (petId: number, { rejectWithValue }) => {
     try {
       return await examinationService.getPetExaminationHistory(petId);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error retrieving examination history');
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch pet examination history');
     }
   }
 );
 
-export const deleteExamination = createAsyncThunk<
-  ApiResponse<any> & { id: number },
-  number,
-  { rejectValue: string }
->(
-  'examinations/deleteExamination',
-  async (id: number, { rejectWithValue }) => {
+export const deleteExamination = createAsyncThunk(
+  'examinations/delete',
+  async (examinationId: number, { rejectWithValue }) => {
     try {
-      const response = await examinationService.deleteExamination(id);
-      return { ...response, id };
+      return await examinationService.deleteExamination(examinationId);
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Error deleting examination');
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete examination');
     }
   }
 );
 
+// Create the slice
 const examinationSlice = createSlice({
   name: 'examinations',
   initialState,
   reducers: {
     resetExaminationState: (state) => {
-      state.loading = initialState.loading;
+      state.loading = false;
       state.error = null;
       state.success = false;
     },
-    clearExaminationDetails: (state) => {
-      state.examination = null;
-    },
-    resetExaminationErrors: (state) => {
-      state.error = null;
+    clearCurrentExamination: (state) => {
+      state.currentExamination = null;
     }
   },
   extraReducers: (builder) => {
     builder
-      // fetchExaminations
-      .addCase(fetchExaminations.pending, (state) => {
-        state.loading.list = true;
+      // List examinations
+      .addCase(listExaminations.pending, (state) => {
+        state.loading = true;
         state.error = null;
       })
-      .addCase(fetchExaminations.fulfilled, (state, action: PayloadAction<ApiResponse<Examination[]>>) => {
-        state.loading.list = false;
-        if (action.payload.examinations) {
-          state.examinations = action.payload.examinations;
-          state.totalCount = action.payload.count || action.payload.examinations.length;
-        }
-        state.success = action.payload.success;
+      .addCase(listExaminations.fulfilled, (state, action: PayloadAction<{ success: boolean, examinations: Examination[], count: number }>) => {
+        state.loading = false;
+        state.examinations = action.payload.examinations;
+        state.totalCount = action.payload.count;
+        state.success = true;
       })
-      .addCase(fetchExaminations.rejected, (state, action) => {
-        state.loading.list = false;
-        state.error = action.payload || 'Error retrieving examinations';
+      .addCase(listExaminations.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       })
       
-      // fetchExamination
-      .addCase(fetchExamination.pending, (state) => {
-        state.loading.details = true;
+      // Get examination
+      .addCase(getExamination.pending, (state) => {
+        state.loading = true;
         state.error = null;
       })
-      .addCase(fetchExamination.fulfilled, (state, action: PayloadAction<ApiResponse<Examination>>) => {
-        state.loading.details = false;
-        if (action.payload.examination) {
-          state.examination = action.payload.examination;
-        }
-        state.success = action.payload.success;
+      .addCase(getExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
+        state.loading = false;
+        state.currentExamination = action.payload.examination;
+        state.success = true;
       })
-      .addCase(fetchExamination.rejected, (state, action) => {
-        state.loading.details = false;
-        state.error = action.payload || 'Error retrieving examination details';
+      .addCase(getExamination.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       })
       
-      // createExamination
+      // Create examination
       .addCase(createExamination.pending, (state) => {
-        state.loading.create = true;
+        state.loading = true;
         state.error = null;
+        state.success = false;
       })
-      .addCase(createExamination.fulfilled, (state, action: PayloadAction<ApiResponse<Examination>>) => {
-        state.loading.create = false;
-        if (action.payload.examination) {
-          state.examination = action.payload.examination;
-          state.examinations = [action.payload.examination, ...state.examinations];
-        }
-        state.success = action.payload.success;
+      .addCase(createExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
+        state.loading = false;
+        state.examinations = [action.payload.examination, ...state.examinations];
+        state.currentExamination = action.payload.examination;
+        state.success = true;
       })
       .addCase(createExamination.rejected, (state, action) => {
-        state.loading.create = false;
-        state.error = action.payload || 'Error creating examination';
+        state.loading = false;
+        state.error = action.payload as string;
+        state.success = false;
       })
       
-      // updateExamination
+      // Update examination
       .addCase(updateExamination.pending, (state) => {
-        state.loading.update = true;
+        state.loading = true;
         state.error = null;
       })
-      .addCase(updateExamination.fulfilled, (state, action: PayloadAction<ApiResponse<Examination>>) => {
-        state.loading.update = false;
-        if (action.payload.examination) {
-          state.examination = action.payload.examination;
-          state.examinations = state.examinations.map(exam => 
-            exam.examination_id === action.payload.examination!.examination_id 
-              ? action.payload.examination! 
-              : exam
-          );
-        }
-        state.success = action.payload.success;
+      .addCase(updateExamination.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
+        state.loading = false;
+        state.examinations = state.examinations.map(exam => 
+          exam.examination_id === action.payload.examination.examination_id 
+            ? action.payload.examination 
+            : exam
+        );
+        state.currentExamination = action.payload.examination;
+        state.success = true;
       })
       .addCase(updateExamination.rejected, (state, action) => {
-        state.loading.update = false;
-        state.error = action.payload || 'Error updating examination';
+        state.loading = false;
+        state.error = action.payload as string;
       })
       
-      // updateExaminationStatus
+      // Update examination status
       .addCase(updateExaminationStatus.pending, (state) => {
-        state.loading.update = true;
+        state.loading = true;
         state.error = null;
       })
-      .addCase(updateExaminationStatus.fulfilled, (state, action: PayloadAction<ApiResponse<Examination>>) => {
-        state.loading.update = false;
-        if (action.payload.examination) {
-          state.examination = action.payload.examination;
-          state.examinations = state.examinations.map(exam => 
-            exam.examination_id === action.payload.examination!.examination_id 
-              ? action.payload.examination! 
-              : exam
-          );
-        }
-        state.success = action.payload.success;
+      .addCase(updateExaminationStatus.fulfilled, (state, action: PayloadAction<{ success: boolean, examination: Examination }>) => {
+        state.loading = false;
+        state.examinations = state.examinations.map(exam => 
+          exam.examination_id === action.payload.examination.examination_id 
+            ? action.payload.examination 
+            : exam
+        );
+        state.currentExamination = action.payload.examination;
+        state.success = true;
       })
       .addCase(updateExaminationStatus.rejected, (state, action) => {
-        state.loading.update = false;
-        state.error = action.payload || 'Error updating examination status';
+        state.loading = false;
+        state.error = action.payload as string;
       })
       
-      // fetchPetExaminationHistory
-      .addCase(fetchPetExaminationHistory.pending, (state) => {
-        state.loading.list = true;
+      // Get pet examination history
+      .addCase(getPetExaminationHistory.pending, (state) => {
+        state.loading = true;
         state.error = null;
       })
-      .addCase(fetchPetExaminationHistory.fulfilled, (state, action: PayloadAction<ApiResponse<Examination[]>>) => {
-        state.loading.list = false;
-        if (action.payload.examinations) {
-          state.petExaminations = action.payload.examinations;
-        }
-        state.success = action.payload.success;
+      .addCase(getPetExaminationHistory.fulfilled, (state, action: PayloadAction<{ success: boolean, examinations: Examination[], count: number }>) => {
+        state.loading = false;
+        state.petExaminations = action.payload.examinations;
+        state.success = true;
       })
-      .addCase(fetchPetExaminationHistory.rejected, (state, action) => {
-        state.loading.list = false;
-        state.error = action.payload || 'Error retrieving examination history';
+      .addCase(getPetExaminationHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       })
       
-      // deleteExamination
+      // Delete examination
       .addCase(deleteExamination.pending, (state) => {
-        state.loading.delete = true;
+        state.loading = true;
         state.error = null;
       })
-      .addCase(deleteExamination.fulfilled, (state, action: PayloadAction<ApiResponse<any> & { id: number }>) => {
-        state.loading.delete = false;
-        if (action.payload.success) {
+      .addCase(deleteExamination.fulfilled, (state, action: PayloadAction<{ success: boolean }>) => {
+        state.loading = false;
+        if (state.currentExamination) {
           state.examinations = state.examinations.filter(
-            exam => exam.examination_id !== action.payload.id
+            exam => exam.examination_id !== state.currentExamination?.examination_id
           );
-          if (state.examination && state.examination.examination_id === action.payload.id) {
-            state.examination = null;
-          }
+          state.currentExamination = null;
         }
-        state.success = action.payload.success;
+        state.success = true;
       })
       .addCase(deleteExamination.rejected, (state, action) => {
-        state.loading.delete = false;
-        state.error = action.payload || 'Error deleting examination';
+        state.loading = false;
+        state.error = action.payload as string;
       });
   }
 });
 
-export const { resetExaminationState, clearExaminationDetails, resetExaminationErrors } = examinationSlice.actions;
-
+export const { resetExaminationState, clearCurrentExamination } = examinationSlice.actions;
 export default examinationSlice.reducer;

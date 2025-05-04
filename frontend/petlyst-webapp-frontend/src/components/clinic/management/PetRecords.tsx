@@ -478,6 +478,8 @@ const PetRecords: React.FC = () => {
 
   // Handle starting an examination
   const handleStartExamination = (petId: string) => {
+    console.log('Starting examination for pet ID:', petId);
+    
     // Get clinic ID from localStorage
     const clinicId = localStorage.getItem('selectedClinicId');
     
@@ -486,25 +488,35 @@ const PetRecords: React.FC = () => {
       return;
     }
     
-    // Close modal
-    closePetModal();
+    if (!petId) {
+      console.error('Pet ID is undefined or null');
+      return;
+    }
     
-    // Store pet ID in localStorage - this will be read by ExaminationList component
-    localStorage.setItem('startExamForPet', petId);
-    
-    // If we're in the management dashboard, we can switch tabs
-    if (window.location.pathname.includes('management-dashboard')) {
-      // Try to click the examinations tab
-      const examinationsLink = document.querySelector('[data-tab="examinations"]') as HTMLElement;
-      if (examinationsLink) {
-        examinationsLink.click();
-      } else {
-        // If DOM manipulation doesn't work, redirect without exposing petId in URL
-        window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
-      }
-    } else {
-      // If we're on another page, redirect without exposing petId in URL
+    // Store pet ID in localStorage first, then close modal and redirect
+    try {
+      // First, ensure we clear any previous values
+      localStorage.removeItem('startExamForPet');
+      
+      // Then set the new value
+      localStorage.setItem('startExamForPet', petId);
+      console.log('Pet ID saved to localStorage:', petId);
+      
+      // Close modal
+      closePetModal();
+      
+      // Dispatch custom event before redirecting
+      const examEvent = new CustomEvent('startExamination', { 
+        detail: { petId }
+      });
+      window.dispatchEvent(examEvent);
+      console.log('Dispatched startExamination event');
+      
+      // Redirect directly to the examinations tab (do this last)
       window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
+    } catch (error) {
+      console.error('Error during examination start:', error);
+      alert('Failed to start examination. Please try again.');
     }
   };
 
