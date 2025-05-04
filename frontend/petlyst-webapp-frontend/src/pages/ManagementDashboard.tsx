@@ -9,6 +9,7 @@ import PastAppointments from '../components/clinic/management/PastAppointments';
 import PetRecords from '../components/clinic/management/PetRecords';
 import InventoryManagement from '../components/clinic/management/InventoryManagement';
 import HospitalizationDashboard from '../components/clinic/management/hospitalization/HospitalizationDashboard';
+import ExaminationList from '../components/clinic/management/examination/ExaminationList';
 
 interface ClinicData {
   clinic_id: string;
@@ -125,6 +126,26 @@ const ManagementDashboard: React.FC = () => {
       .replace(/\s+Animal\s+Hospital$/i, '');
   };
 
+  // Listen for examination start event
+  useEffect(() => {
+    const handleStartExamination = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const petId = customEvent.detail?.petId;
+      
+      if (petId) {
+        console.log('Starting examination for pet ID:', petId);
+        setActiveTab('examinations');
+        localStorage.setItem('startExamForPet', petId);
+      }
+    };
+
+    window.addEventListener('startExamination', handleStartExamination);
+    
+    return () => {
+      window.removeEventListener('startExamination', handleStartExamination);
+    };
+  }, []);
+
   // Define menu items with expanded state
   const [menuItems, setMenuItems] = useState<MenuItem[]>([
     {
@@ -191,6 +212,15 @@ const ManagementDashboard: React.FC = () => {
             </svg>
           ),
           onClick: () => setActiveTab('pet-records'),
+        },
+        {
+          name: 'Examinations',
+          icon: (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          ),
+          onClick: () => setActiveTab('examinations'),
         },
         {
           name: 'Medical History',
@@ -718,6 +748,25 @@ const ManagementDashboard: React.FC = () => {
     }
   }, [unauthorized, navigate]);
 
+  // Check for tab parameter in URL when component mounts
+  useEffect(() => {
+    // Get the tab parameter from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    // If tab parameter exists and it's a valid tab, set it as active
+    if (tabParam && ['dashboard', 'appointment-requests', 'upcoming-appointments', 'past-appointments', 
+                     'pet-records', 'inventory', 'hospitalization', 'examinations', 'staff', 
+                     'medical-history'].includes(tabParam)) {
+      setActiveTab(tabParam);
+      
+      // Clean URL by removing the tab parameter without refreshing the page
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('tab');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   // Create styles to hide the DefaultHeader
   useEffect(() => {
     // Create a style element
@@ -832,6 +881,9 @@ const ManagementDashboard: React.FC = () => {
         
       case 'hospitalization':
         return <HospitalizationDashboard clinicId={clinicId || ''} />;
+        
+      case 'examinations':
+        return <ExaminationList />;
         
       case 'staff':
         return (

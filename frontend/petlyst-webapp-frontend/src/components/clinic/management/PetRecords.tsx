@@ -476,6 +476,38 @@ const PetRecords: React.FC = () => {
     }
   };
 
+  // Handle starting an examination
+  const handleStartExamination = (petId: string) => {
+    // Get clinic ID from localStorage
+    const clinicId = localStorage.getItem('selectedClinicId');
+    
+    if (!clinicId) {
+      alert('Clinic ID not found. Please refresh the page and try again.');
+      return;
+    }
+    
+    // Close modal
+    closePetModal();
+    
+    // Store pet ID in localStorage - this will be read by ExaminationList component
+    localStorage.setItem('startExamForPet', petId);
+    
+    // If we're in the management dashboard, we can switch tabs
+    if (window.location.pathname.includes('management-dashboard')) {
+      // Try to click the examinations tab
+      const examinationsLink = document.querySelector('[data-tab="examinations"]') as HTMLElement;
+      if (examinationsLink) {
+        examinationsLink.click();
+      } else {
+        // If DOM manipulation doesn't work, redirect without exposing petId in URL
+        window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
+      }
+    } else {
+      // If we're on another page, redirect without exposing petId in URL
+      window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
+    }
+  };
+
   // Close pet details modal
   const closePetModal = () => {
     setSelectedPet(null);
@@ -494,9 +526,9 @@ const PetRecords: React.FC = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-0 max-w-3xl w-full shadow-xl overflow-hidden">
           {/* Modal Header */}
-          <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
+          <div className="bg-purple-50 border-b border-purple-100 px-6 py-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-blue-800">Pet Details: {selectedPet.pet_name}</h3>
+              <h3 className="text-lg font-semibold text-purple-800">Pet Details: {selectedPet.pet_name}</h3>
               <button
                 onClick={closePetModal}
                 className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -687,7 +719,17 @@ const PetRecords: React.FC = () => {
           </div>
           
           {/* Modal Footer */}
-          <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3 border-t border-gray-200">
+          <div className="bg-gray-50 px-6 py-3 flex justify-between border-t border-gray-200">
+            <button
+              onClick={() => handleStartExamination(selectedPet.pet_id)}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              </svg>
+              Start Examination
+            </button>
+            
             <button
               onClick={closePetModal}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
@@ -821,6 +863,22 @@ const PetRecords: React.FC = () => {
                     {calculateAge(pet)}
                   </p>
                 </div>
+              </div>
+
+              {/* Add Start Examination button */}
+              <div className="mt-3 pt-2 border-t border-gray-100">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click
+                    handleStartExamination(pet.pet_id);
+                  }}
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                  </svg>
+                  Start Examination
+                </button>
               </div>
             </div>
           ))}
