@@ -71,18 +71,28 @@ interface ArchiveModalState {
 }
 
 const ManagementDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const userId = useSelector((state: RootState) => state.auth.user?.id);
+  
   // Get clinicId from URL params, fallback to localStorage if not present
-  const { clinicId: urlClinicId } = useParams<{ clinicId: string }>();
+  const { clinicId: urlClinicId } = useParams<{ clinicId?: string }>();
   const storedClinicId = localStorage.getItem('selectedClinicId');
   const clinicId = urlClinicId || storedClinicId;
   
-  // If clinicId from URL is different from stored one, update localStorage
+  // If clinicId from URL is different from stored one, update localStorage and redirect
   useEffect(() => {
-    if (urlClinicId && urlClinicId !== storedClinicId) {
+    if (urlClinicId) {
       localStorage.setItem('selectedClinicId', urlClinicId);
       console.log('Updated selectedClinicId in localStorage:', urlClinicId);
+      
+      // Redirect to /management-dashboard without clinic ID in URL
+      navigate('/management-dashboard', { replace: true });
+    } else if (!storedClinicId) {
+      // If no clinicId in URL or localStorage, redirect to dashboard
+      navigate('/dashboard', { replace: true });
     }
-  }, [urlClinicId, storedClinicId]);
+  }, [urlClinicId, storedClinicId, navigate]);
 
   const [clinic, setClinic] = useState<ClinicData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,10 +134,6 @@ const ManagementDashboard: React.FC = () => {
     action: null
   });
 
-  const token = useSelector((state: RootState) => state.auth.token);
-  const userId = useSelector((state: RootState) => state.auth.user?.id);
-  const navigate = useNavigate();
-  
   // Get base clinic name without suffixes
   const getBaseClinicName = (name: string | undefined) => {
     if (!name) return 'Clinic Management Console';

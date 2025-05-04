@@ -49,7 +49,7 @@ export interface StandardDiagnosis {
 
 // Standard diagnosis creation/update data
 export interface StandardDiagnosisFormData {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   category?: string;
@@ -165,7 +165,7 @@ export const getStandardDiagnoses = async (species?: string): Promise<StandardDi
       queryParams.append('species', species);
     }
     
-    const response = await axiosInstance.get(`/diagnoses/standard/list?${queryParams.toString()}`);
+    const response = await axiosInstance.get(`/diagnoses/standard?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error getting standard diagnoses:', error);

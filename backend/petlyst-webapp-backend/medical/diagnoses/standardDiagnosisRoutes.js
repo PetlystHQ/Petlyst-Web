@@ -1,33 +1,55 @@
 const express = require('express');
 const router = express.Router();
-const StandardDiagnosis = require('./standardDiagnosisModel');
-const { Op } = require('sequelize');
-const authMiddleware = require('../../../middleware/authMiddleware');
+const standardDiagnosisModel = require('./standardDiagnosisModel');
+const authenticateToken = require('../../middleware/authenticateToken');
+const { checkVerificationStatus } = require('../../middleware/verificationMiddleware');
+const pool = require('../../config/db');
+
+// Middleware for checking if the user is a veterinarian
+const veterinarianMiddleware = async (req, res, next) => {
+  try {
+    // User ID should be available from authenticateToken middleware
+    const userId = req.user.userId;
+    
+    // Check if user is a veterinarian
+    const userQuery = `
+      SELECT user_type FROM users WHERE user_id = $1
+    `;
+    const userResult = await pool.query(userQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (userResult.rows[0].user_type !== 'veterinarian') {
+      return res.status(403).json({ message: 'Access denied. Only veterinarians can perform this action.' });
+    }
+    
+    // Add vet_id to request
+    req.vet_id = userId;
+    next();
+  } catch (error) {
+    console.error('Error in veterinarian middleware:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 /**
- * @route   GET /api/diagnoses/standard/list
+ * @route   GET /api/diagnoses/standard
  * @desc    Get all standard diagnoses, optionally filtered by species
  * @access  Private
  */
-router.get('/list', authMiddleware, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { species } = req.query;
-    const whereClause = {};
+    const filters = {};
     
     // Add species filter if provided
     if (species) {
-      whereClause.species = species;
+      filters.species = species;
     }
     
-    const standardDiagnoses = await StandardDiagnosis.findAll({
-      where: whereClause,
-      order: [
-        ['species', 'ASC'],
-        ['category', 'ASC'],
-        ['name', 'ASC']
-      ]
-    });
-    
+    const standardDiagnoses = await standardDiagnosisModel.listStandardDiagnoses(filters);
     res.json(standardDiagnoses);
   } catch (error) {
     console.error('Error fetching standard diagnoses:', error);
@@ -40,11 +62,11 @@ router.get('/list', authMiddleware, async (req, res) => {
  * @desc    Get a standard diagnosis by code
  * @access  Private
  */
-router.get('/:code', authMiddleware, async (req, res) => {
+router.get('/:code', authenticateToken, async (req, res) => {
   try {
     const { code } = req.params;
     
-    const standardDiagnosis = await StandardDiagnosis.findByPk(code);
+    const standardDiagnosis = await standardDiagnosisModel.getStandardDiagnosis(code);
     
     if (!standardDiagnosis) {
       return res.status(404).json({ message: 'Standard diagnosis not found' });
@@ -62,13 +84,13 @@ router.get('/:code', authMiddleware, async (req, res) => {
  * @desc    Create a new standard diagnosis
  * @access  Private
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
   try {
     const { code, name, description, category, species, is_active } = req.body;
     
     // If code is provided, check if it's unique
     if (code) {
-      const existingDiagnosis = await StandardDiagnosis.findByPk(code);
+      const existingDiagnosis = await standardDiagnosisModel.getStandardDiagnosis(code);
       if (existingDiagnosis) {
         return res.status(400).json({ message: 'Diagnosis code already exists' });
       }
@@ -79,17 +101,14 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Name and species are required fields' });
     }
     
-    // Generate unique code if not provided
-    const diagnosisCode = code || await StandardDiagnosis.generateUniqueCode(species, category);
-    
     // Create the diagnosis
-    const newDiagnosis = await StandardDiagnosis.create({
-      code: diagnosisCode,
+    const newDiagnosis = await standardDiagnosisModel.createStandardDiagnosis({
+      code,
       name,
       description,
       category,
       species,
-      is_active: is_active !== undefined ? is_active : true
+      is_active
     });
     
     res.status(201).json(newDiagnosis);
@@ -97,10 +116,10 @@ router.post('/', authMiddleware, async (req, res) => {
     console.error('Error creating standard diagnosis:', error);
     
     // Handle validation errors
-    if (error.name === 'SequelizeValidationError') {
+    if (error.constraint) {
       return res.status(400).json({ 
         message: 'Validation error', 
-        errors: error.errors.map(e => ({ field: e.path, message: e.message })) 
+        error: error.detail 
       });
     }
     
@@ -113,36 +132,36 @@ router.post('/', authMiddleware, async (req, res) => {
  * @desc    Update a standard diagnosis
  * @access  Private
  */
-router.put('/:code', authMiddleware, async (req, res) => {
+router.put('/:code', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
   try {
     const { code } = req.params;
     const { name, description, category, species, is_active } = req.body;
     
     // Find the diagnosis
-    const diagnosis = await StandardDiagnosis.findByPk(code);
+    const diagnosis = await standardDiagnosisModel.getStandardDiagnosis(code);
     
     if (!diagnosis) {
       return res.status(404).json({ message: 'Standard diagnosis not found' });
     }
     
     // Update the diagnosis
-    await diagnosis.update({
-      name: name || diagnosis.name,
-      description: description !== undefined ? description : diagnosis.description,
-      category: category !== undefined ? category : diagnosis.category,
-      species: species || diagnosis.species,
-      is_active: is_active !== undefined ? is_active : diagnosis.is_active
+    const updatedDiagnosis = await standardDiagnosisModel.updateStandardDiagnosis(code, {
+      name,
+      description,
+      category,
+      species,
+      is_active
     });
     
-    res.json(diagnosis);
+    res.json(updatedDiagnosis);
   } catch (error) {
     console.error('Error updating standard diagnosis:', error);
     
     // Handle validation errors
-    if (error.name === 'SequelizeValidationError') {
+    if (error.constraint) {
       return res.status(400).json({ 
         message: 'Validation error', 
-        errors: error.errors.map(e => ({ field: e.path, message: e.message })) 
+        error: error.detail
       });
     }
     
@@ -155,19 +174,19 @@ router.put('/:code', authMiddleware, async (req, res) => {
  * @desc    Delete a standard diagnosis
  * @access  Private
  */
-router.delete('/:code', authMiddleware, async (req, res) => {
+router.delete('/:code', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
   try {
     const { code } = req.params;
     
     // Find the diagnosis
-    const diagnosis = await StandardDiagnosis.findByPk(code);
+    const diagnosis = await standardDiagnosisModel.getStandardDiagnosis(code);
     
     if (!diagnosis) {
       return res.status(404).json({ message: 'Standard diagnosis not found' });
     }
     
     // Delete the diagnosis
-    await diagnosis.destroy();
+    await standardDiagnosisModel.deleteStandardDiagnosis(code);
     
     res.json({ message: 'Standard diagnosis deleted successfully' });
   } catch (error) {
@@ -181,7 +200,7 @@ router.delete('/:code', authMiddleware, async (req, res) => {
  * @desc    Search standard diagnoses by name, code or category
  * @access  Private
  */
-router.get('/search', authMiddleware, async (req, res) => {
+router.get('/search', authenticateToken, async (req, res) => {
   try {
     const { term, species } = req.query;
     
@@ -189,26 +208,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Search term is required' });
     }
     
-    const whereClause = {
-      [Op.or]: [
-        { code: { [Op.iLike]: `%${term}%` } },
-        { name: { [Op.iLike]: `%${term}%` } },
-        { category: { [Op.iLike]: `%${term}%` } }
-      ]
-    };
-    
-    // Add species filter if provided
-    if (species) {
-      whereClause.species = species;
-    }
-    
-    const standardDiagnoses = await StandardDiagnosis.findAll({
-      where: whereClause,
-      order: [
-        ['name', 'ASC']
-      ],
-      limit: 20
-    });
+    const standardDiagnoses = await standardDiagnosisModel.searchStandardDiagnoses(term, species);
     
     res.json(standardDiagnoses);
   } catch (error) {

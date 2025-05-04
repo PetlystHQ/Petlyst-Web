@@ -32,6 +32,7 @@ const inventoryRoutes = require('./inventoryRoutes/inventoryRoutes');
 const hospitalizationRoutes = require('./hospitalization/hospitalizationRoutes');
 const examinationRoutes = require('./medical/examinations/examinationRoutes');
 const diagnosesRoutes = require('./medical/diagnoses/diagnosesRoutes');
+const standardDiagnosisRoutes = require('./medical/diagnoses/standardDiagnosisRoutes');
 const treatmentRoutes = require('./medical/treatments/treatmentRoutes');
 const medicationRoutes = require('./medical/medications/medicationRoutes');
 const reportsRoutes = require('./medical/reports/reportsRoutes');
@@ -48,6 +49,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/clinics', inventoryRoutes);
 app.use('/api', hospitalizationRoutes);
 app.use('/api/examinations', examinationRoutes);
+// Register the standard diagnosis routes first (more specific)
+app.use('/api/diagnoses/standard', standardDiagnosisRoutes);
+// Then register the general diagnoses routes
 app.use('/api/diagnoses', diagnosesRoutes);
 app.use('/api/treatments', treatmentRoutes);
 app.use('/api/medications', medicationRoutes);
