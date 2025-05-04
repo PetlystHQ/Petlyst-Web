@@ -18,6 +18,9 @@ import {
   deleteStandardDiagnosis as apiDeleteStandardDiagnosis
 } from './diagnosisService';
 
+// Backend tarafında kod oluşturulacağı için form verisini güncelleyelim
+type CreateStandardDiagnosisData = Omit<StandardDiagnosisFormData, 'code'> & { code?: string };
+
 // Define the state interface
 interface DiagnosisState {
   diagnoses: Diagnosis[];
@@ -133,9 +136,9 @@ export const getStandardDiagnoses = createAsyncThunk(
 // Add thunks for standard diagnosis management
 export const createStandardDiagnosis = createAsyncThunk(
   'diagnoses/createStandard',
-  async (diagnosisData: StandardDiagnosisFormData, { rejectWithValue }) => {
+  async (diagnosisData: CreateStandardDiagnosisData, { rejectWithValue }) => {
     try {
-      return await apiCreateStandardDiagnosis(diagnosisData);
+      return await apiCreateStandardDiagnosis(diagnosisData as StandardDiagnosisFormData);
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create standard diagnosis');
     }

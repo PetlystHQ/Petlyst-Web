@@ -328,7 +328,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
               <button
                 onClick={() => {
                   localStorage.setItem('selectedClinicId', clinic.clinic_id);
-                  navigate(`/management-dashboard/${clinic.clinic_id}`);
+                  navigate('/management-dashboard');
                 }}
                 className="flex-1 flex items-center justify-center text-base font-medium px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors"
               >

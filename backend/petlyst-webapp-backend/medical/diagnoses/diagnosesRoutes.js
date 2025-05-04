@@ -471,6 +471,8 @@ router.get('/examination/:examinationId', authenticateToken, async (req, res) =>
 });
 
 // Get standard diagnoses (for dropdown selection)
+// This route is now handled by standardDiagnosisRoutes.js
+/*
 router.get('/standard/list', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
   try {
     const { species } = req.query;
@@ -481,5 +483,6 @@ router.get('/standard/list', authenticateToken, checkVerificationStatus, veterin
     res.status(500).json({ message: 'Error getting standard diagnoses', error: error.message });
   }
 });
+*/
 
 module.exports = router;

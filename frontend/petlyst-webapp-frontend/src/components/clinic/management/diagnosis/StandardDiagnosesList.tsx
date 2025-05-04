@@ -223,7 +223,7 @@ const StandardDiagnosesList: React.FC = () => {
                     {diagnosis.name}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {diagnosis.species}
+                    {diagnosis.species.charAt(0).toUpperCase() + diagnosis.species.slice(1)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {diagnosis.category || '-'}

@@ -25,6 +25,7 @@
     "nodemon": "^3.1.9",
     "pg": "^8.11.3",
     "readable-stream": "^4.7.0",
+    "sequelize": "^6.37.7",
     "uuid": "^11.1.0"
   }
 }

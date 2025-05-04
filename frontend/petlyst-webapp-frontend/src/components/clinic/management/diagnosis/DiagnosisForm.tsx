@@ -46,7 +46,7 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   
   // Fetch standard diagnoses
   useEffect(() => {
-    if (formData.diagnosis_type === 'standard') {
+    if (formData.diagnosis_type === 'custom') {
       dispatch(getStandardDiagnoses(undefined));
     }
   }, [dispatch, formData.diagnosis_type]);
@@ -76,7 +76,7 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     
     // When diagnosis type changes, reset related fields
     if (name === 'diagnosis_type') {
-      if (value === 'standard') {
+      if (value === 'custom') {
         setShowStandardDropdown(true);
       } else {
         setShowStandardDropdown(false);
@@ -171,10 +171,10 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
             </div>
             
             {/* Standard Diagnosis Selection */}
-            {formData.diagnosis_type === 'standard' && (
+            {formData.diagnosis_type === 'custom' && (
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Standard Diagnosis
+                  Select Standard Diagnosis as Template
                 </label>
                 <div className="relative">
                   <input
