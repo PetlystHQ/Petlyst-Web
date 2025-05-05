@@ -74,18 +74,21 @@ async function getExamination(examinationId) {
 // List examinations with various filters
 async function listExaminations(filters, limit, offset) {
     try {
-        console.log('ExaminationModel - Listing examinations with filters:', filters);
+        console.log('=== ExaminationModel.listExaminations STARTED ===');
+        console.log('Incoming filters:', JSON.stringify(filters, null, 2));
+        console.log('Limit:', limit, 'Offset:', offset);
         
         // Limit and offset default values if not provided
         limit = limit || 20;
         offset = offset || 0;
+        console.log('Final limit:', limit, 'Final offset:', offset);
         
         let query = `
             SELECT e.*, 
                    p.pet_name, p.pet_species, p.pet_breed,
                    CONCAT(u.user_name, ' ', u.user_surname) as veterinarian_name
             FROM examinations e
-            JOIN pets p ON e.pet_id = p.pet_id
+            LEFT JOIN pets p ON e.pet_id = p.pet_id
             LEFT JOIN veterinarians v ON e.vet_id = v.veterinarian_id
             LEFT JOIN users u ON v.veterinarian_id = u.user_id
             WHERE 1=1
@@ -96,31 +99,47 @@ async function listExaminations(filters, limit, offset) {
         
         // Apply filters
         if (filters.pet_id) {
+            console.log('Adding pet_id filter:', filters.pet_id);
             query += ` AND e.pet_id = $${paramIndex}`;
             queryParams.push(filters.pet_id);
             paramIndex++;
         }
         
         if (filters.vet_id) {
+            console.log('Adding vet_id filter:', filters.vet_id);
             query += ` AND e.vet_id = $${paramIndex}`;
             queryParams.push(filters.vet_id);
             paramIndex++;
         }
         
         if (filters.status) {
-            query += ` AND e.status = $${paramIndex}`;
-            queryParams.push(filters.status);
-            paramIndex++;
+            console.log('Processing status filter:', filters.status);
+            // Check if it's a comma-separated list of statuses
+            if (filters.status.includes(',')) {
+                const statuses = filters.status.split(',').map(s => s.trim());
+                console.log('Status list after splitting:', statuses);
+                query += ` AND e.status IN (${statuses.map((_, i) => `$${paramIndex + i}`).join(', ')})`;
+                queryParams.push(...statuses);
+                console.log('Status parameters added to query:', statuses);
+                paramIndex += statuses.length;
+            } else {
+                query += ` AND e.status = $${paramIndex}`;
+                queryParams.push(filters.status);
+                console.log('Single status parameter added:', filters.status);
+                paramIndex++;
+            }
         }
         
         // Date filters
         if (filters.start_date) {
+            console.log('Adding start_date filter:', filters.start_date);
             query += ` AND e.created_at >= $${paramIndex}`;
             queryParams.push(filters.start_date);
             paramIndex++;
         }
         
         if (filters.end_date) {
+            console.log('Adding end_date filter:', filters.end_date);
             query += ` AND e.created_at <= $${paramIndex}`;
             queryParams.push(filters.end_date);
             paramIndex++;
@@ -128,8 +147,12 @@ async function listExaminations(filters, limit, offset) {
         
         // Get the total count before applying limit and offset for pagination
         const countQuery = `SELECT COUNT(*) FROM (${query}) as count_query`;
+        console.log('Count query:', countQuery);
+        console.log('Count query params:', queryParams);
+        
         const countResult = await pool.query(countQuery, queryParams);
         const totalCount = parseInt(countResult.rows[0].count);
+        console.log('Total count before pagination:', totalCount);
         
         // Add order by, limit and offset
         query += ` ORDER BY e.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex+1}`;
@@ -140,12 +163,27 @@ async function listExaminations(filters, limit, offset) {
             params: queryParams
         });
         
+        console.log('Executing query...');
         const result = await pool.query(query, queryParams);
-        console.log(`Examinations found: ${result.rows.length}`);
+        console.log(`Query executed. Examinations found: ${result.rows.length}`);
         
+        // Log examination IDs for debugging
+        if (result.rows.length > 0) {
+            console.log('Found examination IDs:', result.rows.map(row => row.examination_id));
+            console.log('Statuses of found examinations:', result.rows.map(row => row.status));
+            // Log pet names to verify they're being returned
+            console.log('Pet names of found examinations:', result.rows.map(row => row.pet_name || 'NOT FOUND'));
+            // Log the first complete row to check all fields
+            console.log('Sample examination data:', result.rows[0]);
+        } else {
+            console.log('No examinations matched the query criteria');
+        }
+        
+        console.log('=== ExaminationModel.listExaminations COMPLETED ===');
         return result.rows;
     } catch (error) {
-        console.error('Error listing examinations:', error);
+        console.error('ERROR in ExaminationModel.listExaminations:', error);
+        console.error('Error stack:', error.stack);
         // Return empty array instead of throwing to prevent frontend from crashing
         return [];
     }
@@ -251,8 +289,10 @@ async function getPetExaminationHistory(petId) {
     try {
         const result = await pool.query(
             `SELECT e.*, 
+                    p.pet_name, p.pet_species, p.pet_breed,
                     CONCAT(u.user_name, ' ', u.user_surname) as veterinarian_name
              FROM examinations e
+             JOIN pets p ON e.pet_id = p.pet_id
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
              WHERE e.pet_id = $1

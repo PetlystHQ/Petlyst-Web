@@ -74,6 +74,20 @@ const ManagementDashboard: React.FC = () => {
   const navigate = useNavigate();
   const token = useSelector((state: RootState) => state.auth.token);
   const userId = useSelector((state: RootState) => state.auth.user?.id);
+  const user = useSelector((state: RootState) => state.auth.user);
+  
+  // Extract veterinarian name safely using a more generic approach
+  const getVetName = () => {
+    if (!user) return '';
+    // Try to access name property regardless of exact field name
+    return (user as any).user_name || (user as any).name || '';
+  };
+  
+  const getVetSurname = () => {
+    if (!user) return '';
+    // Try to access surname property regardless of exact field name
+    return (user as any).user_surname || (user as any).surname || '';
+  };
   
   // Get clinicId from URL params, fallback to localStorage if not present
   const { clinicId: urlClinicId } = useParams<{ clinicId?: string }>();
@@ -243,17 +257,46 @@ const ManagementDashboard: React.FC = () => {
         }, 50);
       }
     };
+    
+    // Listen for the startDiagnosis event
+    const handleStartDiagnosis = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const petId = customEvent.detail?.petId;
+      
+      if (petId) {
+        console.log('ManagementDashboard: Received startDiagnosis event with pet ID:', petId);
+        
+        // Store petId securely in localStorage
+        localStorage.removeItem('currentPetId');
+        localStorage.setItem('currentPetId', petId.toString());
+        console.log('ManagementDashboard: Stored petId in localStorage for diagnosis:', petId);
+        
+        // Set active tab with a small delay to ensure state update is processed
+        setTimeout(() => {
+          console.log('ManagementDashboard: Setting active tab to diagnoses');
+          setActiveTab('diagnoses');
+          
+          // Dispatch custom event to open the diagnosis form
+          const openFormEvent = new CustomEvent('openDiagnosisForm', { 
+            detail: { petId }
+          });
+          window.dispatchEvent(openFormEvent);
+        }, 50);
+      }
+    };
 
     // Add event listeners
     window.addEventListener('startExamination', handleStartExamination);
     window.addEventListener('switchToExaminationsTab', handleSwitchTab);
+    window.addEventListener('startDiagnosis', handleStartDiagnosis);
     
-    console.log('ManagementDashboard: Added event listeners for examination events');
+    console.log('ManagementDashboard: Added event listeners for examination and diagnosis events');
     
     return () => {
       window.removeEventListener('startExamination', handleStartExamination);
       window.removeEventListener('switchToExaminationsTab', handleSwitchTab);
-      console.log('ManagementDashboard: Removed event listeners for examination events');
+      window.removeEventListener('startDiagnosis', handleStartDiagnosis);
+      console.log('ManagementDashboard: Removed event listeners for examination and diagnosis events');
     };
   }, [clinicId]);
 
@@ -341,15 +384,6 @@ const ManagementDashboard: React.FC = () => {
             </svg>
           ),
           onClick: () => setActiveTab('diagnoses'),
-        },
-        {
-          name: 'Medical History',
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 4v12l-4-2-4 2V4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          ),
-          onClick: () => setActiveTab('medical-history'),
         },
       ],
     },
@@ -1329,44 +1363,43 @@ const ManagementDashboard: React.FC = () => {
         } flex flex-col relative`}
       >
         {/* Clinic logo and name */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : ''}`}>
-            {!sidebarCollapsed && (
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <h1 className="text-lg font-semibold text-gray-800 break-words">
-                  {getBaseClinicName(clinic?.clinic_name)}
-                </h1>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <h1 className="text-lg font-semibold text-gray-800 truncate">
-                {clinic?.clinic_name?.charAt(0) || 'C'}
-              </h1>
-            )}
+        <div className={`p-4 border-b border-gray-200 ${sidebarCollapsed ? 'items-center' : ''} flex flex-col`}>
+          {/* Logo centered at the top */}
+          <div className="flex justify-center w-full mb-3">
+            <img 
+              src="https://d4ryfzc64ndbh.cloudfront.net/petlyst-logo.svg" 
+              alt="Petlyst Logo" 
+              className={`${sidebarCollapsed ? 'w-12 h-12' : 'w-16 h-16'} flex-shrink-0`}
+            />
           </div>
+          
+          {/* Clinic name and vet name */}
           {!sidebarCollapsed && (
-            <button onClick={toggleSidebar} className="text-gray-500 hover:text-gray-700 flex-shrink-0 ml-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
-            </button>
+            <div className="flex flex-col items-center text-center w-full">
+              <h1 className="text-lg font-semibold text-gray-800 break-words">
+                {getBaseClinicName(clinic?.clinic_name)}
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">Dr. {getVetName()} {getVetSurname()}</p>
+            </div>
           )}
         </div>
         
-        {/* Collapse toggle */}
-        {sidebarCollapsed && (
-          <button 
-            onClick={toggleSidebar}
-            className="absolute -right-3 top-20 bg-white rounded-full p-1 shadow-md border border-gray-200"
-          >
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
+        {/* Collapse toggle - always visible at sidebar border */}
+        <button 
+          onClick={toggleSidebar}
+          className="absolute -right-3 top-20 bg-white rounded-full p-1 shadow-md border border-gray-200 z-10"
+        >
+          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth="2" 
+              d={sidebarCollapsed 
+                ? "M13 5l7 7-7 7M5 5l7 7-7 7" 
+                : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} 
+            />
+          </svg>
+        </button>
         
         {/* Menu items */}
         <div className="flex-1 overflow-y-auto py-4">

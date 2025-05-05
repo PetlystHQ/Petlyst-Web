@@ -1063,4 +1063,113 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
   }
 });
 
+// Get all appointments for a specific clinic for a given month
+router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
+  try {
+    // Only veterinarians can access this route
+    if (req.user.userType !== 'veterinarian') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Access denied. Veterinarian access only.' 
+      });
+    }
+
+    const { clinicId } = req.params;
+    const { year, month } = req.query;
+    
+    // Validate year and month parameters
+    if (!year || !month) {
+      return res.status(400).json({
+        success: false,
+        error: 'Year and month parameters are required'
+      });
+    }
+    
+    const numYear = parseInt(year);
+    const numMonth = parseInt(month);
+    
+    if (isNaN(numYear) || isNaN(numMonth) || numMonth < 1 || numMonth > 12) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid year or month values'
+      });
+    }
+    
+    // Verify that the veterinarian has access to this clinic
+    const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
+    
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You do not have access to this clinic.'
+      });
+    }
+
+    // Calculate the start and end dates for the month
+    const startDate = new Date(numYear, numMonth - 1, 1).toISOString().split('T')[0]; // First day of month
+    const endDate = new Date(numYear, numMonth, 0).toISOString().split('T')[0]; // Last day of month
+    
+    console.log(`Fetching appointments for clinic ${clinicId} from ${startDate} to ${endDate}`);
+    
+    // Get all appointments for this clinic within the specified month
+    const query = `
+      SELECT 
+        a.appointment_id,
+        a.pet_id,
+        a.pet_owner_id,
+        u.user_name as pet_owner_name,
+        u.user_surname as pet_owner_surname,
+        p.pet_name,
+        p.pet_species as pet_type,
+        p.pet_breed,
+        a.appointment_date,
+        a.appointment_start_hour,
+        a.appointment_end_hour,
+        a.appointment_status,
+        a.video_meeting,
+        a.notes
+      FROM 
+        appointments a
+      JOIN 
+        users u ON a.pet_owner_id = u.user_id
+      JOIN 
+        pets p ON a.pet_id = p.pet_id
+      WHERE 
+        a.clinic_id = $1 AND
+        a.appointment_date BETWEEN $2 AND $3
+      ORDER BY 
+        a.appointment_date, 
+        a.appointment_start_hour
+    `;
+
+    const result = await pool.query(query, [clinicId, startDate, endDate]);
+    
+    // Group appointments by date for easier calendar rendering
+    const appointmentsByDate = {};
+    
+    result.rows.forEach(appointment => {
+      const date = appointment.appointment_date;
+      if (!appointmentsByDate[date]) {
+        appointmentsByDate[date] = [];
+      }
+      appointmentsByDate[date].push(appointment);
+    });
+    
+    res.status(200).json({
+      success: true,
+      month: numMonth,
+      year: numYear,
+      appointmentsByDate,
+      appointments: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching monthly appointments:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch monthly appointments',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

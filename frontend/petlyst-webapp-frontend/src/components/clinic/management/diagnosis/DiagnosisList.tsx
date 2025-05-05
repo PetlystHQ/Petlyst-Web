@@ -27,7 +27,7 @@ interface DiagnosisListProps {
 const DiagnosisList: React.FC<DiagnosisListProps> = ({ 
   filters = {}, 
   examinationId,
-  petId,
+  petId: propPetId,
   onViewDiagnosis,
   onEditDiagnosis
 }) => {
@@ -49,9 +49,13 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
   const [localFilters, setLocalFilters] = useState<DiagnosisFilters>({
     ...filters,
     examination_id: examinationId,
-    pet_id: petId
+    pet_id: propPetId
   });
   const [filterOpen, setFilterOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Rename the prop petId to propPetId to avoid confusion
+  const [petId, setPetId] = useState<number | undefined>(propPetId);
   
   // Fetch diagnoses function
   const fetchDiagnoses = useCallback(() => {
@@ -113,8 +117,26 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
   // Handle diagnosis deletion
   const handleDeleteDiagnosis = () => {
     if (confirmDelete) {
-      dispatch(deleteDiagnosis(confirmDelete));
-      setConfirmDelete(null);
+      dispatch(deleteDiagnosis(confirmDelete))
+        .unwrap()
+        .then(() => {
+          setConfirmDelete(null);
+          // Show success message
+          setErrors({});
+          // Refresh the list
+          fetchDiagnoses();
+        })
+        .catch((error) => {
+          console.error('Delete diagnosis error:', error);
+          
+          // Set error message and keep dialog open
+          setErrors({
+            delete: "Failed to delete diagnosis. Please try again later."
+          });
+          
+          // Don't close the delete confirmation dialog so they can try again
+          // setConfirmDelete(null);
+        });
     }
   };
   
@@ -131,11 +153,91 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
     setSelectedDiagnosis(null);
   };
   
+  // Listen for openDiagnosisForm event from ManagementDashboard
+  useEffect(() => {
+    const handleOpenDiagnosisForm = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const eventPetId = customEvent.detail?.petId;
+      const examinationId = customEvent.detail?.examinationId;
+      
+      console.log('DiagnosisList: Received openDiagnosisForm event with pet ID:', eventPetId);
+      console.log('DiagnosisList: Received openDiagnosisForm event with examination ID:', examinationId);
+      
+      if (eventPetId) {
+        // Update the component's petId state
+        setPetId(Number(eventPetId));
+        
+        // Store in localStorage as fallback
+        localStorage.setItem('currentPetId', eventPetId.toString());
+        
+        // Open the form
+        setSelectedDiagnosis(null);
+        setIsEdit(false);
+        setFormModalOpen(true);
+        
+        console.log('DiagnosisList: Opened diagnosis form for pet ID:', eventPetId);
+      }
+    };
+    
+    // Add event listener for the original event
+    window.addEventListener('openDiagnosisForm', handleOpenDiagnosisForm);
+    
+    // Listen for startDiagnosis event from ExaminationList
+    const handleStartDiagnosis = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const petId = customEvent.detail?.petId;
+      const examinationId = customEvent.detail?.examinationId;
+      
+      console.log('DiagnosisList: Received startDiagnosis event with petId:', petId, 'and examinationId:', examinationId);
+      
+      if (petId) {
+        // Update states
+        setPetId(Number(petId));
+        localStorage.setItem('currentPetId', petId.toString());
+        
+        // IMPORTANT: If we have an examinationId, store it in localStorage for DiagnosisForm to use
+        if (examinationId) {
+          console.log('Setting examination ID in localStorage:', examinationId);
+          localStorage.setItem('examinationIdForDiagnosis', examinationId.toString());
+        }
+        
+        // Open the form immediately
+        setSelectedDiagnosis(null);
+        setIsEdit(false);
+        setFormModalOpen(true);
+        
+        console.log('DiagnosisList: Opened diagnosis form from examination with form modal state:', formModalOpen);
+      }
+    };
+    
+    // Add event listener for the startDiagnosis event
+    window.addEventListener('startDiagnosis', handleStartDiagnosis as EventListener);
+    
+    // Try to get petId from localStorage if not provided via props
+    if (!propPetId) {
+      const storedPetId = localStorage.getItem('currentPetId');
+      if (storedPetId) {
+        console.log('DiagnosisList: Found petId in localStorage:', storedPetId);
+        setPetId(Number(storedPetId));
+      }
+    }
+    
+    return () => {
+      window.removeEventListener('openDiagnosisForm', handleOpenDiagnosisForm);
+      window.removeEventListener('startDiagnosis', handleStartDiagnosis as EventListener);
+    };
+  }, [propPetId]);
+  
   // Handle form modal close
   const handleCloseFormModal = () => {
     setFormModalOpen(false);
     setSelectedDiagnosis(null);
     setIsEdit(false);
+    
+    // Clear petId if it was set from an event and not from props
+    if (petId && !propPetId) {
+      setPetId(undefined);
+    }
   };
   
   // Handle form submission success
@@ -156,7 +258,7 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
   const resetFilters = () => {
     setLocalFilters({
       examination_id: examinationId,
-      pet_id: petId
+      pet_id: propPetId
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -237,7 +339,7 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
           aria-current={activeTab === 'standard' ? 'page' : undefined}
         >
           <FaListAlt className="mr-2" />
-          Standard Diagnoses
+          Diagnoses Template
         </button>
       </nav>
     </div>
@@ -375,6 +477,24 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
         </div>
       )}
       
+      {/* Delete error message */}
+      {errors.delete && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {errors.delete}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Loading state */}
       {loading && (
         <div className="flex justify-center items-center py-10">
@@ -425,7 +545,9 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
                     <div className="flex items-center">
                       <div>
-                        <div className="font-medium text-gray-900">{diagnosis.diagnosis_name}</div>
+                        <div className="font-medium text-gray-900">
+                          {diagnosis.pet_name ? `${diagnosis.pet_name} - ` : ''}{diagnosis.diagnosis_name}
+                        </div>
                         {diagnosis.diagnosis_code && (
                           <div className="text-gray-500">Code: {diagnosis.diagnosis_code}</div>
                         )}
@@ -618,9 +740,18 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
               Are you sure you want to delete this diagnosis? This action cannot be undone.
             </p>
             
+            {errors.delete && (
+              <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
+                <p className="text-sm font-medium">{errors.delete}</p>
+              </div>
+            )}
+            
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setConfirmDelete(null)}
+                onClick={() => {
+                  setConfirmDelete(null);
+                  setErrors({});
+                }}
                 className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
               >
                 Cancel
