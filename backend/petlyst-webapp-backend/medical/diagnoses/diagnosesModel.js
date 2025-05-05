@@ -18,6 +18,21 @@ async function createDiagnosis(diagnosisData) {
             notes
         } = diagnosisData;
 
+        // Verify examination exists and is in a valid status for diagnosis
+        const examinationCheck = await pool.query(
+            `SELECT examination_id, status FROM examinations WHERE examination_id = $1`,
+            [examination_id]
+        );
+        
+        if (examinationCheck.rows.length === 0) {
+            throw new Error(`Examination with ID ${examination_id} not found`);
+        }
+        
+        const examination = examinationCheck.rows[0];
+        if (examination.status === 'scheduled' || examination.status === 'cancelled') {
+            throw new Error('Cannot add diagnosis to a scheduled or cancelled examination');
+        }
+
         const result = await pool.query(
             `INSERT INTO diagnoses (
                 examination_id,
@@ -238,7 +253,9 @@ async function updateDiagnosis(diagnosisId, updateData) {
 // Delete a diagnosis (for admin purposes or data cleanup)
 async function deleteDiagnosis(diagnosisId) {
     try {
-        // Check if any treatments are associated with this diagnosis
+        // Skip treatments check since table doesn't exist
+        // Uncomment this when treatments table is implemented
+        /*
         const treatmentsCheck = await pool.query(
             'SELECT COUNT(*) FROM treatments WHERE diagnosis_id = $1',
             [diagnosisId]
@@ -247,6 +264,7 @@ async function deleteDiagnosis(diagnosisId) {
         if (parseInt(treatmentsCheck.rows[0].count) > 0) {
             throw new Error('Cannot delete diagnosis with associated treatments');
         }
+        */
         
         const result = await pool.query(
             'DELETE FROM diagnoses WHERE diagnosis_id = $1 RETURNING *',

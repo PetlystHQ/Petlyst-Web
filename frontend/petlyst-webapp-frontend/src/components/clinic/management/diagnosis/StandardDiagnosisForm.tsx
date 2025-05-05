@@ -6,7 +6,7 @@ import {
   updateStandardDiagnosis
 } from './DiagnosisSlice';
 import { StandardDiagnosis, StandardDiagnosisFormData } from './diagnosisService';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaQuestionCircle } from 'react-icons/fa';
 
 interface StandardDiagnosisFormProps {
   diagnosis: StandardDiagnosis | null;
@@ -131,13 +131,7 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
         {/* Header */}
         <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900">
-            {diagnosis ? 'Edit Standard Diagnosis' : 'New Standard Diagnosis'}
-            {diagnosis && diagnosis.veterinarian_id 
-              ? ' (Custom)' 
-              : diagnosis && !diagnosis.veterinarian_id 
-                ? ' (System)' 
-                : ' (Custom)'
-            }
+            {diagnosis ? 'Edit Diagnosis Template' : 'New Diagnosis Template'}
           </h3>
           <button
             onClick={onClose}
@@ -150,7 +144,42 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-grow p-6">
           <div className="space-y-6">
-            {/* Name */}
+            {/* Diagnosis Code */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                Diagnosis Code*
+                <div className="relative ml-2 group">
+                  <div className="cursor-help">
+                    <FaQuestionCircle className="text-gray-400 w-4 h-4" />
+                  </div>
+                  <div className="invisible group-hover:visible absolute z-10 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg ml-2 top-0 left-full">
+                    A unique code for this diagnosis template. This will be used as a reference when creating diagnoses.
+                  </div>
+                </div>
+              </label>
+              <input
+                type="text"
+                name="code"
+                value={formData.code || ''}
+                onChange={handleChange}
+                disabled={!!diagnosis}
+                className={`block w-full px-3 py-2 border ${
+                  errors.code ? 'border-red-300' : 'border-gray-300'
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  !!diagnosis ? 'bg-gray-100' : ''
+                }`}
+              />
+              {errors.code && (
+                <p className="mt-1 text-sm text-red-600">{errors.code}</p>
+              )}
+              {!!diagnosis && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Diagnosis template code cannot be changed after creation.
+                </p>
+              )}
+            </div>
+            
+            {/* Diagnosis Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Diagnosis Name*
@@ -169,29 +198,6 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
               )}
             </div>
             
-            {/* Code - optional, system will generate if not provided */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Code {diagnosis ? '(Read-only)' : '(Optional)'}
-              </label>
-              <input
-                type="text"
-                name="code"
-                value={formData.code || ''}
-                onChange={handleChange}
-                readOnly={!!diagnosis}
-                className={`block w-full px-3 py-2 border ${
-                  diagnosis ? 'bg-gray-100' : ''
-                } border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                placeholder={diagnosis ? '' : 'Auto-generated if left blank'}
-              />
-              {!diagnosis && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Leave blank to auto-generate a code based on species
-                </p>
-              )}
-            </div>
-            
             {/* Species */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -205,14 +211,14 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
                   errors.species ? 'border-red-300' : 'border-gray-300'
                 } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
               >
-                <option value="">Select a species</option>
+                <option value="">Select species</option>
                 <option value="dog">Dog</option>
                 <option value="cat">Cat</option>
                 <option value="bird">Bird</option>
+                <option value="rabbit">Rabbit</option>
+                <option value="rodent">Rodent</option>
                 <option value="reptile">Reptile</option>
-                <option value="small_mammal">Small Mammal</option>
-                <option value="large_animal">Large Animal</option>
-                <option value="exotic">Exotic</option>
+                <option value="fish">Fish</option>
                 <option value="other">Other</option>
               </select>
               {errors.species && (
@@ -230,8 +236,8 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
                 name="category"
                 value={formData.category || ''}
                 onChange={handleChange}
+                placeholder="e.g., Cardiac, Respiratory, Digestive, etc."
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="e.g., Respiratory, Cardiac, Dermatological"
               />
             </div>
             
@@ -250,18 +256,21 @@ const StandardDiagnosisForm: React.FC<StandardDiagnosisFormProps> = ({
             </div>
             
             {/* Active Status */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="is_active"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-                Active
-              </label>
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="is_active"
+                  name="is_active"
+                  type="checkbox"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="is_active" className="font-medium text-gray-700">Active</label>
+                <p className="text-gray-500">Inactive templates will not appear in search results when creating diagnoses.</p>
+              </div>
             </div>
           </div>
         </form>

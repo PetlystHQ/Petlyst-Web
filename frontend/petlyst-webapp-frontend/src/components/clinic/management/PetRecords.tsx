@@ -521,11 +521,11 @@ const PetRecords: React.FC = () => {
           // Use setTimeout to ensure UI updates before dispatching event
           setTimeout(() => {
             // Dispatch the event to trigger modal opening
-            const examEvent = new CustomEvent('startExamination', { 
+            const examEvent = new CustomEvent('startDiagnosis', { 
               detail: { petId }
             });
             window.dispatchEvent(examEvent);
-            console.log('Dispatched startExamination event');
+            console.log('Dispatched startDiagnosis event');
           }, 100);
         } 
         // If on dashboard but not on examinations tab
@@ -592,26 +592,31 @@ const PetRecords: React.FC = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Pet Information */}
-              <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <h4 className="text-lg font-medium text-gray-800 border-b border-gray-200 pb-2 mb-4">Pet Information</h4>
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                <h4 className="text-lg font-medium text-gray-800 border-b border-gray-200 pb-2 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pet Information
+                </h4>
                 
                 <div className="space-y-3">
-                  <div>
+                  <div className="bg-purple-50 p-2 rounded-md">
                     <p className="text-sm text-gray-500">Name</p>
                     <p className="font-medium text-gray-800">{selectedPet.pet_name}</p>
                   </div>
                   
-                  <div>
+                  <div className="bg-purple-50 p-2 rounded-md">
                     <p className="text-sm text-gray-500">Type & Breed</p>
                     <p className="font-medium text-gray-800">{selectedPet.pet_type} • {selectedPet.pet_breed}</p>
                   </div>
                   
-                  <div>
+                  <div className="bg-purple-50 p-2 rounded-md">
                     <p className="text-sm text-gray-500">Gender</p>
                     <p className="font-medium text-gray-800">{selectedPet.pet_gender || 'Not specified'}</p>
                   </div>
                   
-                  <div>
+                  <div className="bg-purple-50 p-2 rounded-md">
                     <p className="text-sm text-gray-500">Birthdate & Age</p>
                     <p className="font-medium text-gray-800">
                       {getFormattedBirthdate(selectedPet)} • {calculateAge(selectedPet)}
@@ -620,15 +625,15 @@ const PetRecords: React.FC = () => {
                   
                   {/* Chip Number Section */}
                   <div className="mt-2 pt-2 border-t border-gray-200">
-                    <p className="text-sm text-gray-500">Microchip Number</p>
+                    <p className="text-sm text-gray-500 mb-1">Microchip Number</p>
                     
                     {isChipLoading ? (
-                      <div className="flex items-center mt-1">
+                      <div className="flex items-center mt-1 bg-blue-50 p-2 rounded-md">
                         <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent mr-2"></div>
                         <span className="text-gray-600">Loading...</span>
                       </div>
                     ) : isEditingChip ? (
-                      <div className="mt-1">
+                      <div className="mt-1 bg-blue-50 p-2 rounded-md">
                         <div className="flex items-center">
                           <input
                             type="text"
@@ -665,7 +670,7 @@ const PetRecords: React.FC = () => {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center mt-1">
+                      <div className="flex items-center mt-1 bg-blue-50 p-2 rounded-md">
                         <p className="font-medium text-gray-800 mr-2">
                           {chipNumber ? chipNumber : 'Not assigned'}
                         </p>
@@ -703,63 +708,36 @@ const PetRecords: React.FC = () => {
                 </div>
               </div>
               
-              {/* Owner Information */}
-              <div className="bg-white rounded-lg border border-gray-200 p-5">
-                <h4 className="text-lg font-medium text-gray-800 border-b border-gray-200 pb-2 mb-4">Owner Information</h4>
+              {/* Visit History - Moved to right side */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                <h4 className="text-lg font-medium text-gray-800 border-b border-gray-200 pb-2 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  Visit History
+                </h4>
                 
                 <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
+                  <div className="bg-green-50 p-2 rounded-md">
+                    <p className="text-sm text-gray-500">Owner</p>
                     <p className="font-medium text-gray-800">{selectedPet.pet_owner_name} {selectedPet.pet_owner_surname}</p>
                   </div>
                   
-                  <div>
-                    <button
-                      className="px-4 py-2 mt-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center"
-                      onClick={() => {
-                        // Redirect to owner profile or contact page (to be implemented)
-                        console.log('View owner details:', selectedPet.owner_id);
-                      }}
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      View Owner Details
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Visit History */}
-              <div className="bg-white rounded-lg border border-gray-200 p-5 md:col-span-2">
-                <h4 className="text-lg font-medium text-gray-800 border-b border-gray-200 pb-2 mb-4">Visit History</h4>
-                
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Visit</p>
+                  <div className="bg-green-50 p-2 rounded-md">
+                    <p className="text-sm text-gray-500">Last Visit</p>
                     <p className="font-medium text-gray-800">
                       {selectedPet.last_visit_date ? formatDate(selectedPet.last_visit_date) : 'No visits recorded'}
                     </p>
                   </div>
                   
-                  <div>
+                  <div className="bg-green-50 p-2 rounded-md">
                     <p className="text-sm text-gray-500">Total Appointments</p>
                     <p className="font-medium text-gray-800">{selectedPet.total_appointments || 0}</p>
                   </div>
                   
-                  <div>
-                    <button
-                      className="px-4 py-2 mt-4 bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex items-center"
-                      onClick={() => {
-                        // Redirect to pet's appointment history (to be implemented)
-                        console.log('View appointment history for:', selectedPet.pet_id);
-                      }}
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                      </svg>
-                      View Appointment History
-                    </button>
+                  <div className="bg-green-50 p-2 rounded-md">
+                    <p className="text-sm text-gray-500">Patient ID</p>
+                    <p className="font-medium text-gray-800">{selectedPet.pet_id}</p>
                   </div>
                 </div>
               </div>
@@ -767,17 +745,7 @@ const PetRecords: React.FC = () => {
           </div>
           
           {/* Modal Footer */}
-          <div className="bg-gray-50 px-6 py-3 flex justify-between border-t border-gray-200">
-            <button
-              onClick={() => handleStartExamination(selectedPet.pet_id)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-              </svg>
-              Start Examination
-            </button>
-            
+          <div className="bg-gray-50 px-6 py-3 flex justify-end border-t border-gray-200">
             <button
               onClick={closePetModal}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
@@ -799,18 +767,6 @@ const PetRecords: React.FC = () => {
     <div className="p-6 bg-white rounded-lg shadow">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-800">Patient Records</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Last refreshed: {formatRefreshTime()}</span>
-          <button 
-            onClick={handleManualRefresh}
-            className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md flex items-center gap-1 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
-        </div>
       </div>
 
       <div className="mb-4 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
@@ -911,22 +867,6 @@ const PetRecords: React.FC = () => {
                     {calculateAge(pet)}
                   </p>
                 </div>
-              </div>
-
-              {/* Add Start Examination button */}
-              <div className="mt-3 pt-2 border-t border-gray-100">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent card click
-                    handleStartExamination(pet.pet_id);
-                  }}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors flex items-center justify-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  </svg>
-                  Start Examination
-                </button>
               </div>
             </div>
           ))}

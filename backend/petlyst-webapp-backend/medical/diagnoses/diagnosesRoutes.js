@@ -35,34 +35,52 @@ const veterinarianMiddleware = async (req, res, next) => {
   }
 };
 
-// Create a new diagnosis
-router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
+// Middleware to validate examination for diagnosis creation
+const validateExaminationForDiagnosis = async (req, res, next) => {
   try {
-    const diagnosisData = req.body;
+    const { examination_id } = req.body;
     
-    // Validate required fields
-    if (!diagnosisData.examination_id) {
+    if (!examination_id) {
       return res.status(400).json({ message: 'Examination ID is required' });
     }
     
-    if (!diagnosisData.diagnosis_name) {
-      return res.status(400).json({ message: 'Diagnosis name is required' });
-    }
+    // Fetch the examination with pet details
+    const examinationQuery = `
+      SELECT e.*, p.pet_id, p.pet_owner_id, p.pet_name 
+      FROM examinations e
+      JOIN pets p ON e.pet_id = p.pet_id
+      WHERE e.examination_id = $1
+    `;
+    const examinationResult = await pool.query(examinationQuery, [examination_id]);
     
-    // Check if the examination exists and if the veterinarian has permission to add a diagnosis to it
-    const examinationCheck = await pool.query(
-      'SELECT vet_id FROM examinations WHERE examination_id = $1',
-      [diagnosisData.examination_id]
-    );
-    
-    if (examinationCheck.rows.length === 0) {
+    if (examinationResult.rows.length === 0) {
       return res.status(404).json({ message: 'Examination not found' });
     }
     
-    // Only the veterinarian who performed the exam or those in the same clinic can add diagnoses
-    const examVetId = examinationCheck.rows[0].vet_id;
+    const examination = examinationResult.rows[0];
     
-    if (examVetId !== req.vet_id) {
+    // Check examination status - only allow diagnoses for in_progress or completed examinations
+    if (examination.status === 'scheduled' || examination.status === 'cancelled') {
+      return res.status(400).json({ 
+        message: 'Cannot add diagnosis to a scheduled or cancelled examination. Examination must be in progress or completed.'
+      });
+    }
+    
+    // Add examination to request for use in route handler
+    req.examination = examination;
+    
+    // If we have a pet_id in the body, verify it matches the examination's pet_id
+    if (req.body.pet_id && req.body.pet_id != examination.pet_id) {
+      return res.status(400).json({ 
+        message: 'The provided pet ID does not match the pet ID associated with this examination'
+      });
+    }
+    
+    // Check if the veterinarian has permission to add a diagnosis to this examination
+    const vetId = req.vet_id;
+    const examVetId = examination.vet_id;
+    
+    if (examVetId !== vetId) {
       // Check if they're in the same clinic
       const clinicCheck = await pool.query(`
         SELECT cv1.clinic_id 
@@ -70,13 +88,30 @@ router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddlew
         JOIN clinic_veterinarians cv2 ON cv1.clinic_id = cv2.clinic_id
         WHERE cv1.veterinarian_id = $1 AND cv2.veterinarian_id = $2
         AND cv1.status = 'approved' AND cv2.status = 'approved'
-      `, [examVetId, req.vet_id]);
+      `, [examVetId, vetId]);
       
       if (clinicCheck.rows.length === 0) {
         return res.status(403).json({ 
           message: 'Access denied. You did not perform this examination and are not in the same clinic.' 
         });
       }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error validating examination for diagnosis:', error);
+    res.status(500).json({ message: 'Server error during examination validation', error: error.message });
+  }
+};
+
+// Create a new diagnosis
+router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddleware, validateExaminationForDiagnosis, async (req, res) => {
+  try {
+    const diagnosisData = req.body;
+    
+    // Validate required fields
+    if (!diagnosisData.diagnosis_name) {
+      return res.status(400).json({ message: 'Diagnosis name is required' });
     }
     
     // Set default diagnosis date to current date if not provided
@@ -467,6 +502,45 @@ router.get('/examination/:examinationId', authenticateToken, async (req, res) =>
   } catch (error) {
     console.error('Error getting examination diagnoses:', error);
     res.status(500).json({ message: 'Error getting examination diagnoses', error: error.message });
+  }
+});
+
+// New endpoint to get available examinations for diagnosis
+router.get('/available-examinations/:petId', authenticateToken, checkVerificationStatus, veterinarianMiddleware, async (req, res) => {
+  try {
+    const { petId } = req.params;
+    
+    if (!petId) {
+      return res.status(400).json({ message: 'Pet ID is required' });
+    }
+    
+    // Verify the pet exists
+    const petCheck = await pool.query('SELECT pet_id FROM pets WHERE pet_id = $1', [petId]);
+    
+    if (petCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Pet not found' });
+    }
+    
+    // Get examinations for the pet that are in progress or completed
+    const query = `
+      SELECT e.examination_id, e.status, e.created_at, e.updated_at, e.examination_date,
+             CONCAT(u.user_name, ' ', u.user_surname) as veterinarian_name,
+             p.pet_id, p.pet_name, p.pet_species, p.pet_breed
+      FROM examinations e
+      JOIN pets p ON e.pet_id = p.pet_id
+      JOIN users u ON e.vet_id = u.user_id
+      WHERE e.pet_id = $1 
+      AND e.status IN ('in_progress', 'completed')
+      ORDER BY e.examination_date DESC, e.created_at DESC
+    `;
+    
+    const result = await pool.query(query, [petId]);
+    
+    // Return the examinations
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error getting available examinations for diagnosis:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

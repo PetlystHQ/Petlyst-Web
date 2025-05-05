@@ -10,9 +10,11 @@ import {
 } from './examinationSlice';
 import { Examination, ExaminationFilters } from './examinationService';
 import { format } from 'date-fns';
-import { FaEdit, FaTrash, FaEye, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaEye, FaPlus, FaStethoscope } from 'react-icons/fa';
 import ExaminationDetailModal from './ExaminationDetailModal';
 import NewExaminationModal from './NewExaminationModal';
+import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 
 interface ExaminationListProps {
   filters?: ExaminationFilters;
@@ -51,6 +53,48 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // State for edit modal
   const [editModalOpen, setEditModalOpen] = useState(false);
+  
+  // New state to track examinations with diagnoses
+  const [examinationsWithDiagnoses, setExaminationsWithDiagnoses] = useState<number[]>([]);
+  
+  // Function to check if an examination has associated diagnoses
+  const fetchExaminationsWithDiagnoses = useCallback(async () => {
+    if (!examinations.length) return;
+    
+    try {
+      const examsWithDiagnoses: number[] = [];
+      
+      // For each examination, check if it has diagnoses
+      await Promise.all(
+        examinations.map(async (examination) => {
+          try {
+            const response = await axiosInstance.get(`/diagnoses/examination/${examination.examination_id}`);
+            if (response.data && response.data.length > 0) {
+              examsWithDiagnoses.push(examination.examination_id);
+            }
+          } catch (err) {
+            console.error(`Error checking diagnoses for exam ${examination.examination_id}:`, err);
+          }
+        })
+      );
+      
+      setExaminationsWithDiagnoses(examsWithDiagnoses);
+    } catch (error) {
+      console.error('Error fetching examinations with diagnoses:', error);
+    }
+  }, [examinations]);
+  
+  // Call the function when examinations changes
+  useEffect(() => {
+    if (examinations.length > 0 && !loading) {
+      fetchExaminationsWithDiagnoses();
+    }
+  }, [examinations, loading, fetchExaminationsWithDiagnoses]);
+  
+  // Check if an examination has associated diagnoses
+  const hasDiagnoses = (examinationId: number) => {
+    return examinationsWithDiagnoses.includes(examinationId);
+  };
   
   // Check if there's a pet ID in localStorage to start an examination for, only once
   useEffect(() => {
@@ -445,17 +489,44 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     });
   }, [newExamModalOpen, selectedPetId]);
   
+  // Start diagnosis for an examination
+  const handleStartDiagnosis = (examination: Examination) => {
+    console.log('Starting diagnosis for examination:', examination.examination_id);
+    
+    // Store examination ID and pet ID in localStorage
+    localStorage.setItem('currentPetId', examination.pet_id.toString());
+    
+    // Dispatch custom event to open diagnosis form
+    const event = new CustomEvent('startDiagnosis', { 
+      detail: { 
+        petId: examination.pet_id,
+        examinationId: examination.examination_id
+      } 
+    });
+    window.dispatchEvent(event);
+  };
+  
   return (
     <>
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-800">Examinations</h2>
-        <button
-          onClick={handleOpenNewExamModal}
-          className="px-4 py-2 flex items-center text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-sm"
-        >
-          <FaPlus className="w-4 h-4 mr-2" />
-          New Examination
-        </button>
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">Examinations</h2>
+            <div className="inline-flex items-center mt-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm border border-blue-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Workflow: Examination must be created before adding diagnoses
+            </div>
+          </div>
+          <button
+            onClick={handleOpenNewExamModal}
+            className="px-4 py-2 flex items-center text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-sm"
+          >
+            <FaPlus className="w-4 h-4 mr-2" />
+            New Examination
+          </button>
+        </div>
       </div>
       
       {(loading && !isDataLoaded) ? (
@@ -498,6 +569,30 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
           <p className="mt-1 text-sm text-gray-500">
             Get started by creating a new examination for a patient.
           </p>
+          
+          <div className="mt-4 bg-blue-50 rounded-md p-4 mx-auto max-w-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3 text-left">
+                <h3 className="text-sm font-semibold text-blue-800">Clinical Workflow</h3>
+                <div className="mt-2 text-sm text-blue-700 space-y-1">
+                  <div className="flex items-center">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                    <span className="ml-2">Create an examination record</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                    <span className="ml-2">Add diagnoses to the examination</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div className="mt-6">
             <button
               onClick={handleOpenNewExamModal}
@@ -569,12 +664,21 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
                         <FaEdit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleConfirmDelete(examination.examination_id)}
-                        className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete examination"
+                        onClick={() => handleStartDiagnosis(examination)}
+                        className="p-1.5 rounded-full text-green-600 hover:bg-green-50 transition-colors"
+                        title="Start diagnosis"
                       >
-                        <FaTrash className="w-4 h-4" />
+                        <FaStethoscope className="w-4 h-4" />
                       </button>
+                      {!hasDiagnoses(examination.examination_id) && (
+                        <button
+                          onClick={() => handleConfirmDelete(examination.examination_id)}
+                          className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete examination"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -687,7 +791,7 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
                     <h3 className="text-lg leading-6 font-medium text-gray-900">Delete Examination</h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Are you sure you want to delete this examination? This action cannot be undone.
+                        Are you sure you want to delete this examination? This action cannot be undone. Note that examinations with associated diagnoses cannot be deleted.
                       </p>
                     </div>
                   </div>

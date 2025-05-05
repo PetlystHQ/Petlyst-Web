@@ -298,19 +298,83 @@ router.put('/:id/status', vetAuthMiddleware, async (req, res) => {
   }
 });
 
-// Bir hayvanın muayene geçmişini getir
-router.get('/pet/:petId', authMiddleware, async (req, res) => {
+// Bir hayvanın muayene geçmişini getir - Supports fetching for diagnosis creation
+router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
   try {
-    const petId = parseInt(req.params.petId);
-    const examinations = await examinationModel.getPetExaminationHistory(petId);
+    console.log('=== /pet-history/:petId route handler STARTED ===');
+    console.log('Request params:', req.params);
+    console.log('Request query:', req.query);
+    console.log('User info:', {
+      userId: req.user?.userId,
+      userType: req.user?.userType
+    });
     
-    res.json({
+    const petId = parseInt(req.params.petId);
+    console.log('Parsed petId:', petId);
+    
+    if (!petId) {
+      console.log('ERROR: Invalid petId (falsy after parsing)');
+      return res.status(400).json({
+        success: false,
+        message: 'Pet ID is required'
+      });
+    }
+    
+    // Check if the pet exists
+    console.log('Checking if pet exists with ID:', petId);
+    const petCheck = await pool.query('SELECT pet_id FROM pets WHERE pet_id = $1', [petId]);
+    console.log('Pet check result:', petCheck.rows);
+    
+    if (petCheck.rows.length === 0) {
+      console.log('ERROR: Pet not found with ID:', petId);
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found'
+      });
+    }
+    
+    // Check if a status filter is provided in query params
+    const { status } = req.query;
+    console.log('Status filter from query:', status);
+    
+    // Create filters for the pet_id
+    const filters = {
+      pet_id: petId
+    };
+    
+    // For diagnosis creation, we need completed or in-progress examinations
+    if (status === 'for_diagnosis') {
+      console.log('Setting status filter for diagnosis creation');
+      filters.status = 'in_progress,completed';
+    }
+    
+    console.log('Final filters for listExaminations:', filters);
+    
+    console.log('Calling examinationModel.listExaminations...');
+    const examinations = await examinationModel.listExaminations(filters, 100, 0);
+    console.log(`Found ${examinations.length} examinations for pet:`, petId);
+    
+    // Log the first examination for debugging if available
+    if (examinations.length > 0) {
+      console.log('First examination sample:', {
+        examination_id: examinations[0].examination_id,
+        status: examinations[0].status,
+        pet_id: examinations[0].pet_id
+      });
+    }
+    
+    const response = {
       success: true,
       examinations,
       count: examinations.length
-    });
+    };
+    console.log('Sending response with examination count:', examinations.length);
+    
+    res.json(response);
+    console.log('=== /pet-history/:petId route handler COMPLETED ===');
   } catch (error) {
-    console.error('Error fetching pet examination history:', error);
+    console.error('ERROR in /pet-history/:petId route:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching pet examination history',
