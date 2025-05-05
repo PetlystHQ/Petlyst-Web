@@ -11,6 +11,7 @@ import InventoryManagement from '../components/clinic/management/InventoryManage
 import HospitalizationDashboard from '../components/clinic/management/hospitalization/HospitalizationDashboard';
 import ExaminationList from '../components/clinic/management/examination/ExaminationList';
 import DiagnosisList from '../components/clinic/management/diagnosis/DiagnosisList';
+import Calendar from '../components/clinic/management/Calendar';
 
 interface ClinicData {
   clinic_id: string;
@@ -922,6 +923,58 @@ const ManagementDashboard: React.FC = () => {
     };
   }, []);
 
+  // Handle clinic status change (archive/restore)
+  const handleClinicStatusChange = async (action: 'archive' | 'restore') => {
+    if (!token || !clinicId) return;
+    
+    // Open the confirmation modal instead of using browser confirm
+    setArchiveModal({
+      isOpen: true,
+      action: action
+    });
+  };
+
+  // New function to execute the status change after modal confirmation
+  const executeStatusChange = async (action: 'archive' | 'restore') => {
+    if (!token || !clinicId) return;
+    
+    setLoading(true);
+    
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/api/clinics/${action}/${clinicId}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log(`Clinic ${action} response:`, response.data);
+      
+      if (response.data.success) {
+        // Update local clinic data
+        setClinic(response.data.clinic);
+        
+        // Close modal
+        setArchiveModal({
+          isOpen: false,
+          action: null
+        });
+        
+        // Could show a success toast here if you have a toast system
+      } else {
+        setError(`Failed to ${action} clinic`);
+      }
+    } catch (err: any) {
+      console.error(`Error ${action}ing clinic:`, err);
+      setError(err.response?.data?.message || `Failed to ${action} clinic`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -957,45 +1010,8 @@ const ManagementDashboard: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Appointments Today</h3>
-                <span className="text-2xl font-bold text-blue-600">7</span>
-              </div>
-              <div className="flex items-center text-gray-500">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <span>3 more than yesterday</span>
-              </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Patients Seen</h3>
-                <span className="text-2xl font-bold text-purple-600">245</span>
-              </div>
-              <div className="flex items-center text-gray-500">
-                <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>This month</span>
-              </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Revenue</h3>
-                <span className="text-2xl font-bold text-green-600">$12,450</span>
-              </div>
-              <div className="flex items-center text-gray-500">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <span>15% increase</span>
-              </div>
-            </div>
+          <div className="space-y-6">
+            <Calendar clinicId={clinicId || ''} token={token || ''} />
           </div>
         );
         
@@ -1299,58 +1315,6 @@ const ManagementDashboard: React.FC = () => {
             </div>
           </div>
         );
-    }
-  };
-
-  // Handle clinic status change (archive/restore)
-  const handleClinicStatusChange = async (action: 'archive' | 'restore') => {
-    if (!token || !clinicId) return;
-    
-    // Open the confirmation modal instead of using browser confirm
-    setArchiveModal({
-      isOpen: true,
-      action: action
-    });
-  };
-
-  // New function to execute the status change after modal confirmation
-  const executeStatusChange = async (action: 'archive' | 'restore') => {
-    if (!token || !clinicId) return;
-    
-    setLoading(true);
-    
-    try {
-      const response = await axios.put(
-        `http://localhost:3000/api/clinics/${action}/${clinicId}`,
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      console.log(`Clinic ${action} response:`, response.data);
-      
-      if (response.data.success) {
-        // Update local clinic data
-        setClinic(response.data.clinic);
-        
-        // Close modal
-        setArchiveModal({
-          isOpen: false,
-          action: null
-        });
-        
-        // Could show a success toast here if you have a toast system
-      } else {
-        setError(`Failed to ${action} clinic`);
-      }
-    } catch (err: any) {
-      console.error(`Error ${action}ing clinic:`, err);
-      setError(err.response?.data?.message || `Failed to ${action} clinic`);
-    } finally {
-      setLoading(false);
     }
   };
 
