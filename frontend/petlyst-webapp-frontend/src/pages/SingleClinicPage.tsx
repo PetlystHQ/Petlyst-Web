@@ -128,9 +128,6 @@ const SingleClinicPage: React.FC = () => {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [serviceDuration, setServiceDuration] = useState<{ years: number; months: number } | null>(null);
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [messageContent, setMessageContent] = useState('');
-  const [messageStatus, setMessageStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [isSaved, setIsSaved] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteAnimation, setFavoriteAnimation] = useState(false);
@@ -654,84 +651,6 @@ const SingleClinicPage: React.FC = () => {
     );
   }
   
-  // Add the message modal component
-  const MessageModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Send Message</h3>
-          <button 
-            onClick={() => {
-              setShowMessageModal(false);
-              setMessageContent('');
-              setMessageStatus({ type: null, message: '' });
-            }}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <textarea
-          value={messageContent}
-          onChange={(e) => setMessageContent(e.target.value)}
-          placeholder="Type your message here..."
-          className="w-full h-32 p-2 border rounded-md mb-4"
-        />
-        
-        {messageStatus.type && (
-          <div className={`mb-4 p-2 rounded-md ${
-            messageStatus.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {messageStatus.message}
-          </div>
-        )}
-        
-        <div className="flex justify-end">
-          <button
-            onClick={async () => {
-              if (!messageContent.trim()) {
-                setMessageStatus({ type: 'error', message: 'Please enter a message' });
-                return;
-              }
-              
-              try {
-                // Use axiosInstance for the message endpoint as well
-                const response = await axiosInstance.post(`/clinics/${clinic?.clinic_id}/send-message`, {
-                  message: messageContent,
-                  senderId: user?.id // Use id instead of user_id
-                }, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`
-                  }
-                });
-                
-                if (response.data.success) {
-                  setMessageStatus({ type: 'success', message: 'Message sent successfully' });
-                  setTimeout(() => {
-                    setShowMessageModal(false);
-                    setMessageContent('');
-                    setMessageStatus({ type: null, message: '' });
-                  }, 2000);
-                }
-              } catch (error: any) {
-                setMessageStatus({ 
-                  type: 'error', 
-                  message: error.response?.data?.message || 'Failed to send message' 
-                });
-              }
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            Send Message
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-  
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       {/* Content Container */}
@@ -919,19 +838,6 @@ const SingleClinicPage: React.FC = () => {
                           </span>
                         </>
                       )}
-                    </button>
-                  )}
-                  
-                  {/* Only show message button for non-veterinarians */}
-                  {!isVeterinarian && (
-                    <button
-                      onClick={() => setShowMessageModal(true)}
-                      className="bg-gray-50 text-gray-700 hover:bg-gray-100 font-medium px-4 py-2.5 rounded-lg border border-gray-200 flex items-center justify-center transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                      <span className="ml-2 hidden sm:inline">Message</span>
                     </button>
                   )}
                 </div>
@@ -1389,7 +1295,6 @@ const SingleClinicPage: React.FC = () => {
           </div>
         </div>
       )}
-      {showMessageModal && <MessageModal />}
       
       {/* Add auth modals at the bottom of the component */}
       <AuthModal 
