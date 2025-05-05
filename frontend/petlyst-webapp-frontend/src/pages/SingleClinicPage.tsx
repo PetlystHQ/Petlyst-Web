@@ -40,6 +40,32 @@ interface Clinic {
   clinic_time_slots?: number;
 }
 
+// Try multiple ways to access the API key
+const getApiKey = (): string => {
+  // For debugging
+  console.log('[DEBUG] Environment variables check in SingleClinicPage:');
+  console.log('import.meta.env available:', typeof import.meta.env !== 'undefined');
+  console.log('VITE_GOOGLE_MAPS_API_KEY via import.meta:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
+  console.log('VITE_GOOGLE_MAPS_EMBED_API_KEY via import.meta:', import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY);
+  
+  // Özel olarak Embed API için ayrı bir key kullanın (önerilir)
+  const embedApiKey = import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY;
+  if (embedApiKey) {
+    return embedApiKey;
+  }
+  
+  // Genel API key'i kullan
+  const viaImportMeta = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  
+  // Return the API key or a hardcoded fallback for development ONLY
+  return viaImportMeta || 
+    // API KEY'İNİZİ BURAYA EKLEYİN - GEÇİCİ ÇÖZÜM
+    '';
+};
+
+// Get API key using our robust method
+const GOOGLE_MAPS_API_KEY = getApiKey();
+
 // Services interface
 interface ClinicServices {
   animalTypes: string[];
@@ -1232,10 +1258,10 @@ const SingleClinicPage: React.FC = () => {
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        {clinic.province}
+                        {clinic?.province}
                       </span>
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        {clinic.district}
+                        {clinic?.district}
                       </span>
                     </div>
                   </div>
@@ -1251,20 +1277,43 @@ const SingleClinicPage: React.FC = () => {
                       </svg>
                       Address
                     </h3>
-                    <p className="text-gray-800">{clinic.clinic_address}</p>
+                    <p className="text-gray-800">{clinic?.clinic_address}</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="h-80 bg-gray-200 rounded-lg overflow-hidden">
+            <div className="h-80 bg-gray-100 rounded-lg overflow-hidden relative">
+              {/* Google Maps iframe*/}
               <iframe
                 width="100%"
                 height="100%"
                 frameBorder="0"
                 style={{ border: 0 }}
-                src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${clinic.latitude},${clinic.longitude}`}
+                src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBfwsT8rVE-PIZ8kNbute9tom_JSy17Rww&q=${clinic?.latitude},${clinic?.longitude}&zoom=15&language=tr&maptype=roadmap`}
                 allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Clinic Location"
               ></iframe>
+              
+              {/* Harita alt bilgi ve koordinatlar */}
+              <div className="absolute bottom-4 right-4 z-10">
+                <div className="bg-white p-2 rounded-lg shadow-md text-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">
+                      {clinic?.latitude ? Number(clinic.latitude).toFixed(6) : 'N/A'}, {clinic?.longitude ? Number(clinic.longitude).toFixed(6) : 'N/A'}
+                    </span>
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${clinic?.latitude},${clinic?.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors"
+                    >
+                      Open in Google Maps
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
