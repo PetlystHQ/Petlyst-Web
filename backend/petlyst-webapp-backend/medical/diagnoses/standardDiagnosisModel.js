@@ -63,11 +63,12 @@ async function createStandardDiagnosis(diagnosisData) {
       description,
       category,
       species,
-      is_active
+      is_active,
+      veterinarian_id
     } = diagnosisData;
 
-    // Generate unique code if not provided
-    const diagnosisCode = code || await generateUniqueCode(species, category);
+    // Use provided code or generate a simple one based on timestamp if none provided
+    const diagnosisCode = code || `${species.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
     
     const result = await pool.query(
       `INSERT INTO standard_diagnoses (
@@ -76,15 +77,17 @@ async function createStandardDiagnosis(diagnosisData) {
         description,
         category,
         species,
-        is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        is_active,
+        veterinarian_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [
         diagnosisCode,
         name,
         description,
         category,
         species,
-        is_active !== undefined ? is_active : true
+        is_active !== undefined ? is_active : true,
+        veterinarian_id
       ]
     );
     return result.rows[0];
@@ -94,7 +97,21 @@ async function createStandardDiagnosis(diagnosisData) {
   }
 }
 
-// Get a specific standard diagnosis by code
+// Get a specific standard diagnosis by ID
+async function getStandardDiagnosisById(diagnosisId) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM standard_diagnoses WHERE diagnosis_id = $1`,
+      [diagnosisId]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error getting standard diagnosis by ID:', error);
+    throw error;
+  }
+}
+
+// Get a specific standard diagnosis by code (for backward compatibility)
 async function getStandardDiagnosis(code) {
   try {
     const result = await pool.query(
@@ -103,7 +120,7 @@ async function getStandardDiagnosis(code) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error getting standard diagnosis:', error);
+    console.error('Error getting standard diagnosis by code:', error);
     throw error;
   }
 }
@@ -134,6 +151,12 @@ async function listStandardDiagnoses(filters = {}) {
       paramIndex++;
     }
     
+    if (filters.veterinarian_id !== undefined) {
+      query += ` AND (veterinarian_id = $${paramIndex} OR veterinarian_id IS NULL)`;
+      queryParams.push(filters.veterinarian_id);
+      paramIndex++;
+    }
+    
     // Add order by
     query += ` ORDER BY species ASC, category ASC, name ASC`;
     
@@ -145,7 +168,82 @@ async function listStandardDiagnoses(filters = {}) {
   }
 }
 
-// Update standard diagnosis
+// Update standard diagnosis by ID
+async function updateStandardDiagnosisById(diagnosisId, updateData) {
+  try {
+    const {
+      name,
+      description,
+      category,
+      species,
+      is_active,
+      code
+    } = updateData;
+    
+    // Only update fields that are provided
+    let updateFields = [];
+    let queryParams = [];
+    let paramIndex = 1;
+    
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex}`);
+      queryParams.push(name);
+      paramIndex++;
+    }
+    
+    if (description !== undefined) {
+      updateFields.push(`description = $${paramIndex}`);
+      queryParams.push(description);
+      paramIndex++;
+    }
+    
+    if (category !== undefined) {
+      updateFields.push(`category = $${paramIndex}`);
+      queryParams.push(category);
+      paramIndex++;
+    }
+    
+    if (species !== undefined) {
+      updateFields.push(`species = $${paramIndex}`);
+      queryParams.push(species);
+      paramIndex++;
+    }
+    
+    if (is_active !== undefined) {
+      updateFields.push(`is_active = $${paramIndex}`);
+      queryParams.push(is_active);
+      paramIndex++;
+    }
+    
+    if (code !== undefined) {
+      updateFields.push(`code = $${paramIndex}`);
+      queryParams.push(code);
+      paramIndex++;
+    }
+    
+    // If no fields to update, just return the current diagnosis
+    if (updateFields.length === 0) {
+      return getStandardDiagnosisById(diagnosisId);
+    }
+    
+    queryParams.push(diagnosisId);
+    
+    const query = `
+      UPDATE standard_diagnoses
+      SET ${updateFields.join(', ')}
+      WHERE diagnosis_id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, queryParams);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error updating standard diagnosis by ID:', error);
+    throw error;
+  }
+}
+
+// Update standard diagnosis by code (for backward compatibility)
 async function updateStandardDiagnosis(code, updateData) {
   try {
     const {
@@ -208,12 +306,26 @@ async function updateStandardDiagnosis(code, updateData) {
     const result = await pool.query(query, queryParams);
     return result.rows[0];
   } catch (error) {
-    console.error('Error updating standard diagnosis:', error);
+    console.error('Error updating standard diagnosis by code:', error);
     throw error;
   }
 }
 
-// Delete a standard diagnosis
+// Delete a standard diagnosis by ID
+async function deleteStandardDiagnosisById(diagnosisId) {
+  try {
+    const result = await pool.query(
+      'DELETE FROM standard_diagnoses WHERE diagnosis_id = $1 RETURNING *',
+      [diagnosisId]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting standard diagnosis by ID:', error);
+    throw error;
+  }
+}
+
+// Delete a standard diagnosis by code (for backward compatibility)
 async function deleteStandardDiagnosis(code) {
   try {
     const result = await pool.query(
@@ -222,13 +334,13 @@ async function deleteStandardDiagnosis(code) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error deleting standard diagnosis:', error);
+    console.error('Error deleting standard diagnosis by code:', error);
     throw error;
   }
 }
 
 // Search standard diagnoses
-async function searchStandardDiagnoses(term, species = null) {
+async function searchStandardDiagnoses(term, species = null, veterinarianId = null) {
   try {
     let query = `
       SELECT * FROM standard_diagnoses
@@ -236,10 +348,18 @@ async function searchStandardDiagnoses(term, species = null) {
     `;
     
     const queryParams = [`%${term}%`];
+    let paramIndex = 2;
     
     if (species) {
-      query += ` AND species = $2`;
+      query += ` AND species = $${paramIndex}`;
       queryParams.push(species);
+      paramIndex++;
+    }
+    
+    if (veterinarianId) {
+      query += ` AND (veterinarian_id = $${paramIndex} OR veterinarian_id IS NULL)`;
+      queryParams.push(veterinarianId);
+      paramIndex++;
     }
     
     query += ` ORDER BY name ASC LIMIT 20`;
@@ -252,12 +372,32 @@ async function searchStandardDiagnoses(term, species = null) {
   }
 }
 
+// Get diagnoses created by a specific veterinarian
+async function getVeterinarianDiagnoses(veterinarianId) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM standard_diagnoses 
+       WHERE veterinarian_id = $1
+       ORDER BY species ASC, category ASC, name ASC`,
+      [veterinarianId]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting veterinarian diagnoses:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   generateUniqueCode,
   createStandardDiagnosis,
   getStandardDiagnosis,
+  getStandardDiagnosisById,
   listStandardDiagnoses,
   updateStandardDiagnosis,
+  updateStandardDiagnosisById,
   deleteStandardDiagnosis,
-  searchStandardDiagnoses
+  deleteStandardDiagnosisById,
+  searchStandardDiagnoses,
+  getVeterinarianDiagnoses
 };
