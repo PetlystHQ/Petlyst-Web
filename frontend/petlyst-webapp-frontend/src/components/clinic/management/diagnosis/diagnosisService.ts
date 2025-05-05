@@ -39,12 +39,14 @@ export interface DiagnosisData {
 
 // Standard diagnosis for dropdown
 export interface StandardDiagnosis {
+  diagnosis_id: number;
   code: string;
   name: string;
   description?: string;
   category?: string;
   species: string;
-  is_active?: boolean;
+  is_active: boolean;
+  veterinarian_id?: number;
 }
 
 // Standard diagnosis creation/update data
@@ -54,7 +56,7 @@ export interface StandardDiagnosisFormData {
   description?: string;
   category?: string;
   species: string;
-  is_active?: boolean;
+  is_active: boolean;
 }
 
 // Filters for listing diagnoses
@@ -71,6 +73,29 @@ export interface DiagnosisFilters {
   limit?: number;
   offset?: number;
 }
+
+// Get JWT token from localStorage
+const getToken = () => localStorage.getItem('token');
+
+// Create base axios instance with authorization header
+const api = axios.create({
+  baseURL: 'http://localhost:3000',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add request interceptor to include token
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Create a new diagnosis
 export const createDiagnosis = async (diagnosisData: DiagnosisData): Promise<Diagnosis> => {
@@ -157,50 +182,101 @@ export const getExaminationDiagnoses = async (examinationId: number): Promise<Di
   }
 };
 
-// Get standard diagnoses for dropdown selection
+// Get all standard diagnoses (optional species filter)
 export const getStandardDiagnoses = async (species?: string): Promise<StandardDiagnosis[]> => {
   try {
-    const queryParams = new URLSearchParams();
-    if (species) {
-      queryParams.append('species', species);
-    }
-    
-    const response = await axiosInstance.get(`/diagnoses/standard?${queryParams.toString()}`);
+    const url = '/api/diagnoses/standard';
+    const params = species ? { species } : {};
+    const response = await api.get(url, { params });
     return response.data;
-  } catch (error) {
-    console.error('Error getting standard diagnoses:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error fetching standard diagnoses:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch standard diagnoses');
   }
 };
 
-// Create a new standard diagnosis
-export const createStandardDiagnosis = async (data: StandardDiagnosisFormData): Promise<StandardDiagnosis> => {
+// Get veterinarian's custom diagnoses
+export const getVeterinarianDiagnoses = async (): Promise<StandardDiagnosis[]> => {
   try {
-    const response = await axiosInstance.post('/diagnoses/standard', data);
+    const response = await api.get('/api/diagnoses/standard/veterinarian');
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Error fetching veterinarian diagnoses:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch veterinarian diagnoses');
+  }
+};
+
+// Get a standard diagnosis by ID
+export const getStandardDiagnosisById = async (id: number): Promise<StandardDiagnosis> => {
+  try {
+    const response = await api.get(`/api/diagnoses/standard/id/${id}`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error fetching standard diagnosis ${id}:`, error);
+    throw new Error(error.response?.data?.message || `Failed to fetch standard diagnosis ${id}`);
+  }
+};
+
+// Get a standard diagnosis by code (backward compatibility)
+export const getStandardDiagnosis = async (code: string): Promise<StandardDiagnosis> => {
+  try {
+    const response = await api.get(`/api/diagnoses/standard/code/${code}`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error fetching standard diagnosis ${code}:`, error);
+    throw new Error(error.response?.data?.message || `Failed to fetch standard diagnosis ${code}`);
+  }
+};
+
+// Create a new standard diagnosis 
+export const createStandardDiagnosis = async (diagnosisData: StandardDiagnosisFormData): Promise<StandardDiagnosis> => {
+  try {
+    const response = await api.post('/api/diagnoses/standard', diagnosisData);
+    return response.data;
+  } catch (error: any) {
     console.error('Error creating standard diagnosis:', error);
-    throw error;
+    throw new Error(error.response?.data?.message || 'Failed to create standard diagnosis');
   }
 };
 
-// Update a standard diagnosis
-export const updateStandardDiagnosis = async (code: string, data: Partial<StandardDiagnosisFormData>): Promise<StandardDiagnosis> => {
+// Update a standard diagnosis by ID
+export const updateStandardDiagnosisById = async (id: number, diagnosisData: Partial<StandardDiagnosisFormData>): Promise<StandardDiagnosis> => {
   try {
-    const response = await axiosInstance.put(`/diagnoses/standard/${code}`, data);
+    const response = await api.put(`/api/diagnoses/standard/id/${id}`, diagnosisData);
     return response.data;
-  } catch (error) {
-    console.error(`Error updating standard diagnosis ${code}:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error(`Error updating standard diagnosis ${id}:`, error);
+    throw new Error(error.response?.data?.message || `Failed to update standard diagnosis ${id}`);
   }
 };
 
-// Delete a standard diagnosis
+// Update a standard diagnosis by code (backward compatibility)
+export const updateStandardDiagnosis = async (code: string, diagnosisData: Partial<StandardDiagnosisFormData>): Promise<StandardDiagnosis> => {
+  try {
+    const response = await api.put(`/api/diagnoses/standard/code/${code}`, diagnosisData);
+    return response.data;
+  } catch (error: any) {
+    console.error(`Error updating standard diagnosis ${code}:`, error);
+    throw new Error(error.response?.data?.message || `Failed to update standard diagnosis ${code}`);
+  }
+};
+
+// Delete a standard diagnosis by ID
+export const deleteStandardDiagnosisById = async (id: number): Promise<void> => {
+  try {
+    await api.delete(`/api/diagnoses/standard/id/${id}`);
+  } catch (error: any) {
+    console.error(`Error deleting standard diagnosis ${id}:`, error);
+    throw new Error(error.response?.data?.message || `Failed to delete standard diagnosis ${id}`);
+  }
+};
+
+// Delete a standard diagnosis by code (backward compatibility)
 export const deleteStandardDiagnosis = async (code: string): Promise<void> => {
   try {
-    await axiosInstance.delete(`/diagnoses/standard/${code}`);
-  } catch (error) {
+    await api.delete(`/api/diagnoses/standard/code/${code}`);
+  } catch (error: any) {
     console.error(`Error deleting standard diagnosis ${code}:`, error);
-    throw error;
+    throw new Error(error.response?.data?.message || `Failed to delete standard diagnosis ${code}`);
   }
 };

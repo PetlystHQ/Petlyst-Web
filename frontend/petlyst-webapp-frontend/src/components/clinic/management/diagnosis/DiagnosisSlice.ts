@@ -17,6 +17,7 @@ import {
   updateStandardDiagnosis as apiUpdateStandardDiagnosis,
   deleteStandardDiagnosis as apiDeleteStandardDiagnosis
 } from './diagnosisService';
+import axios from 'axios';
 
 // Backend tarafında kod oluşturulacağı için form verisini güncelleyelim
 type CreateStandardDiagnosisData = Omit<StandardDiagnosisFormData, 'code'> & { code?: string };
@@ -41,6 +42,32 @@ const initialState: DiagnosisState = {
   error: null,
   success: false,
   totalCount: 0
+};
+
+// Define API instance
+const api = axios.create({
+  baseURL: 'http://localhost:3000', // Adjust this to your API URL
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Set up API request interceptor to add token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Helper function to handle API errors
+const handleApiError = (error: any, rejectWithValue: any) => {
+  const errorMessage = error.response?.data?.message || 'An error occurred';
+  return rejectWithValue(errorMessage);
 };
 
 // Async thunks for API operations
@@ -146,24 +173,52 @@ export const createStandardDiagnosis = createAsyncThunk(
 );
 
 export const updateStandardDiagnosis = createAsyncThunk(
-  'diagnoses/updateStandard',
-  async ({ code, diagnosisData }: { code: string, diagnosisData: Partial<StandardDiagnosisFormData> }, { rejectWithValue }) => {
+  'diagnoses/updateStandardDiagnosis',
+  async (
+    params: { 
+      code?: string; 
+      id?: number; 
+      diagnosisData: Partial<StandardDiagnosisFormData> 
+    }, 
+    { rejectWithValue }
+  ) => {
     try {
-      return await apiUpdateStandardDiagnosis(code, diagnosisData);
+      let response;
+      
+      if (params.id) {
+        // Use ID-based update
+        response = await api.put(`/api/diagnoses/standard/id/${params.id}`, params.diagnosisData);
+      } else if (params.code) {
+        // Use code-based update for backward compatibility
+        response = await api.put(`/api/diagnoses/standard/code/${params.code}`, params.diagnosisData);
+      } else {
+        return rejectWithValue('Either diagnosis ID or code must be provided');
+      }
+      
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to update standard diagnosis ${code}`);
+      return handleApiError(error, rejectWithValue);
     }
   }
 );
 
 export const deleteStandardDiagnosis = createAsyncThunk(
-  'diagnoses/deleteStandard',
-  async (code: string, { rejectWithValue }) => {
+  'diagnoses/deleteStandardDiagnosis',
+  async (diagnosisIdOrCode: number | string, { rejectWithValue }) => {
     try {
-      await apiDeleteStandardDiagnosis(code);
-      return code;
+      let response;
+      
+      if (typeof diagnosisIdOrCode === 'number') {
+        // Use ID-based deletion
+        response = await api.delete(`/api/diagnoses/standard/id/${diagnosisIdOrCode}`);
+      } else {
+        // Use code-based deletion for backward compatibility
+        response = await api.delete(`/api/diagnoses/standard/code/${diagnosisIdOrCode}`);
+      }
+      
+      return { id: diagnosisIdOrCode, response: response.data };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to delete standard diagnosis ${code}`);
+      return handleApiError(error, rejectWithValue);
     }
   }
 );
