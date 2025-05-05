@@ -18,7 +18,7 @@ const StandardDiagnosesList: React.FC = () => {
   const [filteredDiagnoses, setFilteredDiagnoses] = useState<StandardDiagnosis[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<StandardDiagnosis | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [speciesFilter, setSpeciesFilter] = useState<string>('');
   
   // Load standard diagnoses
@@ -74,13 +74,14 @@ const StandardDiagnosesList: React.FC = () => {
   };
   
   // Open delete confirmation
-  const handleDeleteConfirm = (code: string) => {
-    setConfirmDelete(code);
+  const handleDeleteConfirm = (diagnosisId: number) => {
+    setConfirmDelete(diagnosisId);
   };
   
   // Delete diagnosis
   const handleDelete = () => {
     if (confirmDelete) {
+      // Use ID-based deletion
       dispatch(deleteStandardDiagnosis(confirmDelete));
       setConfirmDelete(null);
     }
@@ -208,6 +209,7 @@ const StandardDiagnosesList: React.FC = () => {
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Species</th>
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Category</th>
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Source</th>
                 <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -215,7 +217,7 @@ const StandardDiagnosesList: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {filteredDiagnoses.map((diagnosis) => (
-                <tr key={diagnosis.code} className="hover:bg-gray-50">
+                <tr key={diagnosis.diagnosis_id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                     {diagnosis.code}
                   </td>
@@ -237,6 +239,15 @@ const StandardDiagnosesList: React.FC = () => {
                       {diagnosis.is_active !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      diagnosis.veterinarian_id
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : 'bg-purple-100 text-purple-800 border border-purple-200'
+                    }`}>
+                      {diagnosis.veterinarian_id ? 'Custom' : 'System'}
+                    </span>
+                  </td>
                   <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                     <div className="flex justify-end space-x-2">
                       <button
@@ -245,12 +256,15 @@ const StandardDiagnosesList: React.FC = () => {
                       >
                         <FaEdit />
                       </button>
-                      <button
-                        onClick={() => handleDeleteConfirm(diagnosis.code)}
-                        className="text-red-600 hover:text-red-900 p-1"
-                      >
-                        <FaTrash />
-                      </button>
+                      {/* Only show delete for custom diagnoses created by this vet */}
+                      {diagnosis.veterinarian_id && (
+                        <button
+                          onClick={() => handleDeleteConfirm(diagnosis.diagnosis_id)}
+                          className="text-red-600 hover:text-red-900 p-1"
+                        >
+                          <FaTrash />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
