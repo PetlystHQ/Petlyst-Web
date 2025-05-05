@@ -54,6 +54,13 @@ interface CalendarProps {
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'canceled';
 
+// Modal states interface
+interface AppointmentModal {
+  isOpen: boolean;
+  appointment: CalendarAppointment | null;
+  isLoading: boolean;
+}
+
 const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
   // State for calendar
   const [appointments, setAppointments] = useState<Record<string, CalendarAppointment[]>>({});
@@ -61,12 +68,20 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [appointmentError, setAppointmentError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   
   // Filter settings
   const [showPending, setShowPending] = useState(true);
   const [showConfirmed, setShowConfirmed] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
   const [showCanceled, setShowCanceled] = useState(false);
+  
+  // Modal state for appointment actions
+  const [appointmentModal, setAppointmentModal] = useState<AppointmentModal>({
+    isOpen: false,
+    appointment: null,
+    isLoading: false
+  });
 
   // Function to get all days in a month
   const getDaysInMonth = (year: number, month: number) => {
@@ -310,6 +325,66 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
   const refreshAppointments = () => {
     fetchAllAppointments();
   };
+  
+  // Open appointment modal
+  const openAppointmentModal = (appointment: CalendarAppointment) => {
+    setAppointmentModal({
+      isOpen: true,
+      appointment,
+      isLoading: false
+    });
+    setActionError(null);
+  };
+  
+  // Close appointment modal
+  const closeAppointmentModal = () => {
+    setAppointmentModal({
+      isOpen: false,
+      appointment: null,
+      isLoading: false
+    });
+  };
+  
+  // Update appointment status
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: AppointmentStatus) => {
+    if (!token || !appointmentId) return;
+    
+    setAppointmentModal(prev => ({ ...prev, isLoading: true }));
+    setActionError(null);
+    
+    try {
+      let response;
+      
+      if (newStatus === 'completed') {
+        // Use the complete endpoint for marking as completed
+        response = await axios.patch(
+          `http://localhost:3000/api/appointments/${appointmentId}/complete`,
+          {},
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+      } else {
+        // Use the status update endpoint for other status changes
+        response = await axios.put(
+          `http://localhost:3000/api/appointments/${appointmentId}/status`,
+          { status: newStatus },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+      }
+      
+      if (response.data.success || response.status === 200) {
+        // Close the modal and refresh appointments
+        closeAppointmentModal();
+        fetchAllAppointments();
+      } else {
+        setActionError('Failed to update appointment status');
+      }
+    } catch (error: any) {
+      console.error('Error updating appointment status:', error);
+      setActionError(error.response?.data?.message || 'Failed to update appointment status');
+    } finally {
+      setAppointmentModal(prev => ({ ...prev, isLoading: false }));
+    }
+  };
 
   // Render calendar for the current month
   const renderCalendar = () => {
@@ -488,8 +563,9 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
                   {dayAppointments.slice(0, 3).map((appointment, i) => (
                     <div 
                       key={i}
-                      className={`text-xs p-1 rounded truncate ${statusColors[appointment.appointment_status].bg} ${statusColors[appointment.appointment_status].text} ${statusColors[appointment.appointment_status].border} border`}
+                      className={`text-xs p-1 rounded truncate ${statusColors[appointment.appointment_status].bg} ${statusColors[appointment.appointment_status].text} ${statusColors[appointment.appointment_status].border} border cursor-pointer transition-all hover:shadow-md`}
                       title={`${appointment.pet_name} - ${appointment.pet_owner_name} ${appointment.pet_owner_surname} - ${formatTime(appointment.appointment_start_hour)}`}
+                      onClick={() => openAppointmentModal(appointment)}
                     >
                       <div className="font-medium truncate">{formatTime(appointment.appointment_start_hour)}</div>
                       <div className="truncate">{appointment.pet_name}</div>
@@ -504,6 +580,164 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
               </div>
             );
           })}
+        </div>
+      </div>
+    );
+  };
+  
+  // Appointment Modal
+  const AppointmentDetailModal = () => {
+    if (!appointmentModal.isOpen || !appointmentModal.appointment) return null;
+    
+    const appointment = appointmentModal.appointment;
+    const appointmentStatus = appointment.appointment_status;
+    const appointmentDate = new Date(appointment.appointment_date);
+    const startTime = formatTime(appointment.appointment_start_hour);
+    const endTime = formatTime(appointment.appointment_end_hour);
+    
+    // Check if appointment end time has passed
+    const now = new Date();
+    const appointmentEndTime = new Date(appointment.appointment_end_hour);
+    const appointmentHasPassed = appointmentEndTime < now;
+    
+    // Warning message for appointments that can't be completed yet
+    const [showTimeWarning, setShowTimeWarning] = useState(false);
+    
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="appointment-modal" role="dialog" aria-modal="true">
+        <div className="flex items-center justify-center min-h-screen p-4 text-center sm:p-0">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeAppointmentModal}></div>
+          
+          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                    <span>Appointment Details</span>
+                    <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full 
+                      ${statusColors[appointmentStatus].bg} 
+                      ${statusColors[appointmentStatus].text}`}
+                    >
+                      {appointmentStatus.charAt(0).toUpperCase() + appointmentStatus.slice(1)}
+                    </span>
+                  </h3>
+                  
+                  <div className="mt-4 space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex justify-between">
+                        <div>
+                          <h4 className="font-semibold text-sm text-gray-700">Patient</h4>
+                          <p className="text-gray-900 font-medium">{appointment.pet_name}</p>
+                          <p className="text-gray-500 text-sm">{appointment.pet_type} - {appointment.pet_breed}</p>
+                        </div>
+                        <div className="text-right">
+                          <h4 className="font-semibold text-sm text-gray-700">Owner</h4>
+                          <p className="text-gray-900">{appointment.pet_owner_name} {appointment.pet_owner_surname}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700">Date & Time</h4>
+                        <p className="text-gray-900">
+                          {appointmentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                        <p className="text-gray-700">{startTime} - {endTime}</p>
+                      </div>
+                      {appointment.video_meeting && (
+                        <div className="bg-indigo-50 text-indigo-700 rounded-md px-2 py-1 text-xs font-medium">
+                          <svg className="inline-block w-4 h-4 mr-1 align-text-bottom" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Video Meeting
+                        </div>
+                      )}
+                    </div>
+                    
+                    {appointment.notes && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-700">Notes</h4>
+                        <p className="text-gray-600 text-sm whitespace-pre-wrap">{appointment.notes}</p>
+                      </div>
+                    )}
+                    
+                    {/* Show warning message when user tries to complete a future appointment */}
+                    {showTimeWarning && !appointmentHasPassed && (
+                      <div className="text-amber-600 text-sm py-2 px-3 bg-amber-50 rounded-md border border-amber-200">
+                        <div className="flex items-start">
+                          <svg className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <span>You cannot mark this appointment as completed because the appointment time has not passed yet.</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {actionError && (
+                      <div className="text-red-600 text-sm py-2 px-3 bg-red-50 rounded-md">
+                        {actionError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              {/* Action buttons based on appointment status */}
+              {appointmentStatus === 'pending' && (
+                <>
+                  <button
+                    type="button"
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={() => updateAppointmentStatus(appointment.appointment_id, 'confirmed')}
+                    disabled={appointmentModal.isLoading}
+                  >
+                    {appointmentModal.isLoading ? 'Confirming...' : 'Confirm Appointment'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    onClick={() => updateAppointmentStatus(appointment.appointment_id, 'canceled')}
+                    disabled={appointmentModal.isLoading}
+                  >
+                    {appointmentModal.isLoading ? 'Canceling...' : 'Cancel Appointment'}
+                  </button>
+                </>
+              )}
+              
+              {appointmentStatus === 'confirmed' && (
+                <button
+                  type="button"
+                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 ${
+                    appointmentHasPassed 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-blue-300 text-white cursor-not-allowed'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm`}
+                  onClick={() => {
+                    if (appointmentHasPassed) {
+                      updateAppointmentStatus(appointment.appointment_id, 'completed');
+                    } else {
+                      setShowTimeWarning(true);
+                    }
+                  }}
+                  disabled={appointmentModal.isLoading || !appointmentHasPassed}
+                >
+                  {appointmentModal.isLoading ? 'Marking as Completed...' : 'Mark as Completed'}
+                </button>
+              )}
+              
+              <button
+                type="button"
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                onClick={closeAppointmentModal}
+                disabled={appointmentModal.isLoading}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -536,6 +770,9 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       ) : (
         renderCalendar()
       )}
+      
+      {/* Render appointment modal */}
+      <AppointmentDetailModal />
     </div>
   );
 };
