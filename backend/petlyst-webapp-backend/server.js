@@ -34,6 +34,7 @@ const examinationRoutes = require('./medical/examinations/examinationRoutes');
 const diagnosesRoutes = require('./medical/diagnoses/diagnosesRoutes');
 const standardDiagnosisRoutes = require('./medical/diagnoses/standardDiagnosisRoutes');
 const reviewRoutes = require('./review/reviewRoutes');
+const emergencyRoutes = require('./clinicRoutes/emergencyRoutes');
 
 
 // Use routes
@@ -52,6 +53,8 @@ app.use('/api/diagnoses/standard', standardDiagnosisRoutes);
 // Then register the general diagnoses routes
 app.use('/api/diagnoses', diagnosesRoutes);
 app.use('/api/reviews', reviewRoutes);
+// Acil durum rotaları
+app.use('/api/emergency', emergencyRoutes);
 
 // Test route
 app.get('/', (req, res) => {
@@ -76,7 +79,8 @@ app.use((req, res) => {
             '/api/hospitalization/[hospitalizationId]/discharge',
             '/api/examinations',
             '/api/diagnoses',
-            '/api/reviews'
+            '/api/reviews',
+            '/api/emergency'
         ]
     });
 });
@@ -200,4 +204,5 @@ app.listen(PORT, () => {
     console.log('- /api/examinations');
     console.log('- /api/diagnoses');
     console.log('- /api/reviews');
+    console.log('- /api/emergency');
 });

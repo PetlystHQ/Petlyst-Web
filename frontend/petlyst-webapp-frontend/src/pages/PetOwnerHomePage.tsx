@@ -5,10 +5,42 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 import AuthModal from '../components/modals/AuthModal';
+import { getEmergencyData, createDirectionsUrl } from '../components/emergency/EmergencyService';
+import EmergencyModal from '../components/emergency/EmergencyModal';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface SearchSuggestion {
   text: string;
   type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
+}
+
+// Telefon numarası için arayüz
+interface PhoneNumber {
+  phone_number: string;
+  phone_type: string;
+}
+
+// Veteriner operatör için arayüz
+interface Operator {
+  user_name: string;
+  user_surname: string;
+}
+
+// Klinik tipi için arayüz
+interface Clinic {
+  location_id: number;
+  clinic_id: number;
+  province: string;
+  district: string;
+  clinic_address: string;
+  latitude: number;
+  longitude: number;
+  clinic_name: string;
+  clinic_operator_id: number;
+  slug: string;
+  distance: number;
+  phones: PhoneNumber[];
+  operator: Operator | null;
 }
 
 // Common Turkish cities to suggest
@@ -16,6 +48,46 @@ const commonCities = [
   'Ankara', 'Istanbul', 'Izmir', 'Antalya', 'Bursa',
   'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Kayseri'
 ];
+
+// Özel Toast Stili
+const notifyEmergency = (message: string) => {
+  toast.dismiss(); // Dismiss any existing toasts first
+  toast(message, {
+    icon: '🚨',
+    style: {
+      borderRadius: '10px',
+      background: '#FEE2E2',
+      color: '#991B1B',
+      fontWeight: 'bold',
+      padding: '16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #F87171',
+    },
+    duration: 5000,
+    position: 'top-center', // Force position to be top-center
+    // Prevent default toast behavior
+    id: 'emergency-toast', // Use a consistent ID to prevent duplicates
+  });
+};
+
+// Özel Error Toast Stili
+const notifyError = (message: string) => {
+  toast.dismiss(); // Dismiss any existing toasts first
+  toast.error(message, {
+    style: {
+      borderRadius: '10px',
+      background: '#FEF2F2',
+      color: '#991B1B',
+      fontWeight: 'bold',
+      padding: '16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #EF4444',
+    },
+    duration: 5000,
+    position: 'top-center', // Force position to be top-center
+    id: 'error-toast', // Use a consistent ID to prevent duplicates
+  });
+};
 
 const PetOwnerHomePage: React.FC = () => {
   const { user } = useAppSelector(state => state.auth);
@@ -29,6 +101,12 @@ const PetOwnerHomePage: React.FC = () => {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isEmergency, setIsEmergency] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isNavigatingToEmergency, setIsNavigatingToEmergency] = useState(false);
+  
+  // Acil durum modalı için state'ler
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [nearestClinic, setNearestClinic] = useState<Clinic | null>(null);
+  const [directionsUrl, setDirectionsUrl] = useState('');
 
   // Fetch popular searches when component mounts
   useEffect(() => {
@@ -145,9 +223,43 @@ const PetOwnerHomePage: React.FC = () => {
   };
 
   // Handle emergency toggle
-  const toggleEmergency = (e: React.MouseEvent) => {
+  const toggleEmergency = async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent form submission
-    setIsEmergency(!isEmergency);
+    
+    // Eğer acil durum modu zaten aktifse, yönlendirme işlemini başlat
+    if (isEmergency) {
+      try {
+        setIsNavigatingToEmergency(true);
+        
+        // En yakın klinikleri ve kullanıcı konumunu al
+        const emergencyData = await getEmergencyData();
+        
+        // En yakın klinik (liste sıralanmış olarak gelir)
+        const clinic = emergencyData.clinics[0];
+        
+        // Google Maps yönlendirme URL'sini oluştur
+        const mapUrl = createDirectionsUrl(clinic, emergencyData.userLocation);
+        
+        // State'leri güncelle
+        setNearestClinic(clinic);
+        setDirectionsUrl(mapUrl);
+        
+        // Modalı açmadan önce tüm toast bildirimleri kapat
+        toast.dismiss();
+        
+        // Modalı aç - modal açıldığında toast gösterme
+        setIsEmergencyModalOpen(true);
+      } catch (error: any) {
+        notifyError(error.message || 'En yakın kliniğe yönlendirme sırasında bir hata oluştu');
+        console.error('Emergency navigation error:', error);
+      } finally {
+        setIsNavigatingToEmergency(false);
+      }
+    } else {
+      // Acil durum modunu aktif et
+      setIsEmergency(true);
+      notifyEmergency('Emergency mode is active! By pressing the button again, you will be directed to the nearest clinic.');
+    }
   };
 
   // Handle suggestion click
@@ -292,6 +404,31 @@ const PetOwnerHomePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-12">
+      {/* Toast bildirimleri için Toaster componenti */}
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        containerClassName=""
+        containerStyle={{}}
+        toastOptions={{
+          // Sadece bir toast gösterilsin
+          duration: 5000,
+          // Diğer toast gösterim alanını kaldır
+          position: 'top-center',
+          // Sağ üstteki toastı engelle
+          success: {
+            position: 'top-center',
+          },
+          error: {
+            position: 'top-center',
+          },
+          loading: {
+            position: 'top-center',
+          },
+        }}
+      />
+    
       {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
@@ -299,6 +436,17 @@ const PetOwnerHomePage: React.FC = () => {
         onForgotPassword={() => {/* Handle forgot password */}}
         initialTab="register"
       />
+      
+      {/* Emergency Modal */}
+      {nearestClinic && (
+        <EmergencyModal
+          isOpen={isEmergencyModalOpen}
+          onClose={() => setIsEmergencyModalOpen(false)}
+          clinic={nearestClinic}
+          directionsUrl={directionsUrl}
+          resetEmergency={() => setIsEmergency(false)}
+        />
+      )}
 
       {/* Hero Section with Search */}
       <div className="relative mb-16">
@@ -424,12 +572,20 @@ const PetOwnerHomePage: React.FC = () => {
                 onClick={toggleEmergency}
                 className={`absolute right-[132px] top-1/2 transform -translate-y-1/2 p-2 rounded-full ${
                   isEmergency 
-                    ? 'bg-red-600 text-white shadow-md ring-2 ring-red-300' 
+                    ? 'bg-red-600 text-white shadow-md ring-2 ring-red-300 animate-pulse' 
                     : 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
                 } transition-all duration-200 shadow-sm z-20 flex items-center space-x-1`}
-                title="Emergency services only"
+                title={isEmergency ? "Navigate to the nearest clinic" : "Activate emergency mode"}
+                disabled={isNavigatingToEmergency}
               >
-                <WarningIcon size="md" />
+                {isNavigatingToEmergency ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <WarningIcon size="md" />
+                )}
               </button>
               
               {/* Search button */}
