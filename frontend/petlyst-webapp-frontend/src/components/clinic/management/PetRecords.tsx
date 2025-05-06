@@ -734,11 +734,6 @@ const PetRecords: React.FC = () => {
                     <p className="text-sm text-gray-500">Total Appointments</p>
                     <p className="font-medium text-gray-800">{selectedPet.total_appointments || 0}</p>
                   </div>
-                  
-                  <div className="bg-green-50 p-2 rounded-md">
-                    <p className="text-sm text-gray-500">Patient ID</p>
-                    <p className="font-medium text-gray-800">{selectedPet.pet_id}</p>
-                  </div>
                 </div>
               </div>
             </div>

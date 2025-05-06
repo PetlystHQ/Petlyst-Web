@@ -2370,6 +2370,7 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
         p.pet_birth_month,
         p.pet_birth_year,
         p.pet_owner_id AS owner_id,
+        p.pet_status,
         u.user_name AS pet_owner_name,
         u.user_surname AS pet_owner_surname,
         cp.created_at,
@@ -2379,6 +2380,7 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
       JOIN pet_owners po ON p.pet_owner_id = po.pet_owner_id
       JOIN users u ON po.pet_owner_id = u.user_id
       WHERE cp.clinic_id = $1
+      AND (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY cp.updated_at DESC
     `;
     
@@ -2506,35 +2508,46 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
         console.log(`[DEBUG-CLINIC] Randevu '${status}' durumunda. Hayvanın clinic_patients tablosunda olup olmadığı kontrol ediliyor.`);
         console.log(`[DEBUG-CLINIC] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
         
-        // Check if the pet is already a patient of this clinic
-        const checkPatientQuery = `
-          SELECT id FROM clinic_patients 
-          WHERE clinic_id = $1 AND pet_id = $2
-        `;
-        const checkPatientResult = await client.query(checkPatientQuery, [
-          appointment.clinic_id, 
-          appointment.pet_id
-        ]);
+        // Check if the pet is deleted
+        const petStatusResult = await client.query(
+          'SELECT pet_status FROM pets WHERE pet_id = $1',
+          [appointment.pet_id]
+        );
         
-        console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda mı? Sonuç sayısı: ${checkPatientResult.rows.length}`);
-        
-        if (checkPatientResult.rows.length === 0) {
-          // Insert new record in clinic_patients
-          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
-          await client.query(`
-            INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          `, [appointment.clinic_id, appointment.pet_id]);
-          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosuna eklendi.`);
+        if (petStatusResult.rows.length > 0 && petStatusResult.rows[0].pet_status === 'deleted') {
+          console.log(`[DEBUG-CLINIC] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+          // Skip adding to clinic_patients if pet is deleted
         } else {
-          // Update the existing record timestamp
-          console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda. Timestamp güncelleniyor.`);
-          await client.query(`
-            UPDATE clinic_patients 
-            SET updated_at = CURRENT_TIMESTAMP 
+          // Check if the pet is already a patient of this clinic
+          const checkPatientQuery = `
+            SELECT id FROM clinic_patients 
             WHERE clinic_id = $1 AND pet_id = $2
-          `, [appointment.clinic_id, appointment.pet_id]);
-          console.log(`[DEBUG-CLINIC] Hayvan clinic_patients kaydı güncellendi.`);
+          `;
+          const checkPatientResult = await client.query(checkPatientQuery, [
+            appointment.clinic_id, 
+            appointment.pet_id
+          ]);
+          
+          console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda mı? Sonuç sayısı: ${checkPatientResult.rows.length}`);
+          
+          if (checkPatientResult.rows.length === 0) {
+            // Insert new record in clinic_patients
+            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+            await client.query(`
+              INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
+              VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            `, [appointment.clinic_id, appointment.pet_id]);
+            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosuna eklendi.`);
+          } else {
+            // Update the existing record timestamp
+            console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda. Timestamp güncelleniyor.`);
+            await client.query(`
+              UPDATE clinic_patients 
+              SET updated_at = CURRENT_TIMESTAMP 
+              WHERE clinic_id = $1 AND pet_id = $2
+            `, [appointment.clinic_id, appointment.pet_id]);
+            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients kaydı güncellendi.`);
+          }
         }
       } else {
         console.log(`[DEBUG-CLINIC] Randevu durumu '${status}' olduğu için clinic_patients tablosu güncellenmedi.`);
@@ -2594,8 +2607,10 @@ router.post('/:clinicId/sync-patients', authenticateToken, checkVerificationStat
       const missingPatientsQuery = `
         SELECT DISTINCT a.pet_id, a.clinic_id 
         FROM appointments a
+        JOIN pets p ON a.pet_id = p.pet_id
         WHERE a.clinic_id = $1
         AND a.appointment_status IN ('confirmed', 'completed')
+        AND (p.pet_status = 'active' OR p.pet_status IS NULL)
         AND NOT EXISTS (
           SELECT 1 FROM clinic_patients cp 
           WHERE cp.clinic_id = a.clinic_id AND cp.pet_id = a.pet_id

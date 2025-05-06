@@ -61,7 +61,8 @@ async function getExamination(examinationId) {
              JOIN pets p ON e.pet_id = p.pet_id
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
-             WHERE e.examination_id = $1`,
+             WHERE e.examination_id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)`,
             [examinationId]
         );
         return result.rows[0];
@@ -92,6 +93,7 @@ async function listExaminations(filters, limit, offset) {
             LEFT JOIN veterinarians v ON e.vet_id = v.veterinarian_id
             LEFT JOIN users u ON v.veterinarian_id = u.user_id
             WHERE 1=1
+            AND (p.pet_status = 'active' OR p.pet_status IS NULL)
         `;
         
         const queryParams = [];
@@ -296,6 +298,7 @@ async function getPetExaminationHistory(petId) {
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
              WHERE e.pet_id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)
              ORDER BY e.created_at DESC`,
             [petId]
         );

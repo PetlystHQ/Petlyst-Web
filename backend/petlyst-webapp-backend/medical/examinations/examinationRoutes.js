@@ -163,6 +163,26 @@ router.post('/', vetAuthMiddleware, async (req, res) => {
       });
     }
     
+    // Check if pet exists and is not deleted
+    const petQuery = await pool.query(
+      'SELECT pet_id, pet_status FROM pets WHERE pet_id = $1',
+      [pet_id]
+    );
+    
+    if (petQuery.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found'
+      });
+    }
+    
+    if (petQuery.rows[0].pet_status === 'deleted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create examination for a deleted pet'
+      });
+    }
+    
     const examinationData = {
       pet_id: parseInt(pet_id),
       vet_id,

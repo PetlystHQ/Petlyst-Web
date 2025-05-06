@@ -75,7 +75,8 @@ async function getDiagnosis(diagnosisId) {
              JOIN pets p ON e.pet_id = p.pet_id
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
-             WHERE d.diagnosis_id = $1`,
+             WHERE d.diagnosis_id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)`,
             [diagnosisId]
         );
         return result.rows[0];
@@ -99,6 +100,7 @@ async function listDiagnoses(filters, limit = 20, offset = 0) {
             JOIN veterinarians v ON e.vet_id = v.veterinarian_id
             JOIN users u ON v.veterinarian_id = u.user_id
             WHERE 1=1
+            AND (p.pet_status = 'active' OR p.pet_status IS NULL)
         `;
         
         const queryParams = [];
@@ -288,7 +290,9 @@ async function getPetDiagnoses(petId) {
              JOIN examinations e ON d.examination_id = e.examination_id
              JOIN veterinarians v ON e.vet_id = v.veterinarian_id
              JOIN users u ON v.veterinarian_id = u.user_id
+             JOIN pets p ON e.pet_id = p.pet_id
              WHERE e.pet_id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)
              ORDER BY d.diagnosis_date DESC`,
             [petId]
         );

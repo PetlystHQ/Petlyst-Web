@@ -119,6 +119,20 @@ async function admitPet(roomId, petId, admissionDate, expectedDischargeDate) {
             throw new Error('Room is not available for admission');
         }
         
+        // Check if pet exists and is not deleted
+        const petCheck = await pool.query(
+            'SELECT pet_id, pet_status FROM pets WHERE pet_id = $1',
+            [petId]
+        );
+        
+        if (!petCheck.rows[0]) {
+            throw new Error('Pet not found');
+        }
+        
+        if (petCheck.rows[0].pet_status === 'deleted') {
+            throw new Error('Cannot admit a deleted pet');
+        }
+        
         // Begin transaction
         await pool.query('BEGIN');
         
@@ -195,7 +209,9 @@ async function getCurrentHospitalization(petId) {
             `SELECT h.*, r.room_name, r.room_type, r.clinic_id
              FROM pet_hospitalizations h
              JOIN clinic_hospitalization_rooms r ON h.room_id = r.id
-             WHERE h.pet_id = $1 AND h.actual_discharge_date IS NULL`,
+             JOIN pets p ON h.pet_id = p.pet_id
+             WHERE h.pet_id = $1 AND h.actual_discharge_date IS NULL
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)`,
             [petId]
         );
         return result.rows[0];
@@ -212,7 +228,9 @@ async function getPetHospitalizationHistory(petId) {
             `SELECT h.*, r.room_name, r.room_type, r.clinic_id
              FROM pet_hospitalizations h
              JOIN clinic_hospitalization_rooms r ON h.room_id = r.id
+             JOIN pets p ON h.pet_id = p.pet_id
              WHERE h.pet_id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)
              ORDER BY h.admission_date DESC`,
             [petId]
         );
@@ -232,6 +250,7 @@ async function getCurrentHospitalizationsByClinic(clinicId) {
              JOIN clinic_hospitalization_rooms r ON h.room_id = r.id
              JOIN pets p ON h.pet_id = p.pet_id
              WHERE r.clinic_id = $1 AND h.actual_discharge_date IS NULL
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)
              ORDER BY h.admission_date`,
             [clinicId]
         );
@@ -250,7 +269,8 @@ async function getHospitalizationById(hospitalizationId) {
              FROM pet_hospitalizations h
              JOIN clinic_hospitalization_rooms r ON h.room_id = r.id
              JOIN pets p ON h.pet_id = p.pet_id
-             WHERE h.id = $1`,
+             WHERE h.id = $1
+             AND (p.pet_status = 'active' OR p.pet_status IS NULL)`,
             [hospitalizationId]
         );
         return result.rows[0];

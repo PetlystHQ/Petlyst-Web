@@ -57,6 +57,8 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.pet_owner_id = $1
+      AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         CASE
           WHEN a.appointment_status = 'pending' THEN 1
@@ -166,32 +168,35 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Validate required fields
     if (!petId || !clinicId || !appointmentDate || !appointmentStartHour || !appointmentEndHour) {
-      return res.status(400).json({ error: 'Missing required appointment information' });
+      return res.status(400).json({ error: 'Required fields are missing' });
     }
-
-    // Check if the selected time slot is available
-    const isAvailable = await appointmentModel.isAppointmentSlotAvailable(
-      clinicId,
-      appointmentDate,
-      appointmentStartHour,
-      appointmentEndHour
+    
+    // Check if pet exists and is not deleted
+    const petCheck = await pool.query(
+      'SELECT pet_id, pet_status FROM pets WHERE pet_id = $1 AND pet_owner_id = $2',
+      [petId, req.user.userId]
     );
-
-    if (!isAvailable) {
-      return res.status(409).json({ error: 'Selected appointment slot is not available' });
+    
+    if (petCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found or does not belong to you' });
+    }
+    
+    if (petCheck.rows[0].pet_status === 'deleted') {
+      return res.status(400).json({ error: 'Cannot create appointment for a deleted pet' });
     }
 
-    // Create appointment with the pet owner ID from authenticated user
+    // Pet owner ID from token
+    const petOwnerId = req.user.userId;
+
+    // Create appointment data
     const appointmentData = {
       petId,
       clinicId,
-      petOwnerId: req.user.userId,
+      petOwnerId,
       appointmentDate,
       appointmentStartHour,
       appointmentEndHour,
       videoMeeting,
-      meetingUrl: null,  // Will be set by clinic later if needed
-      meetingPassword: null, // Will be set by clinic later if needed
       notes
     };
 
@@ -375,32 +380,43 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
       console.log(`[DEBUG-APIROUTE] Randevu tamamlandı. clinic_patients tablosu güncelleniyor...`);
       console.log(`[DEBUG-APIROUTE] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
       
-      // Check if the pet is already in the clinic_patients table
-      const checkResult = await pool.query(
-        `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
-        [appointment.clinic_id, appointment.pet_id]
+      // Check if the pet is deleted
+      const petStatusCheck = await pool.query(
+        `SELECT pet_status FROM pets WHERE pet_id = $1`,
+        [appointment.pet_id]
       );
       
-      console.log(`[DEBUG-APIROUTE] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
-      
-      // If the pet is not already in the clinic_patients table, add it
-      if (checkResult.rowCount === 0) {
-        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
-        await pool.query(
-          `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
-           VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [appointment.clinic_id, appointment.pet_id]
-        );
-        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosuna eklendi (tamamlama endpointi).`);
+      if (petStatusCheck.rows.length > 0 && petStatusCheck.rows[0].pet_status === 'deleted') {
+        console.log(`[DEBUG-APIROUTE] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+        // Skip adding to clinic_patients if pet is deleted
       } else {
-        console.log(`[DEBUG-APIROUTE] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
-        await pool.query(
-          `UPDATE clinic_patients 
-           SET updated_at = CURRENT_TIMESTAMP 
-           WHERE clinic_id = $1 AND pet_id = $2`,
+        // Check if the pet is already in the clinic_patients table
+        const checkResult = await pool.query(
+          `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
           [appointment.clinic_id, appointment.pet_id]
         );
-        console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients kaydı güncellendi (tamamlama endpointi).`);
+        
+        console.log(`[DEBUG-APIROUTE] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+        
+        // If the pet is not already in the clinic_patients table, add it
+        if (checkResult.rowCount === 0) {
+          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+          await pool.query(
+            `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
+             VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [appointment.clinic_id, appointment.pet_id]
+          );
+          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosuna eklendi (tamamlama endpointi).`);
+        } else {
+          console.log(`[DEBUG-APIROUTE] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+          await pool.query(
+            `UPDATE clinic_patients 
+             SET updated_at = CURRENT_TIMESTAMP 
+             WHERE clinic_id = $1 AND pet_id = $2`,
+            [appointment.clinic_id, appointment.pet_id]
+          );
+          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients kaydı güncellendi (tamamlama endpointi).`);
+        }
       }
     } catch (error) {
       console.error('Error updating clinic_patients table:', error);
@@ -532,7 +548,8 @@ router.get('/clinic/:clinicId/pending', authenticateToken, async (req, res) => {
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_status = 'pending'
+        a.appointment_status = 'pending' AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date, 
         a.appointment_start_hour
@@ -619,32 +636,43 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
         console.log(`[DEBUG-APIROUTE-STATUS] Randevu onaylandı. clinic_patients tablosu güncelleniyor...`);
         console.log(`[DEBUG-APIROUTE-STATUS] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
         
-        // Check if the pet is already in the clinic_patients table
-        const checkResult = await pool.query(
-          `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
-          [appointment.clinic_id, appointment.pet_id]
+        // Check if the pet is deleted
+        const petStatusCheck = await pool.query(
+          `SELECT pet_status FROM pets WHERE pet_id = $1`,
+          [appointment.pet_id]
         );
         
-        console.log(`[DEBUG-APIROUTE-STATUS] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
-        
-        // If the pet is not already in the clinic_patients table, add it
-        if (checkResult.rowCount === 0) {
-          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
-          await pool.query(
-            `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
-             VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            [appointment.clinic_id, appointment.pet_id]
-          );
-          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosuna eklendi (onaylama endpointi).`);
+        if (petStatusCheck.rows.length > 0 && petStatusCheck.rows[0].pet_status === 'deleted') {
+          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+          // Skip adding to clinic_patients if pet is deleted
         } else {
-          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
-          await pool.query(
-            `UPDATE clinic_patients 
-             SET updated_at = CURRENT_TIMESTAMP 
-             WHERE clinic_id = $1 AND pet_id = $2`,
+          // Check if the pet is already in the clinic_patients table
+          const checkResult = await pool.query(
+            `SELECT id FROM clinic_patients WHERE clinic_id = $1 AND pet_id = $2`,
             [appointment.clinic_id, appointment.pet_id]
           );
-          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients kaydı güncellendi (onaylama endpointi).`);
+          
+          console.log(`[DEBUG-APIROUTE-STATUS] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+          
+          // If the pet is not already in the clinic_patients table, add it
+          if (checkResult.rowCount === 0) {
+            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+            await pool.query(
+              `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
+               VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+              [appointment.clinic_id, appointment.pet_id]
+            );
+            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosuna eklendi (onaylama endpointi).`);
+          } else {
+            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+            await pool.query(
+              `UPDATE clinic_patients 
+               SET updated_at = CURRENT_TIMESTAMP 
+               WHERE clinic_id = $1 AND pet_id = $2`,
+              [appointment.clinic_id, appointment.pet_id]
+            );
+            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients kaydı güncellendi (onaylama endpointi).`);
+          }
         }
       } catch (error) {
         console.error('Error updating clinic_patients table:', error);

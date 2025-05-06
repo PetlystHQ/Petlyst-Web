@@ -14,6 +14,7 @@ const getAppointmentsByPetOwner = async (petOwnerId) => {
        JOIN clinics c ON a.clinic_id = c.clinic_id
        JOIN pets p ON a.pet_id = p.pet_id
        WHERE a.pet_owner_id = $1
+       AND (p.pet_status = 'active' OR p.pet_status IS NULL)
        ORDER BY a.appointment_date, a.appointment_start_hour`,
       [petOwnerId]
     );
@@ -33,6 +34,7 @@ const getAppointmentsByClinic = async (clinicId) => {
        JOIN users u ON a.pet_owner_id = u.user_id
        JOIN pets p ON a.pet_id = p.pet_id
        WHERE a.clinic_id = $1
+       AND (p.pet_status = 'active' OR p.pet_status IS NULL)
        ORDER BY a.appointment_date, a.appointment_start_hour`,
       [clinicId]
     );
@@ -52,7 +54,8 @@ const getAppointmentById = async (appointmentId) => {
        JOIN clinics c ON a.clinic_id = c.clinic_id
        JOIN users u ON a.pet_owner_id = u.user_id
        JOIN pets p ON a.pet_id = p.pet_id
-       WHERE a.appointment_id = $1`,
+       WHERE a.appointment_id = $1
+       AND (p.pet_status = 'active' OR p.pet_status IS NULL)`,
       [appointmentId]
     );
     
