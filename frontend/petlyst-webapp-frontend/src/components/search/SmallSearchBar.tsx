@@ -89,7 +89,64 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
     // For regular search with the search button, use the 'all' filter by default
     // to ensure both clinics and veterinarians are included in results
     const params = new URLSearchParams();
+    
+    // Şehir ismi kontrolü - yaygın şehirlerden biri mi kontrol et
+    const cityMatch = commonCities.find(city => 
+      city.toLowerCase() === searchQuery.toLowerCase()
+    );
+    
+    // Tam eşleşme yoksa, içeren arama yapalım
+    const cityPartialMatch = !cityMatch && commonCities.find(city => 
+      searchQuery.toLowerCase().includes(city.toLowerCase())
+    );
+    
+    // Common medical services
+    const medicalServices = [
+      'Vaccination', 'Internal Medicine', 'Ultrasound', 'Preventive Care', 'X-Ray',
+      'Surgery', 'Emergency Care', 'Laboratory', 'Dental Care', 'Ophthalmology'
+    ];
+    
+    // Common additional services
+    const additionalServices = [
+      'Boarding', 'Pet Transportation', 'Pet Daycare', 'Grooming', 'Home Visits',
+      'Behavioral Consultation', 'Nutrition Consultation', 'Pet Insurance', 'Pet Adoption'
+    ];
+    
+    // Medical service kontrolü
+    const medicalServiceMatch = medicalServices.find(service => 
+      service.toLowerCase() === searchQuery.toLowerCase() ||
+      searchQuery.toLowerCase().includes(service.toLowerCase())
+    );
+    
+    // Additional service kontrolü
+    const additionalServiceMatch = additionalServices.find(service => 
+      service.toLowerCase() === searchQuery.toLowerCase() ||
+      searchQuery.toLowerCase().includes(service.toLowerCase())
+    );
+    
+    if (cityMatch || cityPartialMatch) {
+      // Bulunan şehir adını province parametresi olarak ayarla
+      const cityName = cityMatch || cityPartialMatch;
+      if (cityName) {
+        params.set('province', cityName);
+        // Query parametresini boş olarak ayarla
+        params.set('query', '');
+      }
+    } else if (medicalServiceMatch) {
+      // Medical service parametresi olarak ayarla
+      params.set('medicalService', medicalServiceMatch);
+      // Query parametresini boş olarak ayarla
+      params.set('query', '');
+    } else if (additionalServiceMatch) {
+      // Additional service parametresi olarak ayarla
+      params.set('additionalService', additionalServiceMatch);
+      // Query parametresini boş olarak ayarla
+      params.set('query', '');
+    } else {
+      // Normal bir arama sorgusu ise query parametresini ayarla
     params.set('query', searchQuery);
+    }
+    
     params.set('veterinarian', 'all'); // Set to 'all' to include both clinics and veterinarians
     
     // Navigate using window.location for full page reload and consistent behavior
@@ -131,18 +188,24 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
               suggestion.type === 'additional_service' ||
               suggestion.type === 'city') {
       // For these types, show all results
-      params.set('query', suggestion.text);
       params.set('veterinarian', 'all');
       
       // Add specific filter based on type
       if (suggestion.type === 'animal_type') {
         params.set('animalType', suggestion.text);
+        params.set('query', suggestion.text); // Include query for general search
       } else if (suggestion.type === 'medical_service') {
         params.set('medicalService', suggestion.text);
+        // Arama sorgusundan servisi çıkar, sadece service filtresi olarak kullan
+        params.set('query', '');
       } else if (suggestion.type === 'additional_service') {
         params.set('additionalService', suggestion.text);
+        // Arama sorgusundan additional servisi çıkar, sadece additionalService filtresi olarak kullan
+        params.set('query', '');
       } else if (suggestion.type === 'city') {
         params.set('province', suggestion.text);
+        // Şehir için query parametresi kullanmıyoruz, query boş olsun
+        params.set('query', '');
       }
       
       // Navigate using window.location to ensure full page reload

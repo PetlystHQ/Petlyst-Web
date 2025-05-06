@@ -17,6 +17,8 @@ const DefaultHeader: React.FC = () => {
                           location.pathname === '/pet-owner-home' || 
                           location.pathname.startsWith('/search') ||
                           location.pathname.startsWith('/clinic/') ||
+                          location.pathname.startsWith('/veterinarians/profile/') ||
+                          location.pathname.startsWith('/veterinarians/') ||
                           location.pathname.includes('/clinics/');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
