@@ -104,6 +104,25 @@ interface User {
   // Remove user_id as it's not needed
 }
 
+// Add Review interface after other interfaces
+interface Review {
+  clinic_review_id: string;
+  clinic_id: string;
+  pet_id: string;
+  pet_name: string;
+  pet_owner_name: string;
+  clinic_review_hygiene_rating: number;
+  clinic_review_stuff_behaviour_rating: number;
+  clinic_review_price_rating: number;
+  comments: string;
+  clinic_review_date: string;
+  approval_status: string;
+}
+
+// Add these filter types near the Review interface
+type RatingFilter = 'all' | 5 | 4 | 3 | 2 | 1;
+type SortOption = 'newest' | 'oldest';
+
 const SingleClinicPage: React.FC = () => {
   const params = useParams<{ clinicId?: string, slug?: string }>();
   const navigate = useNavigate();
@@ -139,6 +158,15 @@ const SingleClinicPage: React.FC = () => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsTotalPages, setReviewsTotalPages] = useState(1);
+  
+  // Add these new states for filtering
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
   
   // Get user from Redux instead of making a separate API call
   const user = useSelector((state: RootState) => state.auth.user);
@@ -336,6 +364,155 @@ const SingleClinicPage: React.FC = () => {
       checkPendingAppointment();
     }
   }, [clinic, token, isVeterinarian]);
+  
+  // Add fetchReviews function after other fetch functions
+  useEffect(() => {
+    if (clinic) {
+      fetchReviews();
+    }
+  }, [clinic]);
+  
+  // Update fetchReviews function to include filter parameters
+  const fetchReviews = async (page = 1) => {
+    if (!clinic) return;
+    
+    try {
+      setReviewsLoading(true);
+      setReviewsError(null);
+      
+      const response = await axiosInstance.get(`/reviews/clinic/${clinic.clinic_id}`, {
+        params: {
+          page,
+          limit: 5,
+          sort: sortOption,
+          // Only send rating filter if it's not 'all'
+          ...(ratingFilter !== 'all' && { rating: ratingFilter })
+        }
+      });
+      
+      if (response.data) {
+        setReviews(response.data.reviews || []);
+        setReviewsPage(response.data.page || 1);
+        setReviewsTotalPages(response.data.totalPages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching clinic reviews:', error);
+      setReviewsError('Could not load reviews at this time.');
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+  
+  // Refetch reviews when filters change
+  useEffect(() => {
+    if (clinic) {
+      fetchReviews(1); // Reset to first page when filters change
+    }
+  }, [ratingFilter, sortOption, clinic]);
+  
+  // Add these handler functions
+  const handleRatingFilterChange = (rating: RatingFilter) => {
+    setRatingFilter(rating);
+  };
+  
+  const handleSortOptionChange = (sort: SortOption) => {
+    setSortOption(sort);
+  };
+  
+  // Add a filter UI component to the renderReviews function
+  const renderReviewFilters = () => {
+    return (
+      <div className="mb-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Rating</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleRatingFilterChange('all')}
+                className={`px-3 py-1.5 text-sm rounded-full transition-all ${
+                  ratingFilter === 'all'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                All Ratings
+              </button>
+              
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <button
+                  key={rating}
+                  onClick={() => handleRatingFilterChange(rating as RatingFilter)}
+                  className={`flex items-center px-3 py-1.5 text-sm rounded-full transition-all ${
+                    ratingFilter === rating
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {rating}
+                  <span className="ml-1 text-yellow-400">★</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleSortOptionChange('newest')}
+                className={`px-4 py-1.5 text-sm rounded-full transition-all ${
+                  sortOption === 'newest'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <span>Newest</span>
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </div>
+              </button>
+              <button
+                onClick={() => handleSortOptionChange('oldest')}
+                className={`px-4 py-1.5 text-sm rounded-full transition-all ${
+                  sortOption === 'oldest'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <span>Oldest</span>
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Add a helper function to calculate average rating
+  const calculateAverageRating = (review: Review) => {
+    const sum = 
+      review.clinic_review_hygiene_rating + 
+      review.clinic_review_stuff_behaviour_rating + 
+      review.clinic_review_price_rating;
+    return (sum / 3).toFixed(1);
+  };
+  
+  // Add formatDate function if not already present
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
   
   // Format day names
   const getDayName = (index: number): string => {
@@ -618,6 +795,287 @@ const SingleClinicPage: React.FC = () => {
     };
   }, [tooltipVisible]);
   
+  // Modify the renderReviews function to include filters
+  const renderReviews = () => {
+    if (reviewsLoading) {
+      return (
+        <div className="flex justify-center items-center py-10">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+    
+    if (reviewsError) {
+      return (
+        <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center">
+          <p className="text-red-600">{reviewsError}</p>
+          <button 
+            onClick={() => fetchReviews(reviewsPage)}
+            className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded-md text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    
+    if (reviews.length === 0) {
+      return (
+        <>
+          {renderReviewFilters()}
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 text-center">
+            <svg className="w-12 h-12 text-blue-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">
+              {ratingFilter === 'all' 
+                ? 'No Reviews Yet' 
+                : `No ${ratingFilter}-Star Reviews`}
+            </h3>
+            <p className="text-blue-600 max-w-md mx-auto">
+              {ratingFilter === 'all'
+                ? `Be the first to share your experience at ${clinic?.clinic_name}!`
+                : 'Try adjusting your filters to see more reviews.'}
+            </p>
+          </div>
+        </>
+      );
+    }
+    
+    // Client-side filtering in case the backend doesn't support filtering
+    // This is a fallback in case server filtering isn't working
+    let filteredReviews = [...reviews];
+    
+    // If we're filtering by rating and the server didn't do it
+    if (ratingFilter !== 'all') {
+      filteredReviews = filteredReviews.filter(review => {
+        const avgRating = Math.round(
+          (review.clinic_review_hygiene_rating + 
+          review.clinic_review_stuff_behaviour_rating + 
+          review.clinic_review_price_rating) / 3
+        );
+        return avgRating === ratingFilter;
+      });
+    }
+    
+    // Show message for empty results after filtering
+    if (filteredReviews.length === 0) {
+      return (
+        <>
+          {renderReviewFilters()}
+          <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-6 text-center">
+            <svg className="w-12 h-12 text-yellow-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">No {ratingFilter}-Star Reviews</h3>
+            <p className="text-yellow-800 max-w-md mx-auto">
+              No reviews match your current filter. Try adjusting your filters to see other reviews.
+            </p>
+            <button 
+              onClick={() => setRatingFilter('all')}
+              className="mt-4 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-md transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </>
+      );
+    }
+    
+    return (
+      <div>
+        {renderReviewFilters()}
+        <div className="space-y-6 mb-6">
+          {filteredReviews.map((review) => {
+            const avgRating = calculateAverageRating(review);
+            
+            return (
+              <div key={review.clinic_review_id} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between">
+                  <div className="flex items-start mb-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full p-3 mr-3 border border-blue-100">
+                      <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">{review.pet_owner_name}</p>
+                      <div className="flex items-center mt-1">
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          Pet: {review.pet_name}
+                        </span>
+                        <span className="mx-2 text-gray-300">•</span>
+                        <span className="text-xs text-gray-500">{formatDate(review.clinic_review_date)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg px-3 py-2 h-fit flex items-center shadow-sm border border-yellow-100">
+                    <div className="flex text-yellow-500 mr-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg 
+                          key={star} 
+                          className="w-4 h-4"
+                          fill={parseFloat(avgRating) >= star ? "currentColor" : "none"} 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                          />
+                        </svg>
+                      ))}
+                    </div>
+                    <span className="font-bold text-gray-800">{avgRating}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Hygiene</p>
+                    <div className="flex items-center">
+                      <div className="flex text-blue-500 mr-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg 
+                            key={star} 
+                            className="w-3 h-3"
+                            fill={review.clinic_review_hygiene_rating >= star ? "currentColor" : "none"} 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.5"
+                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                            />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="ml-1 font-medium text-sm">{review.clinic_review_hygiene_rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Staff</p>
+                    <div className="flex items-center">
+                      <div className="flex text-purple-500 mr-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg 
+                            key={star} 
+                            className="w-3 h-3"
+                            fill={review.clinic_review_stuff_behaviour_rating >= star ? "currentColor" : "none"} 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.5"
+                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                            />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="ml-1 font-medium text-sm">{review.clinic_review_stuff_behaviour_rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Price</p>
+                    <div className="flex items-center">
+                      <div className="flex text-green-500 mr-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg 
+                            key={star} 
+                            className="w-3 h-3"
+                            fill={review.clinic_review_price_rating >= star ? "currentColor" : "none"} 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.5"
+                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                            />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="ml-1 font-medium text-sm">{review.clinic_review_price_rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {review.comments && (
+                  <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-300">
+                    <p className="text-gray-700">{review.comments}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Pagination */}
+        {reviewsTotalPages > 1 && (
+          <div className="flex justify-center mt-8">
+            <nav className="flex items-center space-x-2">
+              <button
+                onClick={() => fetchReviews(reviewsPage - 1)}
+                disabled={reviewsPage === 1}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  reviewsPage === 1
+                    ? 'text-gray-400 cursor-not-allowed bg-gray-100'
+                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous
+                </div>
+              </button>
+              
+              {Array.from({ length: reviewsTotalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => fetchReviews(page)}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                    page === reviewsPage
+                      ? 'bg-blue-600 text-white font-medium shadow-md'
+                      : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => fetchReviews(reviewsPage + 1)}
+                disabled={reviewsPage === reviewsTotalPages}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  reviewsPage === reviewsTotalPages
+                    ? 'text-gray-400 cursor-not-allowed bg-gray-100'
+                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  Next
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            </nav>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   // Render loading state
   if (loading) {
     return (
@@ -650,6 +1108,23 @@ const SingleClinicPage: React.FC = () => {
       </div>
     );
   }
+  
+  // Add new function to calculate overall clinic average rating
+  const calculateClinicAverageRating = () => {
+    if (!reviews || reviews.length === 0) return null;
+    
+    let totalSum = 0;
+    let totalCount = 0;
+    
+    reviews.forEach(review => {
+      totalSum += review.clinic_review_hygiene_rating;
+      totalSum += review.clinic_review_stuff_behaviour_rating;
+      totalSum += review.clinic_review_price_rating;
+      totalCount += 3; // Three ratings per review
+    });
+    
+    return (totalSum / totalCount).toFixed(1);
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -844,13 +1319,44 @@ const SingleClinicPage: React.FC = () => {
               </div>
             </div>
             
-            {/* Clinic Description */}
-            {clinic?.clinic_description && (
-              <div className="mt-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-2">About the Clinic</h2>
-                <p className="text-gray-600 whitespace-pre-line">{clinic.clinic_description}</p>
-              </div>
-            )}
+            {/* Clinic Description with Rating */}
+            <div className="mt-6">
+              {/* Average Rating */}
+              {reviews.length > 0 && (
+                <div className="mb-5">
+                  <div 
+                    className="bg-yellow-50 rounded-lg p-3 flex items-center border border-yellow-100 inline-flex cursor-pointer hover:bg-yellow-100 transition-colors"
+                    onClick={() => {
+                      document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    title="Click to see all reviews"
+                  >
+                    <span className="text-2xl font-bold text-gray-800 mr-2">{calculateClinicAverageRating()}</span>
+                    <div className="flex text-yellow-500">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg 
+                          key={star} 
+                          className="w-5 h-5"
+                          fill={parseFloat(calculateClinicAverageRating() || "0") >= star ? "currentColor" : "none"} 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                          />
+                        </svg>
+                      ))}
+                    </div>
+                    <span className="text-gray-500 ml-2 text-sm">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+                  </div>
+                </div>
+              )}
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">About the Clinic</h2>
+              <p className="text-gray-600 whitespace-pre-line">{clinic.clinic_description}</p>
+            </div>
             
             {/* Hours and Location Quick Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -1224,23 +1730,20 @@ const SingleClinicPage: React.FC = () => {
           </div>
         )}
         
-        {/* Reviews section (placeholder) */}
-        <div className="bg-white shadow-lg rounded-lg p-6 md:p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Reviews</h2>
-            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">Write a Review</button>
+        {/* Reviews section */}
+        <div id="reviews-section" className="bg-white shadow-lg rounded-lg p-6 md:p-8">
+          <div className="flex items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Customer Reviews</h2>
+            {reviews.length > 0 && (
+              <div className="ml-3 flex items-center bg-blue-50 px-3 py-1 rounded-full">
+                <span className="text-yellow-500 mr-1">★</span>
+                <span className="font-medium text-blue-800">{calculateClinicAverageRating()}</span>
+                <span className="text-blue-600 ml-1 text-sm">• {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</span>
+              </div>
+            )}
           </div>
           
-          {/* Reviews Coming Soon message */}
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 text-center">
-            <svg className="w-12 h-12 text-blue-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <h3 className="text-lg font-semibold text-blue-800 mb-2">Reviews Coming Soon!</h3>
-            <p className="text-blue-600 max-w-md mx-auto">
-              We're working on adding reviews for {clinic.clinic_name}. Stay tuned to see what other pet owners think about their experience!
-            </p>
-          </div>
+          {renderReviews()}
         </div>
       </div>
       

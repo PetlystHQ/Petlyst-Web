@@ -57,7 +57,10 @@ router.get('/clinic/:clinicId', async (req, res) => {
             page: parseInt(req.query.page) || 1,
             limit: parseInt(req.query.limit) || 10,
             // By default, only return approved reviews
-            includeAll: false
+            includeAll: false,
+            // Add support for rating filter and sort options
+            rating: req.query.rating ? parseInt(req.query.rating) : null,
+            sort: req.query.sort || 'newest'
         };
 
         const reviews = await reviewModel.getClinicReviews(clinicId, options);
@@ -141,34 +144,6 @@ router.put('/admin/:reviewId/approve', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Error approving review:', error);
-        if (error.message.includes('Review not found')) {
-            return res.status(404).json({ message: error.message });
-        }
-        res.status(500).json({ message: error.message });
-    }
-});
-
-/**
- * @route   PUT /api/reviews/admin/:reviewId/reject
- * @desc    Reject a review
- * @access  Private (Admin only)
- */
-router.put('/admin/:reviewId/reject', authenticateToken, async (req, res) => {
-    try {
-        // Validate user is an admin
-        if (req.user.userType !== 'admin') {
-            return res.status(403).json({ message: 'Access denied. Admin access only.' });
-        }
-
-        const reviewId = parseInt(req.params.reviewId);
-        const rejectedReview = await reviewModel.rejectReview(reviewId);
-        
-        res.json({
-            review: rejectedReview,
-            message: 'Review rejected successfully.'
-        });
-    } catch (error) {
-        console.error('Error rejecting review:', error);
         if (error.message.includes('Review not found')) {
             return res.status(404).json({ message: error.message });
         }
