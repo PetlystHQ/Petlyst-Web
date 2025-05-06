@@ -85,7 +85,8 @@ class Pet {
                     breed: pet.pet_breed,
                     gender: pet.pet_gender,
                     birth_date: birthDateFormatted,
-                    photo: pet.pet_photo
+                    photo: pet.pet_photo,
+                    status: pet.pet_status || 'active'
                 };
             }
             return null;
@@ -99,7 +100,7 @@ class Pet {
     static async getPetsByOwnerId(ownerId) {
         try {
             const query = {
-                text: 'SELECT * FROM "pets" WHERE pet_owner_id = $1',
+                text: 'SELECT * FROM "pets" WHERE pet_owner_id = $1 AND (pet_status = \'active\' OR pet_status IS NULL)',
                 values: [ownerId]
             };
             const result = await pool.query(query);
@@ -120,7 +121,8 @@ class Pet {
                     breed: pet.pet_breed,
                     gender: pet.pet_gender,
                     birth_date: birthDateFormatted,
-                    photo: pet.pet_photo
+                    photo: pet.pet_photo,
+                    status: pet.pet_status || 'active'
                 };
             });
         } catch (error) {
@@ -194,7 +196,7 @@ class Pet {
                 text: `UPDATE "pets" 
                        SET ${updateFields.join(', ')} 
                        WHERE pet_id = $${valueCounter} 
-                       RETURNING pet_id, pet_owner_id, pet_name, pet_species, pet_breed, pet_gender, pet_photo, pet_birth_day, pet_birth_month, pet_birth_year`,
+                       RETURNING pet_id, pet_owner_id, pet_name, pet_species, pet_breed, pet_gender, pet_photo, pet_birth_day, pet_birth_month, pet_birth_year, pet_status`,
                 values: values
             };
 
@@ -220,7 +222,8 @@ class Pet {
                 breed: pet.pet_breed,
                 gender: pet.pet_gender,
                 birth_date: birthDateFormatted,
-                photo: pet.pet_photo
+                photo: pet.pet_photo,
+                status: pet.pet_status || 'active'
             };
             
         } catch (error) {
@@ -246,6 +249,27 @@ class Pet {
             return { id: result.rows[0].pet_id };
         } catch (error) {
             console.error('Error in deletePet:', error);
+            throw error;
+        }
+    }
+
+    // Update pet status (for soft delete)
+    static async updatePetStatus(petId, status) {
+        try {
+            const query = {
+                text: 'UPDATE "pets" SET pet_status = $1 WHERE pet_id = $2 RETURNING pet_id',
+                values: [status, petId]
+            };
+            
+            const result = await pool.query(query);
+            
+            if (!result.rows[0]) {
+                throw new Error('Pet status update failed - Pet not found');
+            }
+            
+            return { id: result.rows[0].pet_id, status };
+        } catch (error) {
+            console.error('Error in updatePetStatus:', error);
             throw error;
         }
     }

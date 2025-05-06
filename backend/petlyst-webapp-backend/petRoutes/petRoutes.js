@@ -44,7 +44,8 @@ router.get('/my-pets', authenticateToken, async (req, res) => {
             pet_birth_date: pet.birth_date,
             pet_gender: pet.gender,
             pet_owner_id: pet.pet_owner_id,
-            pet_profile_photo: pet.photo // Frontend uses pet_profile_photo
+            pet_profile_photo: pet.photo, // Frontend uses pet_profile_photo
+            pet_status: pet.status // Add status to frontend response
         }));
 
         res.json({
@@ -77,6 +78,14 @@ router.get('/:petId', authenticateToken, async (req, res) => {
             });
         }
         
+        // Check if pet is deleted and user is not an admin
+        if (pet.status === 'deleted' && req.user.userType !== 'admin') {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
         // Check if the user is the owner of the pet or a veterinarian
         if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
             return res.status(403).json({
@@ -94,7 +103,8 @@ router.get('/:petId', authenticateToken, async (req, res) => {
             pet_birth_date: pet.birth_date,
             pet_gender: pet.gender,
             pet_owner_id: pet.pet_owner_id,
-            pet_profile_photo: pet.photo // Frontend uses pet_profile_photo
+            pet_profile_photo: pet.photo, // Frontend uses pet_profile_photo
+            pet_status: pet.status
         };
         
         res.json({
@@ -209,6 +219,14 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
             });
         }
         
+        // Check if pet is deleted
+        if (pet.status === 'deleted') {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
         // Verify ownership
         if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
             return res.status(403).json({
@@ -281,7 +299,8 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
             pet_birth_date: updatedPet.birth_date,
             pet_gender: updatedPet.gender,
             pet_owner_id: updatedPet.pet_owner_id,
-            pet_profile_photo: updatedPet.photo
+            pet_profile_photo: updatedPet.photo,
+            pet_status: updatedPet.status
         };
 
         res.json({
@@ -323,36 +342,18 @@ router.delete('/:petId', authenticateToken, async (req, res) => {
             });
         }
 
-        // Delete the pet photo from S3 if exists
-        if (pet.photo) {
-            try {
-                console.log('Deleting pet photo from S3:', pet.photo);
-                // Extract key from URL
-                const key = pet.photo.split('.com/')[1];
-                if (key) {
-                    await deletePetPhoto(key).catch(err => {
-                        console.warn('Failed to delete pet photo from S3:', err);
-                        // Continue even if photo deletion fails
-                    });
-                }
-            } catch (deleteError) {
-                console.warn('Error processing photo URL for deletion:', deleteError);
-                // Continue with pet deletion even if photo deletion fails
-            }
-        }
-
-        // Delete pet from database
-        await Pet.deletePet(petId);
+        // Instead of deleting the pet, update its status to 'deleted'
+        await Pet.updatePetStatus(petId, 'deleted');
 
         res.json({
             success: true,
-            message: 'Pet deleted successfully'
+            message: 'Pet marked as deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting pet:', error);
+        console.error('Error marking pet as deleted:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to delete pet',
+            message: 'Failed to mark pet as deleted',
             error: error.message
         });
     }
@@ -376,6 +377,14 @@ router.post('/:petId/chip', authenticateToken, async (req, res) => {
         // Check if pet exists
         const pet = await Pet.getPetById(petId);
         if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check if pet is deleted and user is not an admin
+        if (pet.status === 'deleted') {
             return res.status(404).json({
                 success: false,
                 message: 'Pet not found'
@@ -427,6 +436,14 @@ router.get('/:petId/chip', authenticateToken, async (req, res) => {
         // Check if pet exists
         const pet = await Pet.getPetById(petId);
         if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check if pet is deleted and user is not an admin
+        if (pet.status === 'deleted') {
             return res.status(404).json({
                 success: false,
                 message: 'Pet not found'
@@ -492,6 +509,14 @@ router.put('/:petId/chip', authenticateToken, async (req, res) => {
             });
         }
         
+        // Check if pet is deleted and user is not an admin
+        if (pet.status === 'deleted') {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
         // Check authorization (pet owner or veterinarian)
         if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
             return res.status(403).json({
@@ -537,6 +562,14 @@ router.delete('/:petId/chip', authenticateToken, async (req, res) => {
         // Check if pet exists
         const pet = await Pet.getPetById(petId);
         if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pet not found'
+            });
+        }
+        
+        // Check if pet is deleted and user is not an admin
+        if (pet.status === 'deleted') {
             return res.status(404).json({
                 success: false,
                 message: 'Pet not found'
