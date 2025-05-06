@@ -127,8 +127,8 @@ const meeting_url = generator.generate({
     );
 
     try {
-      await notifyClinicVeterinarians(clinic_id, 'new', {
-        appointmentId: newAppointment.appointment_id
+      await notifyClinicVeterinarians(clinicId, 'new', {
+        appointmentId: result.rows[0].appointment_id
       });
     } catch (notificationError) {
       console.error('Error sending notification to veterinarians:', notificationError);

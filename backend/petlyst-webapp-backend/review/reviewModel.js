@@ -66,17 +66,17 @@ async function createReview(reviewData) {
  */
 async function getClinicReviews(clinicId, options = {}) {
     try {
-        const { page = 1, limit = 10, includeAll = false } = options;
+        const { page = 1, limit = 10, includeAll = false, rating = null, sort = 'newest' } = options;
         const offset = (page - 1) * limit;
 
-        // Base query
+        // Build the query with the main join statements
         let query = `
             SELECT r.*, 
-                po.pet_owner_name,
+                u.user_name AS pet_owner_name,
                 p.pet_name,
-                p.pet_photo_url
+                (r.clinic_review_hygiene_rating + r.clinic_review_stuff_behaviour_rating + r.clinic_review_price_rating) / 3 AS avg_rating
             FROM reviews r
-            JOIN pet_owners po ON r.pet_owner_id = po.pet_owner_id
+            JOIN users u ON u.user_id = r.pet_owner_id
             JOIN pets p ON r.pet_id = p.pet_id
             WHERE r.clinic_id = $1
         `;
@@ -86,15 +86,33 @@ async function getClinicReviews(clinicId, options = {}) {
             query += ` AND r.approval_status = 'approved'`;
         }
         
-        query += ` ORDER BY r.clinic_review_date DESC
-                   LIMIT $2 OFFSET $3`;
+        // Add rating filter if specified
+        if (rating !== null) {
+            query += ` AND ROUND((r.clinic_review_hygiene_rating + r.clinic_review_stuff_behaviour_rating + r.clinic_review_price_rating) / 3) = ${rating}`;
+        }
+        
+        // Add sort option
+        if (sort === 'oldest') {
+            query += ` ORDER BY r.clinic_review_date ASC`;
+        } else {
+            query += ` ORDER BY r.clinic_review_date DESC`;
+        }
+        
+        // Add limit and offset for pagination
+        query += ` LIMIT $2 OFFSET $3`;
 
         const result = await pool.query(query, [clinicId, limit, offset]);
 
-        // Count query for pagination
-        let countQuery = `SELECT COUNT(*) FROM reviews WHERE clinic_id = $1`;
+        // Build the count query with the same filters
+        let countQuery = `SELECT COUNT(*) FROM reviews r WHERE r.clinic_id = $1`;
+        
         if (!includeAll) {
-            countQuery += ` AND approval_status = 'approved'`;
+            countQuery += ` AND r.approval_status = 'approved'`;
+        }
+        
+        // Add rating filter to count query if specified
+        if (rating !== null) {
+            countQuery += ` AND ROUND((r.clinic_review_hygiene_rating + r.clinic_review_stuff_behaviour_rating + r.clinic_review_price_rating) / 3) = ${rating}`;
         }
         
         const countResult = await pool.query(countQuery, [clinicId]);
@@ -121,13 +139,14 @@ async function getPendingReviews(options = {}) {
         const { page = 1, limit = 10 } = options;
         const offset = (page - 1) * limit;
 
+        // Simplified query with direct joins
         const result = await pool.query(
             `SELECT r.*, 
-                po.pet_owner_name,
+                u.user_name AS pet_owner_name,
                 p.pet_name,
                 c.clinic_name
              FROM reviews r
-             JOIN pet_owners po ON r.pet_owner_id = po.pet_owner_id
+             JOIN users u ON u.user_id = r.pet_owner_id
              JOIN pets p ON r.pet_id = p.pet_id
              JOIN clinics c ON r.clinic_id = c.clinic_id
              WHERE r.approval_status = 'pending'
@@ -160,9 +179,10 @@ async function getPendingReviews(options = {}) {
 async function getPetOwnerReviews(petOwnerId) {
     try {
         const result = await pool.query(
-            `SELECT r.*, c.clinic_name
+            `SELECT r.*, c.clinic_name, p.pet_name
              FROM reviews r
              JOIN clinics c ON r.clinic_id = c.clinic_id
+             JOIN pets p ON r.pet_id = p.pet_id
              WHERE r.pet_owner_id = $1
              ORDER BY r.clinic_review_date DESC`,
             [petOwnerId]
@@ -181,13 +201,14 @@ async function getPetOwnerReviews(petOwnerId) {
  */
 async function getReviewById(reviewId) {
     try {
+        // Simplified query with direct joins
         const result = await pool.query(
             `SELECT r.*, 
-                po.pet_owner_name,
+                u.user_name AS pet_owner_name,
                 p.pet_name,
                 c.clinic_name
              FROM reviews r
-             JOIN pet_owners po ON r.pet_owner_id = po.pet_owner_id
+             JOIN users u ON u.user_id = r.pet_owner_id
              JOIN pets p ON r.pet_id = p.pet_id
              JOIN clinics c ON r.clinic_id = c.clinic_id
              WHERE r.clinic_review_id = $1`,
@@ -254,31 +275,6 @@ async function approveReview(reviewId) {
         const result = await pool.query(
             `UPDATE reviews
              SET approval_status = 'approved'
-             WHERE clinic_review_id = $1
-             RETURNING *`,
-            [reviewId]
-        );
-
-        if (result.rows.length === 0) {
-            throw new Error('Review not found');
-        }
-
-        return result.rows[0];
-    } catch (error) {
-        throw error;
-    }
-}
-
-/**
- * Reject a review
- * @param {number} reviewId - ID of the review to reject
- * @returns {Promise} - Resolves to the rejected review
- */
-async function rejectReview(reviewId) {
-    try {
-        const result = await pool.query(
-            `UPDATE reviews
-             SET approval_status = 'rejected'
              WHERE clinic_review_id = $1
              RETURNING *`,
             [reviewId]
@@ -411,6 +407,5 @@ module.exports = {
     getReviewableAppointments,
     getPendingReviews,
     approveReview,
-    rejectReview,
     adminDeleteReview
 };
