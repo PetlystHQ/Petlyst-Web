@@ -1,5 +1,9 @@
 const pool = require('../config/db');
 const generator = require('generate-password')
+const {
+  notifyUserAppointmentStatusChanged,
+  notifyClinicVeterinarians
+} = require('../utils/notificationHelper');
 
 // Get all appointments for a pet owner
 const getAppointmentsByPetOwner = async (petOwnerId) => {
@@ -121,6 +125,14 @@ const meeting_url = generator.generate({
         notes || null
       ]
     );
+
+    try {
+      await notifyClinicVeterinarians(clinic_id, 'new', {
+        appointmentId: newAppointment.appointment_id
+      });
+    } catch (notificationError) {
+      console.error('Error sending notification to veterinarians:', notificationError);
+    }
     
     return result.rows[0];
   } catch (error) {
