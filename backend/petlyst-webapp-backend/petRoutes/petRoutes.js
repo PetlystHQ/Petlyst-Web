@@ -611,4 +611,122 @@ router.delete('/:petId/chip', authenticateToken, async (req, res) => {
     }
 });
 
+// Bir hayvana ait tüm muayene kayıtlarını getir
+router.get('/:petId/examinations', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const userId = req.user.userId;
+        
+        // İlk önce hayvanın var olduğunu ve kullanıcıya ait olduğunu kontrol et
+        const pet = await Pet.getPetById(petId);
+        
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Evcil hayvan bulunamadı'
+            });
+        }
+        
+        // Silinen hayvanlar için kontrol
+        if (pet.status === 'deleted') {
+            return res.status(404).json({
+                success: false,
+                message: 'Evcil hayvan bulunamadı'
+            });
+        }
+        
+        // Kullanıcı eğer hayvan sahibi ise, sadece kendi hayvanlarının verilerine erişebilmeli
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Erişim reddedildi. Bu evcil hayvanın sahibi değilsiniz.'
+            });
+        }
+        
+        // Hayvanın muayene kayıtlarını getir
+        const examinationQuery = `
+            SELECT e.*, u.user_name as vet_name, u.user_surname as vet_surname, 
+                   a.appointment_date, a.appointment_start_hour
+            FROM examinations e
+            LEFT JOIN users u ON e.vet_id = u.user_id
+            LEFT JOIN appointments a ON e.appointment_id = a.appointment_id
+            WHERE e.pet_id = $1
+            ORDER BY e.examination_date DESC
+        `;
+        
+        const examinations = await pool.query(examinationQuery, [petId]);
+        
+        res.json({
+            success: true,
+            examinations: examinations.rows
+        });
+    } catch (error) {
+        console.error('Muayene kayıtları getirilirken hata oluştu:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Muayene kayıtları getirilemedi',
+            error: error.message
+        });
+    }
+});
+
+// Bir hayvana ait tüm teşhis kayıtlarını getir
+router.get('/:petId/diagnoses', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        const userId = req.user.userId;
+        
+        // İlk önce hayvanın var olduğunu ve kullanıcıya ait olduğunu kontrol et
+        const pet = await Pet.getPetById(petId);
+        
+        if (!pet) {
+            return res.status(404).json({
+                success: false,
+                message: 'Evcil hayvan bulunamadı'
+            });
+        }
+        
+        // Silinen hayvanlar için kontrol
+        if (pet.status === 'deleted') {
+            return res.status(404).json({
+                success: false,
+                message: 'Evcil hayvan bulunamadı'
+            });
+        }
+        
+        // Kullanıcı eğer hayvan sahibi ise, sadece kendi hayvanlarının verilerine erişebilmeli
+        if (req.user.userType === 'pet_owner' && pet.pet_owner_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Erişim reddedildi. Bu evcil hayvanın sahibi değilsiniz.'
+            });
+        }
+        
+        // Hayvanın teşhis kayıtlarını getir (muayene verilerini de dahil ederek)
+        const diagnosisQuery = `
+            SELECT d.*, e.examination_date, e.status as examination_status,
+                   u.user_name as vet_name, u.user_surname as vet_surname
+            FROM diagnoses d
+            JOIN examinations e ON d.examination_id = e.examination_id
+            JOIN users u ON e.vet_id = u.user_id
+            WHERE e.pet_id = $1
+            ORDER BY d.diagnosis_date DESC
+        `;
+        
+        const diagnoses = await pool.query(diagnosisQuery, [petId]);
+        
+        res.json({
+            success: true,
+            diagnoses: diagnoses.rows
+        });
+    } catch (error) {
+        console.error('Teşhis kayıtları getirilirken hata oluştu:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Teşhis kayıtları getirilemedi',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router; 

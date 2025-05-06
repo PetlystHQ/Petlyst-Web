@@ -9,6 +9,7 @@ import MyPets from "../components/petowner/MyPets";
 import MyProfile from "../components/petowner/MyProfile";
 import MyAppointments from "../components/petowner/MyAppointments";
 import CreateReviewForm from "../components/petowner/reviews/CreateReviewForm";
+import PetHealth from "../components/petowner/health/PetHealth";
 import {
   ArrowLeftOnRectangleIcon,
   HomeIcon,
@@ -135,6 +136,10 @@ const PetOwnerDashboard: React.FC = () => {
       onClick: () => setActiveTab("appointments"),
     },
     {
+      name: "Pet Health",
+      onClick: () => setActiveTab("petHealth"),
+    },
+    {
       name: "Saved Clinics",
       onClick: () => setActiveTab("savedClinics"),
     },
@@ -180,6 +185,9 @@ const PetOwnerDashboard: React.FC = () => {
           break;
         case "reviews":
           await fetchReviews();
+          break;
+        case "petHealth":
+          await fetchPetHealth();
           break;
         default:
           break;
@@ -253,6 +261,12 @@ const PetOwnerDashboard: React.FC = () => {
       console.error("Error fetching reviews:", err);
       throw err;
     }
+  };
+  
+  // Fetch pet health
+  const fetchPetHealth = async () => {
+    // PetHealth bileşeni kendi içinde veri çektiği için burada bir şey yapmaya gerek yok
+    console.log('PetOwnerDashboard: Pet Health sekmesi açıldı');
   };
   
   // Handle removing a saved clinic
@@ -1018,6 +1032,8 @@ const PetOwnerDashboard: React.FC = () => {
         return renderSavedClinics();
       case "reviews":
         return renderReviews();
+      case "petHealth":
+        return renderPetHealth();
       default:
         return renderOverview();
     }
@@ -1170,6 +1186,17 @@ const PetOwnerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+    );
+  };
+  
+  // Render pet health content
+  const renderPetHealth = () => {
+    return (
+      <PetHealth 
+        pets={pets}
+        loading={loading && activeTab === "petHealth"}
+        error={error && activeTab === "petHealth" ? error : null}
+      />
     );
   };
   
