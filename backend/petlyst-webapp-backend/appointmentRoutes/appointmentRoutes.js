@@ -744,7 +744,8 @@ router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) =>
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_status = 'confirmed'
+        a.appointment_status = 'confirmed' AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date, 
         a.appointment_start_hour
@@ -814,7 +815,8 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_status = 'canceled'
+        a.appointment_status = 'canceled' AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date, 
         a.appointment_start_hour
@@ -884,7 +886,8 @@ router.get('/clinic/:clinicId/completed', authenticateToken, async (req, res) =>
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_status = 'completed'
+        a.appointment_status = 'completed' AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date DESC, 
         a.appointment_start_hour DESC
@@ -976,7 +979,8 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
         a.clinic_id = $1 AND
         (a.appointment_status = 'confirmed' OR a.appointment_status = 'completed') AND
         a.appointment_start_hour >= $2 AND
-        a.appointment_start_hour <= $3
+        a.appointment_start_hour <= $3 AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date, 
         a.appointment_start_hour
@@ -1058,7 +1062,8 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
       WHERE 
         a.clinic_id = $1 AND
         a.appointment_status = 'confirmed' AND
-        a.appointment_end_hour < $2
+        a.appointment_end_hour < $2 AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date DESC, 
         a.appointment_start_hour DESC
@@ -1164,7 +1169,8 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
         pets p ON a.pet_id = p.pet_id
       WHERE 
         a.clinic_id = $1 AND
-        a.appointment_date BETWEEN $2 AND $3
+        a.appointment_date BETWEEN $2 AND $3 AND
+        (p.pet_status = 'active' OR p.pet_status IS NULL)
       ORDER BY 
         a.appointment_date, 
         a.appointment_start_hour

@@ -294,6 +294,61 @@ async function updateExpectedDischargeDate(hospitalizationId, expectedDischargeD
     }
 }
 
+// Automatically discharge a pet when it is deleted
+async function dischargeDeletedPet(petId) {
+    try {
+        console.log(`Auto-discharging hospitalization for deleted pet ID: ${petId}`);
+        
+        // Begin transaction
+        await pool.query('BEGIN');
+        
+        // Get current hospitalizations for this pet
+        const activeHospitalizations = await pool.query(
+            'SELECT id, room_id FROM pet_hospitalizations WHERE pet_id = $1 AND actual_discharge_date IS NULL',
+            [petId]
+        );
+        
+        if (activeHospitalizations.rows.length === 0) {
+            console.log('No active hospitalizations found for this pet');
+            await pool.query('COMMIT');
+            return null;
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        const results = [];
+        
+        // Process each active hospitalization
+        for (const hospitalization of activeHospitalizations.rows) {
+            console.log(`Discharging hospitalization ID: ${hospitalization.id}, Room ID: ${hospitalization.room_id}`);
+            
+            // Update hospitalization record with discharge date
+            const dischargeResult = await pool.query(
+                'UPDATE pet_hospitalizations SET actual_discharge_date = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+                [today, hospitalization.id]
+            );
+            
+            // Update room status back to vacant
+            await pool.query(
+                'UPDATE clinic_hospitalization_rooms SET room_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                ['vacant', hospitalization.room_id]
+            );
+            
+            results.push(dischargeResult.rows[0]);
+        }
+        
+        // Commit transaction
+        await pool.query('COMMIT');
+        console.log(`Successfully discharged ${results.length} hospitalizations for deleted pet`);
+        
+        return results;
+    } catch (error) {
+        // Rollback in case of error
+        await pool.query('ROLLBACK');
+        console.error('Error auto-discharging deleted pet:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     // Room operations
     createRoom,
@@ -310,5 +365,6 @@ module.exports = {
     getPetHospitalizationHistory,
     getCurrentHospitalizationsByClinic,
     getHospitalizationById,
-    updateExpectedDischargeDate
+    updateExpectedDischargeDate,
+    dischargeDeletedPet
 };

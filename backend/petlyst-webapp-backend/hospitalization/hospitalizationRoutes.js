@@ -659,4 +659,65 @@ router.put('/hospitalization/:hospitalizationId/discharge-date', authenticateTok
     }
 });
 
+// Auto-discharge a pet's hospitalization when deleted
+router.post('/pets/:petId/auto-discharge', authenticateToken, async (req, res) => {
+    try {
+        const { petId } = req.params;
+        
+        // Only authenticated users (both pet owners and veterinarians) can trigger this
+        if (!req.user || !req.user.userId) {
+            return res.status(403).json({ 
+                success: false,
+                message: 'Authentication required' 
+            });
+        }
+        
+        // Check if user is authorized (either pet owner or veterinarian with access)
+        let isAuthorized = false;
+        
+        if (req.user.userType === 'pet_owner') {
+            // Check if the user is the pet owner
+            isAuthorized = await isPetOwner(req.user.userId, petId);
+        } else if (req.user.userType === 'veterinarian') {
+            // For veterinarians, need to check clinical access
+            // First get any active hospitalization to determine the clinic
+            const activeHospitalization = await pool.query(
+                `SELECT h.id, r.clinic_id
+                 FROM pet_hospitalizations h
+                 JOIN clinic_hospitalization_rooms r ON h.room_id = r.id
+                 WHERE h.pet_id = $1 AND h.actual_discharge_date IS NULL
+                 LIMIT 1`,
+                [petId]
+            );
+            
+            if (activeHospitalization.rows.length > 0) {
+                isAuthorized = await isClinicVeterinarian(req.user.userId, activeHospitalization.rows[0].clinic_id);
+            }
+        }
+        
+        if (!isAuthorized) {
+            return res.status(403).json({ 
+                success: false,
+                message: 'Not authorized to discharge this pet' 
+            });
+        }
+        
+        // Call the function to discharge the pet
+        const results = await hospitalizationModel.dischargeDeletedPet(petId);
+        
+        return res.json({
+            success: true,
+            message: results ? `Successfully discharged ${Array.isArray(results) ? results.length : 0} hospitalizations` : 'No active hospitalizations found',
+            results
+        });
+    } catch (error) {
+        console.error('Error auto-discharging pet:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to auto-discharge pet',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

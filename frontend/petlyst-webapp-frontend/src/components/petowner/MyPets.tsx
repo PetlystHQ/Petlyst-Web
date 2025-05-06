@@ -48,13 +48,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] overflow-auto flex items-center justify-center">
       {/* Overlay backdrop */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onCancel} />
+      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onCancel} />
       
       {/* Dialog box */}
       <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-md relative z-50 mx-auto p-5"
+        className="bg-white rounded-lg shadow-xl w-full max-w-md relative z-[101] mx-auto p-5"
         onClick={e => e.stopPropagation()}
       >
         <h3 className="text-lg font-semibold text-gray-800 mb-2">{title}</h3>

@@ -152,29 +152,35 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       const appointmentsByDate: Record<string, CalendarAppointment[]> = {};
       let sampleAppointment: CalendarAppointment | null = null;
       
+      console.log('Fetching appointments for clinic:', clinicId);
+      
       // Get pending appointments
       const pendingResponse = await axios.get(
         `http://localhost:3000/api/appointments/clinic/${clinicId}/pending`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      console.log('Pending appointments received:', pendingResponse.data.appointments?.length || 0);
       
       // Get confirmed appointments
       const confirmedResponse = await axios.get(
         `http://localhost:3000/api/appointments/clinic/${clinicId}/confirmed`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      console.log('Confirmed appointments received:', confirmedResponse.data.appointments?.length || 0);
       
       // Get completed appointments
       const completedResponse = await axios.get(
         `http://localhost:3000/api/appointments/clinic/${clinicId}/completed`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      console.log('Completed appointments received:', completedResponse.data.appointments?.length || 0);
       
       // Get canceled appointments
       const canceledResponse = await axios.get(
         `http://localhost:3000/api/appointments/clinic/${clinicId}/canceled`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      console.log('Canceled appointments received:', canceledResponse.data.appointments?.length || 0);
       
       // Check that all responses are successful
       if (pendingResponse.data.success && 
@@ -191,6 +197,36 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
         const startDate = firstDay.toISOString().split('T')[0];
         const endDate = lastDay.toISOString().split('T')[0];
         
+        console.log('Filtering appointments for date range:', startDate, 'to', endDate);
+        
+        // Our additional client-side filter to handle potential issues with deleted pets
+        // In case backend filters aren't working as expected
+        const filterAppointment = (appointment: CalendarAppointment): boolean => {
+          // Skip appointments without pet data
+          if (!appointment.pet_id || !appointment.pet_name) {
+            console.log('Skipping appointment missing pet data:', appointment.appointment_id);
+            return false;
+          }
+          
+          // Skip appointments where pet name contains "[DELETED]" or similar markers
+          if (appointment.pet_name.includes("[DELETED]") || 
+              appointment.pet_name.includes("(DELETED)") ||
+              appointment.pet_name.toLowerCase().includes("deleted")) {
+            console.log('Skipping appointment for deleted pet:', appointment.pet_id, appointment.pet_name);
+            return false;
+          }
+          
+          // Skip if pet owner info is missing (might indicate deleted data)
+          if (!appointment.pet_owner_id || 
+              !appointment.pet_owner_name ||
+              !appointment.pet_owner_surname) {
+            console.log('Skipping appointment with missing owner data:', appointment.appointment_id);
+            return false;
+          }
+          
+          return true;
+        };
+        
         // Process all the appointments and group by date
         const processAppointments = (appointments: CalendarAppointment[], status: AppointmentStatus) => {
           if (!appointments || !Array.isArray(appointments)) {
@@ -198,7 +234,16 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
             return;
           }
           
-          appointments.forEach(appointment => {
+          console.log(`Processing ${appointments.length} ${status} appointments`);
+          
+          // Apply our client-side filter
+          const validAppointments = appointments.filter(filterAppointment);
+          
+          if (validAppointments.length !== appointments.length) {
+            console.log(`Filtered out ${appointments.length - validAppointments.length} invalid appointments for ${status}`);
+          }
+          
+          validAppointments.forEach(appointment => {
             // Save sample appointment for debugging
             if (!sampleAppointment && appointment) {
               sampleAppointment = appointment;
@@ -237,8 +282,21 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
           });
         });
         
+        // Count total appointments for logging
+        let totalAppointments = 0;
+        Object.keys(appointmentsByDate).forEach(date => {
+          totalAppointments += appointmentsByDate[date].length;
+        });
+        console.log(`Total appointments for calendar: ${totalAppointments}`);
+        
         setAppointments(appointmentsByDate);
       } else {
+        console.error('One or more appointment requests failed:', {
+          pending: pendingResponse.data.success,
+          confirmed: confirmedResponse.data.success,
+          completed: completedResponse.data.success,
+          canceled: canceledResponse.data.success
+        });
         setAppointmentError('Failed to fetch some appointments');
       }
     } catch (error: any) {
