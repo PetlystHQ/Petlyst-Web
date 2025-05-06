@@ -33,9 +33,6 @@ const hospitalizationRoutes = require('./hospitalization/hospitalizationRoutes')
 const examinationRoutes = require('./medical/examinations/examinationRoutes');
 const diagnosesRoutes = require('./medical/diagnoses/diagnosesRoutes');
 const standardDiagnosisRoutes = require('./medical/diagnoses/standardDiagnosisRoutes');
-const treatmentRoutes = require('./medical/treatments/treatmentRoutes');
-const medicationRoutes = require('./medical/medications/medicationRoutes');
-const reportsRoutes = require('./medical/reports/reportsRoutes');
 const reviewRoutes = require('./review/reviewRoutes');
 
 
@@ -54,9 +51,6 @@ app.use('/api/examinations', examinationRoutes);
 app.use('/api/diagnoses/standard', standardDiagnosisRoutes);
 // Then register the general diagnoses routes
 app.use('/api/diagnoses', diagnosesRoutes);
-app.use('/api/treatments', treatmentRoutes);
-app.use('/api/medications', medicationRoutes);
-app.use('/api/reports', reportsRoutes);
 app.use('/api/reviews', reviewRoutes);
 
 // Test route
@@ -82,10 +76,7 @@ app.use((req, res) => {
             '/api/hospitalization/[hospitalizationId]/discharge',
             '/api/examinations',
             '/api/diagnoses',
-            '/api/treatments',
-            '/api/medications',
-            '/api/reviews',
-            '/api/reports'
+            '/api/reviews'
         ]
     });
 });
@@ -208,8 +199,5 @@ app.listen(PORT, () => {
     console.log('- /api/clinics/[clinicId]/inventory');
     console.log('- /api/examinations');
     console.log('- /api/diagnoses');
-    console.log('- /api/treatments');
-    console.log('- /api/medications');
     console.log('- /api/reviews');
-    console.log('- /api/reports');
 });

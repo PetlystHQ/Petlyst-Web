@@ -1,4 +1,4 @@
-const db = require('../db/db');
+const pool = require('../config/db');
 
 /**
  * Create a new review
@@ -8,7 +8,7 @@ const db = require('../db/db');
 async function createReview(reviewData) {
     try {
         // First validate that the appointment exists and is completed
-        const appointmentCheck = await db.query(
+        const appointmentCheck = await pool.query(
             `SELECT a.appointment_id 
              FROM appointments a 
              WHERE a.appointment_id = $1 
@@ -23,7 +23,7 @@ async function createReview(reviewData) {
         }
 
         // Check if review already exists for this appointment
-        const existingReview = await db.query(
+        const existingReview = await pool.query(
             'SELECT clinic_review_id FROM reviews WHERE appointment_id = $1',
             [reviewData.appointment_id]
         );
@@ -32,13 +32,13 @@ async function createReview(reviewData) {
             throw new Error('A review already exists for this appointment');
         }
 
-        // Insert the review
-        const result = await db.query(
+        // Insert the review (approval_status defaults to 'pending')
+        const result = await pool.query(
             `INSERT INTO reviews
             (appointment_id, clinic_id, pet_owner_id, pet_id, 
             clinic_review_hygiene_rating, clinic_review_stuff_behaviour_rating, 
-            clinic_review_price_rating, comments)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            clinic_review_price_rating, comments, approval_status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
             RETURNING *`,
             [
                 reviewData.appointment_id,
@@ -59,33 +59,85 @@ async function createReview(reviewData) {
 }
 
 /**
- * Get reviews for a clinic
+ * Get reviews for a clinic (only approved reviews for public view)
  * @param {number} clinicId - ID of the clinic
  * @param {Object} options - Pagination and filter options
  * @returns {Promise} - Resolves to reviews for the clinic
  */
 async function getClinicReviews(clinicId, options = {}) {
     try {
-        const { page = 1, limit = 10 } = options;
+        const { page = 1, limit = 10, includeAll = false } = options;
         const offset = (page - 1) * limit;
 
-        const result = await db.query(
-            `SELECT r.*, 
+        // Base query
+        let query = `
+            SELECT r.*, 
                 po.pet_owner_name,
                 p.pet_name,
                 p.pet_photo_url
+            FROM reviews r
+            JOIN pet_owners po ON r.pet_owner_id = po.pet_owner_id
+            JOIN pets p ON r.pet_id = p.pet_id
+            WHERE r.clinic_id = $1
+        `;
+        
+        // Add approval status filter for public view
+        if (!includeAll) {
+            query += ` AND r.approval_status = 'approved'`;
+        }
+        
+        query += ` ORDER BY r.clinic_review_date DESC
+                   LIMIT $2 OFFSET $3`;
+
+        const result = await pool.query(query, [clinicId, limit, offset]);
+
+        // Count query for pagination
+        let countQuery = `SELECT COUNT(*) FROM reviews WHERE clinic_id = $1`;
+        if (!includeAll) {
+            countQuery += ` AND approval_status = 'approved'`;
+        }
+        
+        const countResult = await pool.query(countQuery, [clinicId]);
+
+        return {
+            reviews: result.rows,
+            total: parseInt(countResult.rows[0].count),
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit)
+        };
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Get pending reviews for admin approval
+ * @param {Object} options - Pagination and filter options
+ * @returns {Promise} - Resolves to pending reviews for admin approval
+ */
+async function getPendingReviews(options = {}) {
+    try {
+        const { page = 1, limit = 10 } = options;
+        const offset = (page - 1) * limit;
+
+        const result = await pool.query(
+            `SELECT r.*, 
+                po.pet_owner_name,
+                p.pet_name,
+                c.clinic_name
              FROM reviews r
              JOIN pet_owners po ON r.pet_owner_id = po.pet_owner_id
              JOIN pets p ON r.pet_id = p.pet_id
-             WHERE r.clinic_id = $1
-             ORDER BY r.clinic_review_date DESC
-             LIMIT $2 OFFSET $3`,
-            [clinicId, limit, offset]
+             JOIN clinics c ON r.clinic_id = c.clinic_id
+             WHERE r.approval_status = 'pending'
+             ORDER BY r.clinic_review_date ASC
+             LIMIT $1 OFFSET $2`,
+            [limit, offset]
         );
 
-        const countResult = await db.query(
-            'SELECT COUNT(*) FROM reviews WHERE clinic_id = $1',
-            [clinicId]
+        const countResult = await pool.query(
+            "SELECT COUNT(*) FROM reviews WHERE approval_status = 'pending'"
         );
 
         return {
@@ -107,7 +159,7 @@ async function getClinicReviews(clinicId, options = {}) {
  */
 async function getPetOwnerReviews(petOwnerId) {
     try {
-        const result = await db.query(
+        const result = await pool.query(
             `SELECT r.*, c.clinic_name
              FROM reviews r
              JOIN clinics c ON r.clinic_id = c.clinic_id
@@ -129,7 +181,7 @@ async function getPetOwnerReviews(petOwnerId) {
  */
 async function getReviewById(reviewId) {
     try {
-        const result = await db.query(
+        const result = await pool.query(
             `SELECT r.*, 
                 po.pet_owner_name,
                 p.pet_name,
@@ -158,7 +210,7 @@ async function getReviewById(reviewId) {
 async function updateReview(reviewId, reviewData, petOwnerId) {
     try {
         // Check if review exists and belongs to the pet owner
-        const reviewCheck = await db.query(
+        const reviewCheck = await pool.query(
             'SELECT clinic_review_id FROM reviews WHERE clinic_review_id = $1 AND pet_owner_id = $2',
             [reviewId, petOwnerId]
         );
@@ -167,12 +219,14 @@ async function updateReview(reviewId, reviewData, petOwnerId) {
             throw new Error('Review not found or you are not authorized to update it');
         }
 
-        const result = await db.query(
+        // Reset approval status to pending since the review was modified
+        const result = await pool.query(
             `UPDATE reviews
              SET clinic_review_hygiene_rating = COALESCE($1, clinic_review_hygiene_rating),
                  clinic_review_stuff_behaviour_rating = COALESCE($2, clinic_review_stuff_behaviour_rating),
                  clinic_review_price_rating = COALESCE($3, clinic_review_price_rating),
-                 comments = COALESCE($4, comments)
+                 comments = COALESCE($4, comments),
+                 approval_status = 'pending'
              WHERE clinic_review_id = $5
              RETURNING *`,
             [
@@ -191,6 +245,56 @@ async function updateReview(reviewId, reviewData, petOwnerId) {
 }
 
 /**
+ * Approve a review
+ * @param {number} reviewId - ID of the review to approve
+ * @returns {Promise} - Resolves to the approved review
+ */
+async function approveReview(reviewId) {
+    try {
+        const result = await pool.query(
+            `UPDATE reviews
+             SET approval_status = 'approved'
+             WHERE clinic_review_id = $1
+             RETURNING *`,
+            [reviewId]
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('Review not found');
+        }
+
+        return result.rows[0];
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Reject a review
+ * @param {number} reviewId - ID of the review to reject
+ * @returns {Promise} - Resolves to the rejected review
+ */
+async function rejectReview(reviewId) {
+    try {
+        const result = await pool.query(
+            `UPDATE reviews
+             SET approval_status = 'rejected'
+             WHERE clinic_review_id = $1
+             RETURNING *`,
+            [reviewId]
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('Review not found');
+        }
+
+        return result.rows[0];
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
  * Delete a review
  * @param {number} reviewId - ID of the review to delete
  * @param {number} petOwnerId - ID of the pet owner for authorization
@@ -199,7 +303,7 @@ async function updateReview(reviewId, reviewData, petOwnerId) {
 async function deleteReview(reviewId, petOwnerId) {
     try {
         // Check if review exists and belongs to the pet owner
-        const reviewCheck = await db.query(
+        const reviewCheck = await pool.query(
             'SELECT clinic_review_id FROM reviews WHERE clinic_review_id = $1 AND pet_owner_id = $2',
             [reviewId, petOwnerId]
         );
@@ -208,10 +312,32 @@ async function deleteReview(reviewId, petOwnerId) {
             throw new Error('Review not found or you are not authorized to delete it');
         }
 
-        const result = await db.query(
+        const result = await pool.query(
             'DELETE FROM reviews WHERE clinic_review_id = $1 RETURNING *',
             [reviewId]
         );
+
+        return result.rows[0];
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Admin delete a review
+ * @param {number} reviewId - ID of the review to delete
+ * @returns {Promise} - Resolves to the deleted review
+ */
+async function adminDeleteReview(reviewId) {
+    try {
+        const result = await pool.query(
+            'DELETE FROM reviews WHERE clinic_review_id = $1 RETURNING *',
+            [reviewId]
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('Review not found');
+        }
 
         return result.rows[0];
     } catch (error) {
@@ -226,7 +352,7 @@ async function deleteReview(reviewId, petOwnerId) {
  */
 async function getClinicAverageRatings(clinicId) {
     try {
-        const result = await db.query(
+        const result = await pool.query(
             `SELECT 
                 AVG(clinic_review_hygiene_rating) as avg_hygiene_rating,
                 AVG(clinic_review_stuff_behaviour_rating) as avg_staff_rating,
@@ -238,7 +364,7 @@ async function getClinicAverageRatings(clinicId) {
                 ) / 3 as overall_rating,
                 COUNT(*) as total_reviews
              FROM reviews
-             WHERE clinic_id = $1`,
+             WHERE clinic_id = $1 AND approval_status = 'approved'`,
             [clinicId]
         );
 
@@ -256,7 +382,7 @@ async function getClinicAverageRatings(clinicId) {
  */
 async function getReviewableAppointments(petOwnerId, clinicId) {
     try {
-        const result = await db.query(
+        const result = await pool.query(
             `SELECT a.appointment_id, a.appointment_date, a.pet_id, p.pet_name
              FROM appointments a
              JOIN pets p ON a.pet_id = p.pet_id
@@ -282,5 +408,9 @@ module.exports = {
     updateReview,
     deleteReview,
     getClinicAverageRatings,
-    getReviewableAppointments
+    getReviewableAppointments,
+    getPendingReviews,
+    approveReview,
+    rejectReview,
+    adminDeleteReview
 };

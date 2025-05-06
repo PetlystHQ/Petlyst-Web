@@ -62,16 +62,20 @@ interface SavedClinic {
   slug?: string;
 }
 
-interface Message {
-  message_id: string;
-  sender_id: string;
-  receiver_id: string;
-  message_content: string;
-  created_at: string;
-  read_at?: string;
-  sender_name?: string;
-  sender_type?: string;
-  clinic_name?: string;
+// Replace Message interface with Review interface
+interface Review {
+  clinic_review_id: string;
+  clinic_id: string;
+  clinic_name: string;
+  pet_id: string;
+  pet_name: string;
+  appointment_id: string;
+  clinic_review_hygiene_rating: number;
+  clinic_review_stuff_behaviour_rating: number;
+  clinic_review_price_rating: number;
+  comments: string;
+  clinic_review_date: string;
+  approval_status: 'pending' | 'approved' | 'rejected';
 }
 
 // Add a new interface for countdown timer
@@ -92,7 +96,7 @@ const PetOwnerDashboard: React.FC = () => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [savedClinics, setSavedClinics] = useState<SavedClinic[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -123,8 +127,8 @@ const PetOwnerDashboard: React.FC = () => {
       onClick: () => setActiveTab('savedClinics')
     },
     {
-      name: 'Messages',
-      onClick: () => setActiveTab('messages')
+      name: 'Reviews',
+      onClick: () => setActiveTab('reviews')
     }
   ];
   
@@ -160,8 +164,8 @@ const PetOwnerDashboard: React.FC = () => {
         case 'savedClinics':
           await fetchSavedClinics();
           break;
-        case 'messages':
-          await fetchMessages();
+        case 'reviews':
+          await fetchReviews();
           break;
         default:
           break;
@@ -217,15 +221,15 @@ const PetOwnerDashboard: React.FC = () => {
     }
   };
   
-  // Fetch messages
-  const fetchMessages = async () => {
+  // Fetch reviews
+  const fetchReviews = async () => {
     try {
-      const response = await axiosInstance.get('/pet-owners/messages');
-      if (response.data.success) {
-        setMessages(response.data.messages || []);
+      const response = await axiosInstance.get('/reviews/pet-owner');
+      if (response.data) {
+        setReviews(response.data || []);
       }
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      console.error('Error fetching reviews:', err);
       throw err;
     }
   };
@@ -395,47 +399,113 @@ const PetOwnerDashboard: React.FC = () => {
     );
   };
   
-  // Render messages content
-  const renderMessages = () => {
+  // Render reviews content
+  const renderReviews = () => {
+    // Function to calculate average rating
+    const calculateAverageRating = (review: Review) => {
+      const sum = review.clinic_review_hygiene_rating + 
+                 review.clinic_review_stuff_behaviour_rating + 
+                 review.clinic_review_price_rating;
+      return (sum / 3).toFixed(1);
+    };
+
+    // Function to get status badge class
+    const getStatusBadgeClass = (status: string) => {
+      switch(status) {
+        case 'approved':
+          return 'bg-green-100 text-green-800';
+        case 'pending':
+          return 'bg-yellow-100 text-yellow-800';
+        case 'rejected':
+          return 'bg-red-100 text-red-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    };
+
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Messages</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">My Reviews</h2>
         
-        {messages.length > 0 ? (
+        {reviews.length > 0 ? (
           <div className="space-y-4">
-            {messages.map(message => (
-              <div key={message.message_id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
+            {reviews.map(review => (
+              <div key={review.clinic_review_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div className="flex justify-between items-start mb-3">
                   <div>
-                    <p className="font-semibold text-gray-800">
-                      {message.sender_type === 'veterinarian' 
-                        ? `Dr. ${message.sender_name}` 
-                        : message.clinic_name}
+                    <h3 
+                      className="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer"
+                      onClick={() => navigate(`/clinics/${review.clinic_id}`)}
+                    >
+                      {review.clinic_name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      For: {review.pet_name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(message.created_at).toLocaleString()}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDate(review.clinic_review_date) || 'Date unavailable'}
                     </p>
                   </div>
-                  {!message.read_at && (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">New</span>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-bold text-amber-500">★ {calculateAverageRating(review)}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeClass(review.approval_status)}`}>
+                      {review.approval_status.charAt(0).toUpperCase() + review.approval_status.slice(1)}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-gray-600">{message.message_content}</p>
-                <div className="mt-3 flex justify-end">
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    Reply
-                  </button>
+                
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <p className="text-xs text-gray-500">Hygiene</p>
+                    <p className="font-medium text-amber-500">★ {review.clinic_review_hygiene_rating.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <p className="text-xs text-gray-500">Staff</p>
+                    <p className="font-medium text-amber-500">★ {review.clinic_review_stuff_behaviour_rating.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded text-center">
+                    <p className="text-xs text-gray-500">Price</p>
+                    <p className="font-medium text-amber-500">★ {review.clinic_review_price_rating.toFixed(1)}</p>
+                  </div>
                 </div>
+                
+                {review.comments && (
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="text-sm text-gray-700">{review.comments}</p>
+                  </div>
+                )}
+
+                {review.approval_status === 'pending' && (
+                  <div className="mt-3 flex justify-end">
+                    <button 
+                      onClick={() => navigate(`/clinics/${review.clinic_id}/edit-review/${review.clinic_review_id}`)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-8">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-800 mb-2">No messages</h3>
-            <p className="text-gray-600">When you receive messages from clinics or veterinarians, they will appear here</p>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">No reviews yet</h3>
+            <p className="text-gray-600 mb-4">After completing appointments, you can leave reviews for clinics</p>
+            <button 
+              className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors"
+              onClick={() => setActiveTab('appointments')}
+            >
+              View My Appointments
+            </button>
           </div>
         )}
       </div>
@@ -555,8 +625,8 @@ const PetOwnerDashboard: React.FC = () => {
         return renderAppointments();
       case 'savedClinics':
         return renderSavedClinics();
-      case 'messages':
-        return renderMessages();
+      case 'reviews':
+        return renderReviews();
       default:
         return renderOverview();
     }
