@@ -224,6 +224,20 @@ const updateAppointment = async (appointmentId, updateData) => {
       RETURNING *
     `;
     
+    try {
+      await notifyUserAppointmentStatusChanged(
+        userId,
+        appointment_status,
+        {
+          appointmentId: appointment_id,
+          clinicId: appointmentDetails.clinic_id,
+          petId: appointmentDetails.pet_id
+        }
+      );
+    } catch (notificationError) {
+      console.error('Error sending cancellation notification to user:', notificationError);
+    }
+
     const result = await pool.query(query, values);
     
     if (result.rows.length === 0) {
