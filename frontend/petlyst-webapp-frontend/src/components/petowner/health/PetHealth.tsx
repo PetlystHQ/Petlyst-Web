@@ -61,8 +61,29 @@ const PetHealth: React.FC<PetHealthProps> = ({ pets, loading, error }) => {
   const [activeSection, setActiveSection] = useState<'examinations' | 'diagnoses'>('examinations');
 
   useEffect(() => {
-    if (pets.length > 0 && !selectedPet) {
-      setSelectedPet(pets[0]);
+    if (pets.length > 0) {
+      // Check if there's a selected pet ID in localStorage
+      const selectedPetId = localStorage.getItem('selectedPetHealthId');
+      
+      if (selectedPetId) {
+        // Find the pet with the matching ID
+        const selectedPet = pets.find(pet => pet.pet_id === selectedPetId);
+        
+        // If found, set it as the selected pet
+        if (selectedPet) {
+          setSelectedPet(selectedPet);
+        } else {
+          // If not found (maybe it was deleted), use the first pet
+          setSelectedPet(pets[0]);
+        }
+        
+        // Clear the localStorage item to avoid unintended selection on subsequent visits
+        localStorage.removeItem('selectedPetHealthId');
+      } else if (!selectedPet) {
+        // If no pet is selected in localStorage and no pet is currently selected,
+        // default to the first pet
+        setSelectedPet(pets[0]);
+      }
     }
   }, [pets, selectedPet]);
 

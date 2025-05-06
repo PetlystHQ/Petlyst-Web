@@ -23,6 +23,7 @@ interface MyPetsProps {
   onPetAdded?: () => void; // Callback to refresh pets after adding
   onPetRemoved?: () => void; // Callback to refresh pets after removing
   onPetUpdated?: () => void; // Callback to refresh pets after updating
+  setActiveTab?: (tab: string) => void; // For navigation to Pet Health tab
 }
 
 // Confirmation Dialog Component
@@ -83,7 +84,8 @@ const MyPets: React.FC<MyPetsProps> = ({
   pets, 
   onPetAdded,
   onPetRemoved = onPetAdded,
-  onPetUpdated = onPetAdded
+  onPetUpdated = onPetAdded,
+  setActiveTab
 }) => {
   // State for modals
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -138,6 +140,17 @@ const MyPets: React.FC<MyPetsProps> = ({
         petId,
         petName: petToRemove.pet_name
       });
+    }
+  };
+  
+  // Handle viewing pet health records
+  const handleViewPetHealth = (petId: string) => {
+    // Store the selected pet ID in localStorage to be used by the PetHealth component
+    localStorage.setItem('selectedPetHealthId', petId);
+    
+    // Navigate to the Pet Health tab
+    if (setActiveTab) {
+      setActiveTab('petHealth');
     }
   };
   
@@ -233,6 +246,7 @@ const MyPets: React.FC<MyPetsProps> = ({
                 pet={pet} 
                 onEdit={handleEditPet} 
                 onRemove={handleRemovePet}
+                onViewHealth={setActiveTab ? handleViewPetHealth : undefined}
               />
             ))}
           </div>

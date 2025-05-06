@@ -351,6 +351,7 @@ const PetOwnerDashboard: React.FC = () => {
         loading={loading}
         error={error}
         onPetAdded={fetchPets}
+        setActiveTab={setActiveTab}
       />
     );
   };

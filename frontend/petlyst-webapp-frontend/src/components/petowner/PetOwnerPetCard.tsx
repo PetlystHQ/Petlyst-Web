@@ -15,6 +15,7 @@ interface PetOwnerPetCardProps {
   pet: Pet;
   onEdit: (pet: Pet) => void;
   onRemove?: (petId: string) => void;
+  onViewHealth?: (petId: string) => void;
 }
 
 // Helper function to calculate and format age from birth date
@@ -61,7 +62,7 @@ const calculateAge = (birthDateString: string): string => {
   }
 };
 
-const PetOwnerPetCard: React.FC<PetOwnerPetCardProps> = ({ pet, onEdit, onRemove }) => {
+const PetOwnerPetCard: React.FC<PetOwnerPetCardProps> = ({ pet, onEdit, onRemove, onViewHealth }) => {
   // Generate a gender-specific color for subtle UI elements
   const genderColor = pet.pet_gender === 'Male' ? 'bg-blue-50' : 'bg-pink-50';
   
@@ -127,6 +128,17 @@ const PetOwnerPetCard: React.FC<PetOwnerPetCardProps> = ({ pet, onEdit, onRemove
               onClick={() => onRemove(pet.pet_id)}
             >
               Remove Pet
+            </button>
+          )}
+          {onViewHealth && (
+            <button 
+              className="px-3 py-1.5 text-sm rounded-md bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 flex items-center"
+              onClick={() => onViewHealth(pet.pet_id)}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+              </svg>
+              Health
             </button>
           )}
           <button 
