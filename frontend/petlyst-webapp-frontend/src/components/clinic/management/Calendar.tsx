@@ -17,6 +17,7 @@ interface CalendarAppointment {
   appointment_status: string;
   video_meeting: boolean;
   notes: string;
+  meeting_url?: string;
 }
 
 // Map for appointment status colors
@@ -167,6 +168,21 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       console.log('Confirmed appointments received:', confirmedResponse.data.appointments?.length || 0);
+      
+      // Debug online meetings
+      if (confirmedResponse.data.appointments?.length > 0) {
+        const onlineMeetings = confirmedResponse.data.appointments.filter((a: CalendarAppointment) => a.video_meeting === true);
+        if (onlineMeetings.length > 0) {
+          console.log('Online meetings found:', onlineMeetings.length);
+          console.log('First online meeting sample:', {
+            id: onlineMeetings[0].appointment_id,
+            isVideoMeeting: onlineMeetings[0].video_meeting,
+            meetingUrl: onlineMeetings[0].meeting_url
+          });
+        } else {
+          console.log('No online meetings found among confirmed appointments');
+        }
+      }
       
       // Get completed appointments
       const completedResponse = await axios.get(
@@ -653,6 +669,15 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
     const startTime = formatTime(appointment.appointment_start_hour);
     const endTime = formatTime(appointment.appointment_end_hour);
     
+    // Debug appointment data
+    console.log('Appointment modal data:', {
+      id: appointment.appointment_id,
+      status: appointmentStatus,
+      isVideoMeeting: appointment.video_meeting,
+      meetingUrl: appointment.meeting_url,
+      date: appointmentDate
+    });
+    
     // Check if appointment end time has passed
     const now = new Date();
     const appointmentEndTime = new Date(appointment.appointment_end_hour);
@@ -766,24 +791,52 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
               )}
               
               {appointmentStatus === 'confirmed' && (
-                <button
-                  type="button"
-                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 ${
-                    appointmentHasPassed 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-blue-300 text-white cursor-not-allowed'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm`}
-                  onClick={() => {
-                    if (appointmentHasPassed) {
-                      updateAppointmentStatus(appointment.appointment_id, 'completed');
-                    } else {
-                      setShowTimeWarning(true);
-                    }
-                  }}
-                  disabled={appointmentModal.isLoading || !appointmentHasPassed}
-                >
-                  {appointmentModal.isLoading ? 'Marking as Completed...' : 'Mark as Completed'}
-                </button>
+                <>
+                  {appointment.video_meeting && (
+                    <button
+                      type="button"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
+                      onClick={() => {
+                        console.log('Join Meeting clicked:', {
+                          url: appointment.meeting_url,
+                          videoMeeting: appointment.video_meeting
+                        });
+                        if (appointment.meeting_url) {
+                          // Kullanıcının istediği şekilde protokol ekleyelim
+                          const meetingUrl = appointment.meeting_url.startsWith('http') 
+                            ? appointment.meeting_url 
+                            : `https://${appointment.meeting_url}`;
+                          window.open(meetingUrl, "_blank");
+                        } else {
+                          alert("Meeting URL is not available. Please contact support.");
+                        }
+                      }}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Join Online Meeting
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 ${
+                      appointmentHasPassed 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'bg-blue-300 text-white cursor-not-allowed'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm`}
+                    onClick={() => {
+                      if (appointmentHasPassed) {
+                        updateAppointmentStatus(appointment.appointment_id, 'completed');
+                      } else {
+                        setShowTimeWarning(true);
+                      }
+                    }}
+                    disabled={appointmentModal.isLoading || !appointmentHasPassed}
+                  >
+                    {appointmentModal.isLoading ? 'Marking as Completed...' : 'Mark as Completed'}
+                  </button>
+                </>
               )}
               
               <button

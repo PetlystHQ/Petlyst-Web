@@ -4,6 +4,25 @@ const appointmentModel = require('../models/appointmentModel');
 const authenticateToken = require('../middleware/authenticateToken');
 const pool = require('../config/db');
 
+// Utility function to transform meeting URLs
+function transformAppointmentUrls(appointments) {
+  if (!Array.isArray(appointments)) {
+    // Handle single appointment case
+    if (appointments && appointments.video_meeting && appointments.meeting_url) {
+      appointments.meeting_url = `meeting.petlyst.com/${appointments.meeting_url}`;
+    }
+    return appointments;
+  }
+  
+  // Handle array of appointments
+  return appointments.map(appointment => {
+    if (appointment.video_meeting && appointment.meeting_url) {
+      appointment.meeting_url = `meeting.petlyst.com/${appointment.meeting_url}`;
+    }
+    return appointment;
+  });
+}
+
 // Get all appointments for authenticated pet owner with detailed information
 router.get('/pet-owner', authenticateToken, async (req, res) => {
   try {
@@ -86,9 +105,11 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
       });
     }
     
+    const transformedAppointments = transformAppointmentUrls(result.rows);
+    
     res.status(200).json({
       success: true,
-      appointments: result.rows
+      appointments: transformedAppointments
     });
   } catch (error) {
     console.error('Error fetching pet owner appointments:', error);
@@ -110,7 +131,11 @@ router.get('/clinic', authenticateToken, async (req, res) => {
 
     const clinicId = req.user.clinicId;
     const appointments = await appointmentModel.getAppointmentsByClinic(clinicId);
-    res.status(200).json(appointments);
+    
+    // Transform meeting URLs for video meetings
+    const transformedAppointments = transformAppointmentUrls(appointments);
+    
+    res.status(200).json(transformedAppointments);
   } catch (error) {
     console.error('Error fetching clinic appointments:', error);
     res.status(500).json({ error: 'Failed to fetch appointments' });
@@ -135,7 +160,10 @@ router.get('/:appointmentId', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Access denied. Not authorized to view this appointment.' });
     }
 
-    res.status(200).json(appointment);
+    // Transform meeting URL if it's a video meeting
+    const transformedAppointment = transformAppointmentUrls(appointment);
+
+    res.status(200).json(transformedAppointment);
   } catch (error) {
     console.error('Error fetching appointment:', error);
     res.status(500).json({ error: 'Failed to fetch appointment details' });
@@ -539,6 +567,7 @@ router.get('/clinic/:clinicId/pending', authenticateToken, async (req, res) => {
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -735,6 +764,7 @@ router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) =>
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -753,9 +783,12 @@ router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) =>
 
     const result = await pool.query(query, [clinicId]);
     
+    // Transform meeting URLs for video meetings
+    const transformedAppointments = transformAppointmentUrls(result.rows);
+    
     res.status(200).json({
       success: true,
-      appointments: result.rows
+      appointments: transformedAppointments
     });
   } catch (error) {
     console.error('Error fetching confirmed appointments:', error);
@@ -806,6 +839,7 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -877,6 +911,7 @@ router.get('/clinic/:clinicId/completed', authenticateToken, async (req, res) =>
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -968,6 +1003,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -990,9 +1026,12 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
     
     console.log('Found upcoming appointments:', result.rows.length);
     
+    // Transform meeting URLs for video meetings
+    const transformedAppointments = transformAppointmentUrls(result.rows);
+    
     res.status(200).json({
       success: true,
-      appointments: result.rows
+      appointments: transformedAppointments
     });
   } catch (error) {
     console.error('Error fetching upcoming appointments:', error);
@@ -1052,6 +1091,7 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -1160,6 +1200,7 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
         a.appointment_end_hour,
         a.appointment_status,
         a.video_meeting,
+        a.meeting_url,
         a.notes
       FROM 
         appointments a
@@ -1178,10 +1219,13 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
 
     const result = await pool.query(query, [clinicId, startDate, endDate]);
     
+    // Transform meeting URLs for video meetings
+    const transformedAppointments = transformAppointmentUrls(result.rows);
+    
     // Group appointments by date for easier calendar rendering
     const appointmentsByDate = {};
     
-    result.rows.forEach(appointment => {
+    transformedAppointments.forEach(appointment => {
       const date = appointment.appointment_date;
       if (!appointmentsByDate[date]) {
         appointmentsByDate[date] = [];
@@ -1194,7 +1238,7 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
       month: numMonth,
       year: numYear,
       appointmentsByDate,
-      appointments: result.rows
+      appointments: transformedAppointments
     });
   } catch (error) {
     console.error('Error fetching monthly appointments:', error);

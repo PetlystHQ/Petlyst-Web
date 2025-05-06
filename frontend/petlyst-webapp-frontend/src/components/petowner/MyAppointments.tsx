@@ -286,7 +286,13 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
   // Join online meeting
   const joinMeeting = (appointment: Appointment) => {
     if (appointment.meeting_url) {
-      window.open(appointment.meeting_url, "_blank");
+      // URL protokolü kontrolü
+      const meetingUrl = appointment.meeting_url.startsWith('http') 
+        ? appointment.meeting_url 
+        : `https://${appointment.meeting_url}`;
+      
+      console.log('Opening meeting URL:', meetingUrl);
+      window.open(meetingUrl, "_blank");
     } else {
       alert("No meeting URL available. Please contact the clinic.");
     }

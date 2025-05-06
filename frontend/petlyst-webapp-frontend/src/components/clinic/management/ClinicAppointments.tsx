@@ -17,6 +17,7 @@ interface AppointmentRequest {
   appointment_status: 'pending' | 'confirmed' | 'completed' | 'canceled';
   notes?: string;
   video_meeting: boolean;
+  meeting_url?: string;
   created_at?: string;
 }
 
@@ -385,6 +386,30 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
             
             {selectedAppointment.appointment_status === 'confirmed' && (
               <>
+                {selectedAppointment.video_meeting && (
+                  <button
+                    onClick={() => {
+                      console.log('Join Meeting clicked:', {
+                        url: selectedAppointment.meeting_url,
+                        videoMeeting: selectedAppointment.video_meeting
+                      });
+                      if (selectedAppointment.meeting_url) {
+                        const meetingUrl = selectedAppointment.meeting_url.startsWith('http') 
+                          ? selectedAppointment.meeting_url 
+                          : `https://${selectedAppointment.meeting_url}`;
+                        window.open(meetingUrl, "_blank");
+                      } else {
+                        alert("Meeting URL is not available. Please contact support.");
+                      }
+                    }}
+                    className="p-1.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200 transition-colors"
+                    title="Join Online Meeting"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                )}
                 {isPastAppointment && (
                   <button
                     onClick={() => handleCompleteAppointment(selectedAppointment.appointment_id)}
@@ -552,6 +577,30 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                       
                       {activeTab === 'confirmed' && (
                         <>
+                          {appointment && appointment.video_meeting && (
+                            <button
+                              onClick={() => {
+                                console.log('Join Meeting clicked:', {
+                                  url: appointment.meeting_url,
+                                  videoMeeting: appointment.video_meeting
+                                });
+                                if (appointment.meeting_url) {
+                                  const meetingUrl = appointment.meeting_url.startsWith('http') 
+                                    ? appointment.meeting_url 
+                                    : `https://${appointment.meeting_url}`;
+                                  window.open(meetingUrl, "_blank");
+                                } else {
+                                  alert("Meeting URL is not available. Please contact support.");
+                                }
+                              }}
+                              className="p-1.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200 transition-colors"
+                              title="Join Online Meeting"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
                           {isPastAppointment && (
                             <button
                               onClick={() => handleCompleteAppointment(appointment.appointment_id)}
