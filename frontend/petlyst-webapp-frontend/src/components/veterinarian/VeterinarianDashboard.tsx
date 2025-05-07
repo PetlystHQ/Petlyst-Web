@@ -5,7 +5,6 @@ import { useAppSelector } from '../../hooks/useAppSelector';
 import { DashboardView, VerificationStatus, Clinic } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
 import DashboardLayout from '../layout/DashboardLayout';
-import VideoConferenceButton from './VideoConferenceButton';
 import VeterinarianProfile from './VeterinarianProfile';
 
 interface ClinicsListProps {
@@ -385,9 +384,6 @@ const VeterinarianDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            
-            {/* Video Conference Section */}
-            <VideoConferenceButton className="mt-4" />
             
             {/* Actions Section */}
             {verificationStatus === 'verified' && (

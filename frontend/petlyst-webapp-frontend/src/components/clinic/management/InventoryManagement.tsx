@@ -5,6 +5,7 @@ import axios from 'axios';
 import InventoryList from '../../../components/clinic/management/inventory/InventoryList';
 import InventoryCategories from '../../../components/clinic/management/inventory/InventoryCategories';
 import InventoryTransactions from '../../../components/clinic/management/inventory/InventoryTransactions';
+import IDSS from '../../../components/clinic/management/inventory/iDSS';
 
 // Tab types
 type TabType = 'items' | 'categories' | 'transactions' | 'idss';
@@ -26,21 +27,7 @@ const InventoryManagement: React.FC = () => {
       case 'transactions':
         return <InventoryTransactions />;
       case 'idss':
-        return <div className="p-8 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-24 h-24 mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-              Intelligent Decision Support System
-            </h3>
-            <p className="text-gray-600 max-w-md mb-6">
-              AI-powered inventory optimization coming soon.
-            </p>
-          </div>
-        </div>;
+        return <IDSS />;
       default:
         return <InventoryList />;
     }

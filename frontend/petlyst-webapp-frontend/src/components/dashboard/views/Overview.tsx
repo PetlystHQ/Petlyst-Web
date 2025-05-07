@@ -355,34 +355,6 @@ export const Overview: React.FC<OverviewProps> = ({
       {/* Profile Completion Card - shows missing profile sections (visible regardless of verification) */}
       <ProfileCompletionCard className="mb-4" onViewChange={onViewChange} />
       
-      {/* Video Conference Card - only visible for verified veterinarians */}
-      {verificationStatus === 'verified' && (
-        <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-100 overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-purple-800">Video Conference</h3>
-                <p className="mt-1 text-sm text-purple-600">Start or join a video meeting with pet owners using Jitsi Meet</p>
-              </div>
-              <div className="hidden md:block">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-            <button
-              onClick={() => window.open('https://meet.jit.si/PetlystVeterinarianMeeting', '_blank')}
-              className="w-full px-4 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Start Jitsi Meeting
-            </button>
-          </div>
-        </div>
-      )}
-      
       {/* View Profile Button - visible regardless of verification status */}
       <ViewProfileButton 
         className="mt-4" 
