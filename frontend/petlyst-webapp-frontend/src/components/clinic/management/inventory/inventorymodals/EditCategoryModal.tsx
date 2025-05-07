@@ -249,12 +249,6 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
               Update Category
             </button>
           </div>
-          
-          {/* Debug section - remove in production */}
-          <div className="text-xs text-gray-500 border-t pt-2 mt-4">
-            <p>Toggle state: {isActive ? 'true' : 'false'}</p>
-            <p>Form is_active: {formData.is_active ? 'true' : 'false'}</p>
-          </div>
         </form>
       </div>
     </div>
