@@ -191,31 +191,6 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
   
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-      {/* Emergency Toggle - Separate section at the top */}
-      <div className="border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span className="font-medium text-gray-800">Emergency Services</span>
-          </div>
-          
-          {/* Toggle Button */}
-          <button 
-            onClick={handleEmergencyToggle}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${currentFilters.emergency === 'true' ? 'bg-red-600' : 'bg-gray-200'}`}
-            role="switch"
-            aria-checked={currentFilters.emergency === 'true'}
-          >
-            <span className="sr-only">Enable emergency filter</span>
-            <span 
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentFilters.emergency === 'true' ? 'translate-x-6' : 'translate-x-1'}`}
-            />
-          </button>
-        </div>
-      </div>
-
       {/* Search Type Filter - NEW SECTION */}
       <div className="border-b border-gray-200 px-4 py-3">
         <div className="flex flex-col">
