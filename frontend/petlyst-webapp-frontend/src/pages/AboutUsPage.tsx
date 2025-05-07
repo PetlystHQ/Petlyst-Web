@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import AuthModal from '../components/modals/AuthModal';
+import { useAppSelector } from '../hooks/useAppSelector';
 
 const AboutUsPage: React.FC = () => {
+  const { user } = useAppSelector(state => state.auth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const handleOpenAuthModal = () => {
@@ -107,7 +109,8 @@ const AboutUsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Join Us CTA */}
+      {/* Join Us CTA - Sadece giriş yapmayan kullanıcılara göster */}
+      {!user && (
       <div className="max-w-4xl mx-auto mb-16 bg-[#458AB5] bg-opacity-90 text-white p-10 rounded-xl text-center">
         <h2 className="text-2xl font-bold mb-4">Join Us in Our Mission</h2>
         <p className="text-lg mb-6">
@@ -121,6 +124,7 @@ const AboutUsPage: React.FC = () => {
           Get Started Today
         </button>
       </div>
+      )}
 
       {/* Footer */}
       <div className="max-w-4xl mx-auto pt-8 border-t border-gray-200 text-center text-gray-500">
