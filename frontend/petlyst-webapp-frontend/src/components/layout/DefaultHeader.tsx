@@ -84,11 +84,11 @@ const DefaultHeader: React.FC = () => {
             <div className="flex items-center space-x-4">
               {/* Download App button */}
               <a 
-                href="https://play.google.com/store" 
+                href="https://petlyst-s3.s3.eu-central-1.amazonaws.com/Petlyst-Mobile.apk" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-green-600 hover:text-green-800 transition-colors text-sm font-medium"
-                title="Download our mobile app"
+                title="Download Petlyst Android App"
               >
                 <span>Download App</span>
               </a>
