@@ -23,6 +23,9 @@ import SingleClinicPage from './pages/SingleClinicPage';
 import SavedClinicsPage from './pages/SavedClinicsPage';
 import ContactUsPage from './pages/ContactUsPage';
 import AboutUsPage from './pages/AboutUsPage';
+import NotFoundPage from './pages/NotFoundPage';
+import ErrorPage from './pages/ErrorPage';
+import ForbiddenPage from './pages/ForbiddenPage';
 import './styles/clinicPreview.css';
 
 const AppContent: React.FC = () => {
@@ -34,10 +37,13 @@ const AppContent: React.FC = () => {
                       location.pathname === '/pet-owner-dashboard';
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isClinicPreview = location.pathname.startsWith('/clinic-preview/');
+  const isErrorPage = location.pathname === '/404' || 
+                     location.pathname === '/403' ||
+                     location.pathname === '/500';
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isDashboard && !isAdminRoute && !isClinicPreview && <DefaultHeader />}
+      {!isDashboard && !isAdminRoute && !isClinicPreview && !isErrorPage && <DefaultHeader />}
       <Routes>
         <Route path="/" element={<PetOwnerHomePage />} />
         <Route path="/enterprise" element={<HomePage />} />
@@ -105,6 +111,15 @@ const AppContent: React.FC = () => {
         } />
         <Route path="/contact-us" element={<ContactUsPage />} />
         <Route path="/about-us" element={<AboutUsPage />} />
+        
+        {/* Error Pages */}
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="/403" element={<ForbiddenPage />} />
+        <Route path="/500" element={<ErrorPage />} />
+        <Route path="/error" element={<ErrorPage />} />
+        
+        {/* Catch-all route for 404 errors */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <Toaster position="top-right" />
     </div>
