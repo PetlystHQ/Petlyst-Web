@@ -46,7 +46,7 @@ interface Clinic {
 // Common Turkish cities to suggest
 const commonCities = [
   'Ankara', 'Istanbul', 'Izmir', 'Antalya', 'Bursa',
-  'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Kayseri'
+  'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Kayseri', 'NewCity'
 ];
 
 // Özel Toast Stili
@@ -164,23 +164,13 @@ const PetOwnerHomePage: React.FC = () => {
 
         let allSuggestions: SearchSuggestion[] = [];
         
-        // Add API suggestions
+        // Add API suggestions (which now include city suggestions from the database)
         if (response.data.success) {
           allSuggestions = [...response.data.suggestions];
         }
         
-        // Add city suggestions
-        const cityMatches = commonCities.filter(city => 
-          city.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        
-        const citySuggestions: SearchSuggestion[] = cityMatches.map(city => ({
-          text: city,
-          type: 'city'
-        }));
-        
-        // Combine and limit to 5 suggestions
-        allSuggestions = [...allSuggestions, ...citySuggestions].slice(0, 5);
+        // Limit to 5 suggestions
+        allSuggestions = allSuggestions.slice(0, 5);
         
         setSuggestions(allSuggestions);
         setShowSuggestions(allSuggestions.length > 0);

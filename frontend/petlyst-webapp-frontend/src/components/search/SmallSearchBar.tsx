@@ -7,12 +7,6 @@ interface SearchSuggestion {
   type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
 }
 
-// Common Turkish cities to suggest
-const commonCities = [
-  'Ankara', 'Istanbul', 'Izmir', 'Antalya', 'Bursa',
-  'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Kayseri'
-];
-
 interface SmallSearchBarProps {
   initialQuery: string;
   onSearch: (query: string) => void;
@@ -50,23 +44,13 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
 
         let allSuggestions: SearchSuggestion[] = [];
         
-        // Add API suggestions
+        // Add API suggestions (which now include city suggestions from the database)
         if (response.data.success) {
           allSuggestions = [...response.data.suggestions];
         }
         
-        // Add city suggestions
-        const cityMatches = commonCities.filter(city => 
-          city.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        
-        const citySuggestions: SearchSuggestion[] = cityMatches.map(city => ({
-          text: city,
-          type: 'city'
-        }));
-        
-        // Combine and limit to 5 suggestions
-        allSuggestions = [...allSuggestions, ...citySuggestions].slice(0, 5);
+        // Limit to 5 suggestions
+        allSuggestions = allSuggestions.slice(0, 5);
         
         setSuggestions(allSuggestions);
         // Only show suggestions if there are results AND if user has actively typed
@@ -89,16 +73,6 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
     // For regular search with the search button, use the 'all' filter by default
     // to ensure both clinics and veterinarians are included in results
     const params = new URLSearchParams();
-    
-    // Şehir ismi kontrolü - yaygın şehirlerden biri mi kontrol et
-    const cityMatch = commonCities.find(city => 
-      city.toLowerCase() === searchQuery.toLowerCase()
-    );
-    
-    // Tam eşleşme yoksa, içeren arama yapalım
-    const cityPartialMatch = !cityMatch && commonCities.find(city => 
-      searchQuery.toLowerCase().includes(city.toLowerCase())
-    );
     
     // Common medical services
     const medicalServices = [
@@ -124,15 +98,7 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
       searchQuery.toLowerCase().includes(service.toLowerCase())
     );
     
-    if (cityMatch || cityPartialMatch) {
-      // Bulunan şehir adını province parametresi olarak ayarla
-      const cityName = cityMatch || cityPartialMatch;
-      if (cityName) {
-        params.set('province', cityName);
-        // Query parametresini boş olarak ayarla
-        params.set('query', '');
-      }
-    } else if (medicalServiceMatch) {
+    if (medicalServiceMatch) {
       // Medical service parametresi olarak ayarla
       params.set('medicalService', medicalServiceMatch);
       // Query parametresini boş olarak ayarla
@@ -144,7 +110,7 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch 
       params.set('query', '');
     } else {
       // Normal bir arama sorgusu ise query parametresini ayarla
-    params.set('query', searchQuery);
+      params.set('query', searchQuery);
     }
     
     params.set('veterinarian', 'all'); // Set to 'all' to include both clinics and veterinarians

@@ -560,13 +560,25 @@ router.get('/search-suggestions', async (req, res) => {
       LIMIT 3
     `;
     
+    // Get city suggestions from clinic_locations
+    const cityQuery = `
+      SELECT DISTINCT province AS text, 'city' AS type
+      FROM clinic_locations cl
+      JOIN clinics c ON cl.clinic_id = c.clinic_id
+      WHERE c.clinic_verification_status = 'verified'
+      AND province ILIKE $1
+      ORDER BY province
+      LIMIT 5
+    `;
+    
     const likePattern = `%${query}%`;
     
-    const [clinicResults, animalTypeResults, serviceResults, veterinarianResults] = await Promise.all([
+    const [clinicResults, animalTypeResults, serviceResults, veterinarianResults, cityResults] = await Promise.all([
       pool.query(clinicQuery, [likePattern]),
       pool.query(animalTypeQuery, [likePattern]),
       pool.query(serviceQuery, [likePattern]),
-      pool.query(veterinarianQuery, [likePattern])
+      pool.query(veterinarianQuery, [likePattern]),
+      pool.query(cityQuery, [likePattern])
     ]);
     
     // Combine all suggestions
@@ -574,7 +586,8 @@ router.get('/search-suggestions', async (req, res) => {
       ...clinicResults.rows,
       ...animalTypeResults.rows,
       ...serviceResults.rows,
-      ...veterinarianResults.rows
+      ...veterinarianResults.rows,
+      ...cityResults.rows
     ];
     
     res.status(200).json({
