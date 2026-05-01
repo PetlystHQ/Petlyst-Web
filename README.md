@@ -76,4 +76,4 @@ If you rotate `ENCRYPTION_KEY`, existing ciphertexts will become unreadable — 
 
 ## License
 
-Private project. All rights reserved.
+MIT — see [LICENSE](LICENSE).
