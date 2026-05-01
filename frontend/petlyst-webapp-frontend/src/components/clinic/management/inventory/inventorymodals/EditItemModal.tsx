@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../../store';
 import axios from 'axios';
+import { API_URL } from '../../../../../config/api';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -265,7 +266,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
       console.log('Submitting edited data:', dataToSubmit);
 
       const response = await axios.put(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
         dataToSubmit,
         {
           headers: {

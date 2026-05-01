@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { setCredentials } from '../../store/slices/authSlice';
+import { API_URL } from '../../config/api';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
     try {
       if (activeTab === 'login') {
         // Login logic
-        const response = await fetch('http://localhost:3000/api/users/login', {
+        const response = await fetch(`${API_URL}/api/users/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
         onClose();
       } else {
         // Register logic
-        const response = await fetch('http://localhost:3000/api/users/register', {
+        const response = await fetch(`${API_URL}/api/users/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -127,7 +128,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
         }
 
         // After successful registration, automatically log in
-        const loginResponse = await fetch('http://localhost:3000/api/users/login', {
+        const loginResponse = await fetch(`${API_URL}/api/users/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

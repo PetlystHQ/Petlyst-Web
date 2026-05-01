@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
+import { API_URL } from '../../../../config/api';
 
 interface Hospitalization {
   id: string;
@@ -43,7 +44,7 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
     try {
       // First, get current hospitalizations
       const currentResponse = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/current`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -89,7 +90,7 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
       // We can use the existing endpoint and then filter on the frontend
       // In a real implementation, we would ideally have a backend endpoint that provides this data directly
       const response = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/all`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/all`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       

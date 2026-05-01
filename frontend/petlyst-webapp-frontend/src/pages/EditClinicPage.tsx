@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../store';
+import { API_URL } from '../config/api';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { EditVisuals } from '../components/clinic/forms/EditVisuals';
@@ -31,7 +32,7 @@ const EditClinicPage: React.FC = () => {
     
     try {
       setLoading(true);
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
         headers: {
           'Authorization': `Bearer ${token || localStorage.getItem('token')}`,
@@ -231,7 +232,7 @@ const EditClinicPage: React.FC = () => {
       // Log to check the phone numbers data structure
       console.log('Phone numbers data:', formData.phone_numbers);
       
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       
       // Modify clinic name to include the clinic type if it doesn't already end with it
       let clinic_name = formData.name;

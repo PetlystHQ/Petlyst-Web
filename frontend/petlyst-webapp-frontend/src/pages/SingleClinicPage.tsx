@@ -40,31 +40,10 @@ interface Clinic {
   clinic_time_slots?: number;
 }
 
-// Try multiple ways to access the API key
-const getApiKey = (): string => {
-  // For debugging
-  console.log('[DEBUG] Environment variables check in SingleClinicPage:');
-  console.log('import.meta.env available:', typeof import.meta.env !== 'undefined');
-  console.log('VITE_GOOGLE_MAPS_API_KEY via import.meta:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
-  console.log('VITE_GOOGLE_MAPS_EMBED_API_KEY via import.meta:', import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY);
-  
-  // Özel olarak Embed API için ayrı bir key kullanın (önerilir)
-  const embedApiKey = import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY;
-  if (embedApiKey) {
-    return embedApiKey;
-  }
-  
-  // Genel API key'i kullan
-  const viaImportMeta = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  
-  // Return the API key or a hardcoded fallback for development ONLY
-  return viaImportMeta || 
-    // API KEY'İNİZİ BURAYA EKLEYİN - GEÇİCİ ÇÖZÜM
-    '';
-};
-
-// Get API key using our robust method
-const GOOGLE_MAPS_API_KEY = getApiKey();
+const GOOGLE_MAPS_API_KEY =
+  import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY ||
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+  '';
 
 // Services interface
 interface ClinicServices {
@@ -1701,7 +1680,7 @@ const SingleClinicPage: React.FC = () => {
                 height="100%"
                 frameBorder="0"
                 style={{ border: 0 }}
-                src={`https://www.google.com/maps/embed/v1/place?key=REDACTED_GOOGLE_MAPS_KEY&q=${clinic?.latitude},${clinic?.longitude}&zoom=15&language=tr&maptype=roadmap`}
+                src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${clinic?.latitude},${clinic?.longitude}&zoom=15&language=tr&maptype=roadmap`}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"

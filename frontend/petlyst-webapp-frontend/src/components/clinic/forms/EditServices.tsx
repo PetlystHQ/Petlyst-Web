@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Tooltip } from '../shared/Tooltip';
+import { API_URL } from '../../../config/api';
 
 interface EditServicesProps {
   clinicId: string | number;
@@ -207,7 +208,7 @@ export const EditServices: React.FC<EditServicesProps> = ({
     setError(null);
     
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}/services`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -263,7 +264,7 @@ export const EditServices: React.FC<EditServicesProps> = ({
     setSuccess(null);
     
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       const response = await axios.put(
         `${apiUrl}/api/clinics/${clinicId}/services`,
         {

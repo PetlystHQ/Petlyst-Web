@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import axios from 'axios';
 import AddTransactionModal from './inventorymodals/AddTransactionModal';
+import { API_URL } from '../../../../config/api';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -113,7 +114,7 @@ const InventoryTransactions: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/transactions`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/transactions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -152,7 +153,7 @@ const InventoryTransactions: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/items`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/items`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -250,7 +251,7 @@ const InventoryTransactions: React.FC = () => {
       console.log('Submitting transaction with integer values:', processedData);
 
       const response = await axios.post(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/transactions`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/transactions`,
         processedData,
         {
           headers: {

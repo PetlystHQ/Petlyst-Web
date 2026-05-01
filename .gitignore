@@ -1,1 +1,20 @@
 node_modules
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Database dumps / backups
+*.sql.bak
+*.dump
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+.claude/
+
+# Logs
+*.log

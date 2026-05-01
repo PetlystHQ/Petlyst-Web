@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS } from '../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES } from '../constants/VeterinaryLanguages';
 import { useAppSelector } from '../hooks/useAppSelector';
+import { API_URL } from '../config/api';
 
 // Veterinarian profile interfaces
 interface VeterinarianProfile {
@@ -151,7 +152,7 @@ const SingleVeterinarianPage: React.FC = () => {
   // Function to fetch the approved clinic for the veterinarian
   const fetchApprovedClinic = async (veterinarianId: number) => {
     try {
-      const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${veterinarianId}`);
+      const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${veterinarianId}`);
       
       if (response.data && response.data.success) {
         setApprovedClinic(response.data.clinic);

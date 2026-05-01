@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../../../../store';
+import { API_URL } from '../../../../config/api';
 
 // Set to true to show sample data when no reviews exist (for development)
 const SHOW_SAMPLE_DATA = false;
@@ -110,7 +111,7 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
 
         // Fetch review statistics
         console.log("Fetching clinic stats from:", `/api/reviews/clinics/${clinicId}/stats`);
-        const statsResponse = await axios.get(`http://localhost:3000/api/reviews/clinics/${clinicId}/stats`, {
+        const statsResponse = await axios.get(`${API_URL}/api/reviews/clinics/${clinicId}/stats`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         
@@ -154,7 +155,7 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
         console.log("Fetching reviews from:", `/api/reviews/clinic/${clinicId}`);
         console.log("With params:", { page, limit: 10, sort: sortParam, rating: filterRating });
         
-        const reviewsResponse = await axios.get(`http://localhost:3000/api/reviews/clinic/${clinicId}`, {
+        const reviewsResponse = await axios.get(`${API_URL}/api/reviews/clinic/${clinicId}`, {
           params: {
             page,
             limit: 10,

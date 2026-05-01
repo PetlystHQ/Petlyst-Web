@@ -3,6 +3,7 @@ import { Clinic } from '../../types/dashboard';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
+import { API_URL } from '../../config/api';
 
 interface ViewClinicModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ const ViewClinicModal: React.FC<ViewClinicModalProps> = ({ isOpen, onClose, clin
     const fetchPhotos = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/clinics/${clinic.clinic_id}/photos`,
+          `${API_URL}/api/clinics/${clinic.clinic_id}/photos`,
           {
             headers: {
               'Authorization': `Bearer ${token}`

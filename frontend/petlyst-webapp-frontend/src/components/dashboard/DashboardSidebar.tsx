@@ -6,6 +6,7 @@ import { logout, setProfileVisibility } from '../../store/slices/authSlice';
 import { DashboardView, VerificationStatus } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
 import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 const DashboardSidebar = () => {
   const token = useAppSelector(state => state.auth.token);
@@ -23,7 +24,7 @@ const DashboardSidebar = () => {
       }
 
       await axios.get(
-        'http://localhost:3000/api/veterinarian/verification-status',
+        `${API_URL}/api/veterinarian/verification-status`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

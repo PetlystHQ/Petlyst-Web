@@ -18,6 +18,7 @@ import {
   deleteStandardDiagnosis as apiDeleteStandardDiagnosis
 } from './diagnosisService';
 import axios from 'axios';
+import { API_URL } from '../../../../config/api';
 
 // Backend tarafında kod oluşturulacağı için form verisini güncelleyelim
 type CreateStandardDiagnosisData = Omit<StandardDiagnosisFormData, 'code'> & { code?: string };
@@ -46,7 +47,7 @@ const initialState: DiagnosisState = {
 
 // Define API instance
 const api = axios.create({
-  baseURL: 'http://localhost:3000', // Adjust this to your API URL
+  baseURL: API_URL, // Adjust this to your API URL
   headers: {
     'Content-Type': 'application/json'
   }

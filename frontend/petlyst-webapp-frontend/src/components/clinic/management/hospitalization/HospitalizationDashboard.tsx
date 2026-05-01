@@ -5,6 +5,7 @@ import { RootState } from '../../../../store';
 import RoomManagement from './RoomManagement';
 import PatientHospitalization from './PatientHospitalization';
 import RoomHistory from './RoomHistory';
+import { API_URL } from '../../../../config/api';
 
 interface HospitalizationStats {
   totalRooms: number;
@@ -44,13 +45,13 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
     try {
       // Fetch rooms for statistics
       const roomsResponse = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       // Fetch current hospitalizations
       const hospitalizationsResponse = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/current`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       

@@ -6,6 +6,7 @@ import { logout, setProfileVisibility } from '../../store/slices/authSlice';
 import { DashboardView, VerificationStatus } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
 import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 interface DashboardSidebarProps {
   currentView: DashboardView;
@@ -58,7 +59,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     // Check for pending clinic requests
     const checkPendingRequests = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/veterinarian/check-pending-requests', {
+        const response = await axios.get(`${API_URL}/api/veterinarian/check-pending-requests`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -105,7 +106,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       console.log('Trying to update profile visibility to:', newVisibility);
       
       // Hardcoded URL, kesin çalışacak şekilde
-      const response = await axios.put('http://localhost:3000/api/veterinarian/profile-visibility', {
+      const response = await axios.put(`${API_URL}/api/veterinarian/profile-visibility`, {
         is_profile_public: newVisibility
       }, {
         withCredentials: true,

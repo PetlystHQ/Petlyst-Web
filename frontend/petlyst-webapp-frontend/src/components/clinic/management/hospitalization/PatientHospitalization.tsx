@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import AdmitForm from './AdmitForm';
+import { API_URL } from '../../../../config/api';
 
 interface Room {
   id: string;
@@ -73,7 +74,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/current`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -124,7 +125,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -152,7 +153,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/patients`,
+        `${API_URL}/api/clinics/${clinicId}/patients`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -195,7 +196,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     
     try {
       const response = await axios.post(
-        `http://localhost:3000/api/hospitalization/admit`,
+        `${API_URL}/api/hospitalization/admit`,
         formData,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -227,7 +228,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     
     try {
       const response = await axios.put(
-        `http://localhost:3000/api/hospitalization/${selectedHospitalization.id}/discharge`,
+        `${API_URL}/api/hospitalization/${selectedHospitalization.id}/discharge`,
         { actualDischargeDate: dischargeDate },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

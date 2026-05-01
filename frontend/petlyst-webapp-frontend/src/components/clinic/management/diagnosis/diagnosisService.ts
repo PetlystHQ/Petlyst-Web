@@ -1,5 +1,6 @@
 import axios from 'axios';
 import axiosInstance from '../../../../utils/axiosConfig';
+import { API_URL } from '../../../../config/api';
 
 // Diagnosis Interface
 export interface Diagnosis {
@@ -79,7 +80,7 @@ const getToken = () => localStorage.getItem('token');
 
 // Create base axios instance with authorization header
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }

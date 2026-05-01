@@ -4,6 +4,7 @@ import { useAppSelector } from '../../hooks/useAppSelector';
 import { API_ENDPOINTS } from '../../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES, getExpertiseNameById } from '../../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES, LANGUAGE_CATEGORIES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
+import { API_URL } from '../../config/api';
 
 interface Education {
   education_id: number;
@@ -2064,7 +2065,7 @@ const VeterinarianProfile: React.FC = () => {
     try {
       setMyClinicLoading(true);
       
-      const response = await axios.get('http://localhost:3000/api/veterinarian/my-clinic', {
+      const response = await axios.get(`${API_URL}/api/veterinarian/my-clinic`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -2127,7 +2128,7 @@ const VeterinarianProfile: React.FC = () => {
       setClinicSearchError(null);
       setClinics([]);
       
-      const response = await axios.get(`http://localhost:3000/api/pet-owners/search-clinics`, {
+      const response = await axios.get(`${API_URL}/api/pet-owners/search-clinics`, {
         params: {
           query: clinicSearchQuery,
           limit: 50
@@ -2144,7 +2145,7 @@ const VeterinarianProfile: React.FC = () => {
           try {
             // Fetch operators for all clinics in a single request
             const operatorsResponse = await axios.post(
-              'http://localhost:3000/api/veterinarian/clinic-operators',
+              `${API_URL}/api/veterinarian/clinic-operators`,
               { clinicIds },
               {
                 headers: {
@@ -2218,7 +2219,7 @@ const VeterinarianProfile: React.FC = () => {
       setClinicJoinError(null);
       
       const response = await axios.post(
-        `http://localhost:3000/api/veterinarian/request-join-clinic/${selectedClinic.clinic_id}`, 
+        `${API_URL}/api/veterinarian/request-join-clinic/${selectedClinic.clinic_id}`,
         {}, 
         {
           headers: {
@@ -2591,7 +2592,7 @@ const VeterinarianProfile: React.FC = () => {
   // Function to check if veterinarian has pending requests
   const checkPendingRequests = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/veterinarian/check-pending-requests', {
+      const response = await axios.get(`${API_URL}/api/veterinarian/check-pending-requests`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -2620,7 +2621,7 @@ const VeterinarianProfile: React.FC = () => {
       setLeaveClinicError(null);
       
       const response = await axios.delete(
-        `http://localhost:3000/api/veterinarian/leave-clinic/${myClinic.id}`,
+        `${API_URL}/api/veterinarian/leave-clinic/${myClinic.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`

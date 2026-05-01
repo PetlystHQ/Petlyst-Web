@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../../config/api';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/users/reset-password', {
+        const response = await fetch(`${API_URL}/api/users/reset-password`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -134,7 +135,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/users/verify-code', {
+        const response = await fetch(`${API_URL}/api/users/verify-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -170,7 +171,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/users/verify-reset', {
+        const response = await fetch(`${API_URL}/api/users/verify-reset`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

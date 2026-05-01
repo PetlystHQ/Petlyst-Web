@@ -1,7 +1,5 @@
 import { DashboardView } from '../types/dashboard';
-
-// API base URL - Default to localhost if environment variable is not set
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_URL } from '../config/api';
 
 export const DASHBOARD_VIEWS: Record<DashboardView, DashboardView> = {
   overview: 'overview',

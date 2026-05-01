@@ -37,24 +37,7 @@ interface LatLng {
 
 // Tip güvenliği için bu metodu ekleyelim
 
-// Try multiple ways to access the API key
-const getApiKey = (): string => {
-  // For debugging
-  console.log('[DEBUG] Environment variables check:');
-  console.log('import.meta.env available:', typeof import.meta.env !== 'undefined');
-  console.log('VITE_GOOGLE_MAPS_API_KEY via import.meta:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
-  
-  // Try different methods to get API key
-  const viaImportMeta = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  
-  // Return the API key or a hardcoded fallback for development ONLY
-  return viaImportMeta || 
-    // ONLY FOR FIXING THIS ISSUE - REMOVE IN PRODUCTION!
-    'REDACTED_GOOGLE_MAPS_KEY';
-};
-
-// Get API key using our more robust method
-const GOOGLE_MAPS_API_KEY = getApiKey();
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 interface MapComponentProps {
   formData: ClinicFormData;

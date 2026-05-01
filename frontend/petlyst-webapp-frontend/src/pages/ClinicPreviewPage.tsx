@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../store';
+import { API_URL } from '../config/api';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
@@ -98,8 +99,8 @@ const ClinicPreviewPage: React.FC = () => {
       
       setLoading(true);
       try {
-        console.log('Making API request to:', `http://localhost:3000/api/clinics/${clinicId}`);
-        const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}`, {
+        console.log('Making API request to:', `${API_URL}/api/clinics/${clinicId}`);
+        const response = await axios.get(`${API_URL}/api/clinics/${clinicId}`, {
           headers: {
             'Authorization': `Bearer ${token || localStorage.getItem('token')}`
           }
@@ -256,7 +257,7 @@ const ClinicPreviewPage: React.FC = () => {
         // Klinik fotoğraflarını al
         try {
           console.log('Fetching clinic photos from clinicalbum');
-          const photosResponse = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/photos`, {
+          const photosResponse = await axios.get(`${API_URL}/api/clinics/${clinicId}/photos`, {
             headers: {
               'Authorization': `Bearer ${token || localStorage.getItem('token')}`
             }

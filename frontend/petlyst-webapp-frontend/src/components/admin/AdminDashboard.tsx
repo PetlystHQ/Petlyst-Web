@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 interface VerificationRequest {
     veterinarian_id: string;
@@ -68,7 +69,7 @@ const AdminDashboard: React.FC = () => {
     const fetchPendingRequests = async () => {
         try {
             const response = await axios.get(
-                'http://localhost:3000/api/admin/pending-review-status',
+                `${API_URL}/api/admin/pending-review-status`,
                 {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
@@ -87,7 +88,7 @@ const AdminDashboard: React.FC = () => {
     const fetchPendingClinics = async () => {
         try {
             const response = await axios.get(
-                'http://localhost:3000/api/admin/pending-clinics',
+                `${API_URL}/api/admin/pending-clinics`,
                 {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
@@ -120,7 +121,7 @@ const AdminDashboard: React.FC = () => {
         try {
             setReviewsLoading(true);
             const response = await axios.get(
-                'http://localhost:3000/api/reviews/admin/pending',
+                `${API_URL}/api/reviews/admin/pending`,
                 {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
@@ -140,7 +141,7 @@ const AdminDashboard: React.FC = () => {
         setActionLoading(userId);
         try {
             await axios.put(
-                `http://localhost:3000/api/admin/update-verification-status/${userId}`,
+                `${API_URL}/api/admin/update-verification-status/${userId}`,
                 { action },
                 {
                     headers: {
@@ -164,7 +165,7 @@ const AdminDashboard: React.FC = () => {
         setActionLoading(clinicId);
         try {
             await axios.put(
-                `http://localhost:3000/api/admin/update-clinic-status/${clinicId}`,
+                `${API_URL}/api/admin/update-clinic-status/${clinicId}`,
                 { action },
                 {
                     headers: {
@@ -192,11 +193,11 @@ const AdminDashboard: React.FC = () => {
             
             switch (action) {
                 case 'approve':
-                    endpoint = `http://localhost:3000/api/reviews/admin/${reviewId}/approve`;
+                    endpoint = `${API_URL}/api/reviews/admin/${reviewId}/approve`;
                     method = 'put';
                     break;
                 case 'delete':
-                    endpoint = `http://localhost:3000/api/reviews/admin/${reviewId}`;
+                    endpoint = `${API_URL}/api/reviews/admin/${reviewId}`;
                     method = 'delete';
                     break;
             }

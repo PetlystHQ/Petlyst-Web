@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
 import axios from 'axios';
+import { API_URL } from '../config/api';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import { ClinicFormData, FormStep, LocationCoordinates } from '../types/clinic';
 import { ClinicDetailsForm } from '../components/clinic/forms/ClinicDetailsForm';
@@ -137,7 +138,7 @@ const AddClinicPage: React.FC = () => {
     const checkExistingClinics = async () => {
       try {
         // API URL'yi kontrol et
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+        const apiUrl = API_URL;
         
         const response = await axios.get(`${apiUrl}/api/clinics/my-clinics`, {
           headers: {
@@ -189,7 +190,7 @@ const AddClinicPage: React.FC = () => {
       if (clinicId) {
         try {
           setLoading(true);
-          const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+          const apiUrl = API_URL;
           const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
             headers: {
               'Authorization': `Bearer ${token || localStorage.getItem('token')}`
@@ -471,7 +472,7 @@ const AddClinicPage: React.FC = () => {
 
   const uploadPhotos = async (clinicId: string | number, clinicName: string) => {
     // API URL'yi kontrol et
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    const apiUrl = API_URL;
     
     if (selectedPhotos.length === 0) return;
     
@@ -997,7 +998,7 @@ const AddClinicPage: React.FC = () => {
       }
 
       // API URL'yi kontrol et
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       
       // Parse establishment_date into year and month
       let establishmentYear = null;

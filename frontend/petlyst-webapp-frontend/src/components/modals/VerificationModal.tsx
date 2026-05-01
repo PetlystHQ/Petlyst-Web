@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import axiosInstance from '../../utils/axiosConfig';
 import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
     const checkVerificationStatus = async () => {
       try {
         const response = await axios.get(
-          'http://localhost:3000/api/veterinarian/verification-status',
+          `${API_URL}/api/veterinarian/verification-status`,
           {
             headers: {
               Authorization: `Bearer ${token}`

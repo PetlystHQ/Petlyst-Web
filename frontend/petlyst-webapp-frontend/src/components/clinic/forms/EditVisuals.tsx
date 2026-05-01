@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Tooltip } from '../shared/Tooltip';
+import { API_URL } from '../../../config/api';
 
 interface ClinicPhoto {
   clinic_album_photo_id: number;
@@ -62,7 +63,7 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     setError(null);
     
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}/photos`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -191,7 +192,7 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     setSuccess(null);
     
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       
       // SADECE klinik ID ve adını gönder, tip ekleme (tip backend'de eklenecek)
       const sanitizedClinicName = clinicName.toLowerCase().replace(/\s+/g, '-');
@@ -285,7 +286,7 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     }
     
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+      const apiUrl = API_URL;
       await axios.delete(`${apiUrl}/api/clinics/${clinicId}/photos/${photoId}`, {
         headers: {
           'Authorization': `Bearer ${token}`

@@ -13,6 +13,7 @@ import ExaminationList from '../components/clinic/management/examination/Examina
 import DiagnosisList from '../components/clinic/management/diagnosis/DiagnosisList';
 import Calendar from '../components/clinic/management/Calendar';
 import ClinicReviews from '../components/clinic/management/review/ClinicReviews';
+import { API_URL } from '../config/api';
 
 interface ClinicData {
   clinic_id: string;
@@ -476,7 +477,7 @@ const ManagementDashboard: React.FC = () => {
 
     try {
       // Fetch all veterinarians (both approved and pending)
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/veterinarians`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/veterinarians`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -512,7 +513,7 @@ const ManagementDashboard: React.FC = () => {
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/api/clinics/${clinicId}/veterinarian/${requestId}/status`,
+        `${API_URL}/api/clinics/${clinicId}/veterinarian/${requestId}/status`,
         { status },
         {
           headers: {
@@ -560,7 +561,7 @@ const ManagementDashboard: React.FC = () => {
 
     try {
       const response = await axios.delete(
-        `http://localhost:3000/api/clinics/${clinicId}/veterinarian/${vetId}`,
+        `${API_URL}/api/clinics/${clinicId}/veterinarian/${vetId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -840,7 +841,7 @@ const ManagementDashboard: React.FC = () => {
         console.log('Fetching clinic data for clinic ID:', clinicId);
         console.log('Current user ID:', userId);
         
-        const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}`, {
+        const response = await axios.get(`${API_URL}/api/clinics/${clinicId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -952,7 +953,7 @@ const ManagementDashboard: React.FC = () => {
     
     try {
       const response = await axios.put(
-        `http://localhost:3000/api/clinics/${action}/${clinicId}`,
+        `${API_URL}/api/clinics/${action}/${clinicId}`,
         {},
         {
           headers: {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_URL } from '../../../config/api';
 
 // Define interface for calendar appointments
 interface CalendarAppointment {
@@ -157,14 +158,14 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       
       // Get pending appointments
       const pendingResponse = await axios.get(
-        `http://localhost:3000/api/appointments/clinic/${clinicId}/pending`,
+        `${API_URL}/api/appointments/clinic/${clinicId}/pending`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       console.log('Pending appointments received:', pendingResponse.data.appointments?.length || 0);
       
       // Get confirmed appointments
       const confirmedResponse = await axios.get(
-        `http://localhost:3000/api/appointments/clinic/${clinicId}/confirmed`,
+        `${API_URL}/api/appointments/clinic/${clinicId}/confirmed`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       console.log('Confirmed appointments received:', confirmedResponse.data.appointments?.length || 0);
@@ -186,14 +187,14 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       
       // Get completed appointments
       const completedResponse = await axios.get(
-        `http://localhost:3000/api/appointments/clinic/${clinicId}/completed`,
+        `${API_URL}/api/appointments/clinic/${clinicId}/completed`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       console.log('Completed appointments received:', completedResponse.data.appointments?.length || 0);
       
       // Get canceled appointments
       const canceledResponse = await axios.get(
-        `http://localhost:3000/api/appointments/clinic/${clinicId}/canceled`,
+        `${API_URL}/api/appointments/clinic/${clinicId}/canceled`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       console.log('Canceled appointments received:', canceledResponse.data.appointments?.length || 0);
@@ -432,14 +433,14 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       if (newStatus === 'completed') {
         // Use the complete endpoint for marking as completed
         response = await axios.patch(
-          `http://localhost:3000/api/appointments/${appointmentId}/complete`,
+          `${API_URL}/api/appointments/${appointmentId}/complete`,
           {},
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
       } else {
         // Use the status update endpoint for other status changes
         response = await axios.put(
-          `http://localhost:3000/api/appointments/${appointmentId}/status`,
+          `${API_URL}/api/appointments/${appointmentId}/status`,
           { status: newStatus },
           { headers: { 'Authorization': `Bearer ${token}` } }
         );

@@ -12,6 +12,7 @@ import { DashboardView, Clinic } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES, API_ENDPOINTS } from '../constants/dashboard';
 import { RootState } from '../store';
 import { useAppSelector } from '../hooks/useAppSelector';
+import { API_URL } from '../config/api';
 
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
@@ -52,12 +53,12 @@ const Dashboard: React.FC = () => {
       setCheckingApprovedClinic(true);
       try {
         // API endpoint we created to check for approved clinic
-        const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${user.id}`, {
+        const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${user.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         // Set hasApprovedClinic to true if the API returns a clinic
         setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
         console.log('Approved clinic check:', response.data);
@@ -82,7 +83,7 @@ const Dashboard: React.FC = () => {
       
       setCheckingClinics(true);
       try {
-        const response = await axios.get('http://localhost:3000/api/clinics/my-clinics', {
+        const response = await axios.get(`${API_URL}/api/clinics/my-clinics`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -166,7 +167,7 @@ const Dashboard: React.FC = () => {
         if (token && user && user.user_type === 'veterinarian') {
           setCheckingApprovedClinic(true);
           try {
-            const response = await axios.get(`http://localhost:3000/api/veterinarian/approved-clinic/${user.id}`, {
+            const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${user.id}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }

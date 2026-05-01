@@ -4,6 +4,7 @@ import { RootState } from '../../../../store';
 import axios from 'axios';
 import AddItemModal from './inventorymodals/AddItemModal';
 import EditItemModal from './inventorymodals/EditItemModal';
+import { API_URL } from '../../../../config/api';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -118,7 +119,7 @@ const InventoryList: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/items`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/items`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -184,7 +185,7 @@ const InventoryList: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/categories`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/categories`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -306,7 +307,7 @@ const InventoryList: React.FC = () => {
       console.log('Submitting data with forced integers:', dataToSubmit);
 
       const response = await axios.post(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/items`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/items`,
         dataToSubmit,
         {
           headers: {
@@ -397,7 +398,7 @@ const InventoryList: React.FC = () => {
       console.log('Submitting edit with integer values:', dataToSubmit);
 
       const response = await axios.put(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
         dataToSubmit,
         {
           headers: {

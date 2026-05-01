@@ -1,11 +1,11 @@
 const crypto = require('crypto');
 require('dotenv').config();
 
-// Get encryption key from environment variables or use a default for development
-// In production, this should ALWAYS be set in environment variables
-// Ensure the key is exactly 32 bytes (256 bits) for AES-256
-const ENCRYPTION_KEY = (process.env.ENCRYPTION_KEY || 'REDACTED_ENCRYPTION_FALLBACK').slice(0, 32).padEnd(32, '0');
-const IV_LENGTH = 16; // For AES, this is always 16 bytes
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required (32 chars for AES-256)');
+}
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY.slice(0, 32).padEnd(32, '0');
+const IV_LENGTH = 16;
 
 /**
  * Encrypts text using AES-256-CBC algorithm

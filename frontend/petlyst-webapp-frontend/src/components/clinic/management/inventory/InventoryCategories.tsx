@@ -4,6 +4,7 @@ import { RootState } from '../../../../store';
 import axios from 'axios';
 import AddCategoryModal from './inventorymodals/AddCategoryModal';
 import EditCategoryModal from './inventorymodals/EditCategoryModal';
+import { API_URL } from '../../../../config/api';
 
 // Interface for category
 interface Category {
@@ -85,7 +86,7 @@ const InventoryCategories: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`http://localhost:3000/api/clinics/${clinicId}/inventory/categories`, {
+      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/categories`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -159,7 +160,7 @@ const InventoryCategories: React.FC = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/categories`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/categories`,
         formData,
         {
           headers: {
@@ -184,7 +185,7 @@ const InventoryCategories: React.FC = () => {
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/api/clinics/${clinicId}/inventory/categories/${currentCategory.id}`,
+        `${API_URL}/api/clinics/${clinicId}/inventory/categories/${currentCategory.id}`,
         formData,
         {
           headers: {

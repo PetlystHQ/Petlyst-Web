@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import RoomCard from './RoomCard';
 import RoomForm from './RoomForm';
+import { API_URL } from '../../../../config/api';
 
 // Define interfaces
 interface Room {
@@ -57,10 +58,10 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
+        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         setRooms(response.data.rooms);
       } else {
@@ -102,7 +103,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
       if (editingRoom) {
         // Update existing room
         const response = await axios.put(
-          `http://localhost:3000/api/hospitalization/rooms/${editingRoom.id}`,
+          `${API_URL}/api/hospitalization/rooms/${editingRoom.id}`,
           {
             roomName: formData.roomName,
             roomType: formData.roomType
@@ -124,7 +125,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
       } else {
         // Add new room
         const response = await axios.post(
-          `http://localhost:3000/api/clinics/${clinicId}/hospitalization/rooms`,
+          `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
           {
             roomName: formData.roomName,
             roomType: formData.roomType
@@ -163,7 +164,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     
     try {
       const response = await axios.delete(
-        `http://localhost:3000/api/hospitalization/rooms/${roomId}`,
+        `${API_URL}/api/hospitalization/rooms/${roomId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -192,7 +193,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     
     try {
       const response = await axios.put(
-        `http://localhost:3000/api/hospitalization/rooms/${roomId}/status`,
+        `${API_URL}/api/hospitalization/rooms/${roomId}/status`,
         { status },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

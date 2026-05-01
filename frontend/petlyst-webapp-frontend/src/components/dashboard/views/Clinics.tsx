@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../../store';
 import axios from 'axios';
 import { Clinic } from '../../../types/dashboard';
+import { API_URL } from '../../../config/api';
 import './Clinics.css';
 
 interface ClinicsProps {
@@ -30,7 +31,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get('http://localhost:3000/api/clinics/my-clinics', {
+      const response = await axios.get(`${API_URL}/api/clinics/my-clinics`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -59,7 +60,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
   const handleDeleteClinic = async (clinicId: string) => {
     setActionLoading(clinicId);
     try {
-      await axios.delete(`http://localhost:3000/api/clinics/${clinicId}`, {
+      await axios.delete(`${API_URL}/api/clinics/${clinicId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
