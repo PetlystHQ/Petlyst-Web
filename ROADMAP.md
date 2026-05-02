@@ -9,12 +9,12 @@ be paused and resumed without losing context.
 
 | #   | Effort                                  | Time          | Issues | Commits | Risk          |
 | --- | --------------------------------------- | ------------- | ------ | ------- | ------------- |
-| 1   | Continuous Integration (lint + build)   | 2–4 h         | 1      | 2–5     | Low           |
+| 1   | Continuous Integration (lint + build)   | 12–20 h       | 4      | 14–18   | Low / Medium  |
 | 2   | Decompose oversized components          | 40–80 h       | 9      | 60–100  | High          |
 | 3   | Consolidate API client (`axiosInstance`) | 3–6 h         | 1      | 5–15    | Medium        |
 | 4   | Logging discipline                      | 8–15 h        | 2      | 10–20   | Low / Medium  |
 | 5   | Smoke-test baseline                     | 10–20 h       | 2–3    | 15–30   | Low           |
-|     | **Total**                               | **63–125 h**  | **15–16** | **92–170** |             |
+|     | **Total**                               | **73–141 h**  | **18–19** | **104–183** |           |
 
 ## Recommended order
 
@@ -36,9 +36,9 @@ be paused and resumed without losing context.
 
 ### Goal
 
-Every push to `main` and every pull request runs ESLint and a production
-build for the frontend. Surface regressions immediately instead of at deploy
-time.
+Every push to `main` runs ESLint and a production build for both the
+frontend and the backend, on a known-green baseline. Surface regressions
+immediately instead of at deploy time.
 
 ### Why
 
@@ -47,51 +47,133 @@ opening the repo today has no signal that the code even type-checks on any
 machine other than the author's. Adding CI is the single highest-leverage
 change in this roadmap relative to the time it costs.
 
+### Reality check
+
+A first-pass `npm run lint && npm run build` against the frontend surfaces
+substantially more debt than the original 2–4 h estimate assumed:
+
+- **Lint:** 400 problems (344 errors, 56 warnings).
+  - 176 × `@typescript-eslint/no-explicit-any`
+  - 131 × `@typescript-eslint/no-unused-vars`
+  - 54 × `react-hooks/exhaustive-deps` (warnings; reviewed individually
+    rather than blanket-fixed)
+  - **10 × `react-hooks/rules-of-hooks`** — real React bugs
+  - ~30 misc (`no-useless-escape`, `prefer-as-const`, `prefer-const`)
+- **Build (`tsc -b && vite build`): 124 errors — currently broken.**
+  - 119 × TS6133 (unused declarations; overlap with lint unused-vars)
+  - **2 × TS2322** in [useVerificationStatus.ts](frontend/petlyst-webapp-frontend/src/hooks/useVerificationStatus.ts) — real type bugs
+  - ~3 misc TS6196 / TS6192
+
+Landing CI before resolving these would either keep `main` red indefinitely
+or require disabling rules wholesale (which is the wrong signal for a
+portfolio repo). Effort 1 therefore expands to *fix what blocks CI from
+being green*, then add the workflow.
+
 ### Scope
 
 **In:**
-- `.github/workflows/ci.yml` runs `npm ci`, `npm run lint`, `npm run build`
-  for `frontend/petlyst-webapp-frontend`.
-- A status badge in [README.md](README.md).
+- Resolve real bugs surfaced (type contract + rules-of-hooks).
+- Resolve all lint debt: replace every `any` with a real type, review every
+  `exhaustive-deps` warning individually, sweep the trivial rules.
+- Add backend ESLint config (Node-targeted, `eslint:recommended`) and a
+  `lint` script.
+- `.github/workflows/ci.yml` running install + lint + build for both
+  frontend and backend.
+- Status badge in [README.md](README.md).
 
 **Out (deferred):**
-- Backend lint — backend has no ESLint config. A separate effort would add
-  one. Out of scope here to keep the first CI commit small.
+- Prettier config alignment between frontend and backend (cosmetic, separate
+  small effort).
 - Test runs — covered by [Effort 5](#effort-5--smoke-test-baseline).
 - Deployment automation.
+- Branch protection rules — solo-dev project, no merge gating needed.
 
 ### Issues
 
-- [ ] **GH-001** — Add GitHub Actions workflow for frontend lint + build
+- [ ] **GH-001a** — Fix type contract and rules-of-hooks bugs blocking green build
+- [ ] **GH-001b** — Resolve frontend lint debt (`any`, `exhaustive-deps`, sweeps)
+- [ ] **GH-001c** — Add backend ESLint config + lint script
+- [ ] **GH-001d** — Add GitHub Actions workflow + README badge
 
 ### Commit plan
 
-| Order | Subject                                                                    | Notes |
-| ----- | -------------------------------------------------------------------------- | ----- |
-| 1     | `chore(ci): add GitHub Actions workflow for frontend lint + build`         | New `.github/workflows/ci.yml`. Runs on `push` to `main` and on `pull_request`. Uses `actions/setup-node@v4` with `cache: npm`. |
-| 2     | `fix(lint): resolve ESLint errors surfaced by CI (batch 1)`                | Likely `@typescript-eslint/no-unused-vars`, `no-explicit-any` in the larger components. Split into batches if the count is large. |
-| 3     | `fix(lint): resolve ESLint errors surfaced by CI (batch 2)`                | `react-hooks/exhaustive-deps` and similar. Optional — only if batch 1 is too large to review in one PR. |
-| 4     | `fix(types): resolve TypeScript build errors`                              | If `tsc -b` surfaces errors that lint did not. Often type-only fixes (missing return types, narrowed unions). |
-| 5     | `docs(readme): add CI status badge`                                        | Tiny commit at the end so it does not block lint fixes from merging. |
+#### Phase A — Real bug fixes (1–2 h)
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 1     | `fix(types): correct VerificationStatus return type in useVerificationStatus` |
+| 2     | `fix(react): repair rules-of-hooks violations across affected sites`     |
+
+#### Phase B — Mechanical lint sweeps (1–2 h, build goes green here)
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 3     | `chore(lint): remove unused imports and variables across frontend`       |
+| 4     | `chore(lint): apply trivial fixes (no-useless-escape, prefer-as-const, prefer-const)` |
+
+#### Phase C — Type discipline (4–8 h)
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 5     | `refactor(types): replace any with unknown in catch blocks (+ guards)`   |
+| 6     | `refactor(types): introduce API response types for auth + pet-owner endpoints` |
+| 7     | `refactor(types): introduce API response types for clinic + veterinarian endpoints` |
+| 8     | `refactor(types): introduce API response types for admin + inventory endpoints` |
+| 9     | `refactor(types): final any sweep — useState, props, callbacks`          |
+
+#### Phase D — Hooks discipline (3–5 h)
+
+Each `exhaustive-deps` warning is reviewed individually: dep added,
+function memoised, or per-line disable with a comment justifying why.
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 10    | `fix(hooks): resolve exhaustive-deps in src/pages`                       |
+| 11    | `fix(hooks): resolve exhaustive-deps in src/components/clinic`           |
+| 12    | `fix(hooks): resolve exhaustive-deps in remaining components`            |
+
+#### Phase E — Backend lint (1–2 h)
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 13    | `chore(backend): add ESLint config (eslint:recommended for Node) + script` |
+| 14    | `fix(backend-lint): resolve errors surfaced by new config`               |
+
+#### Phase F — CI workflow (~30 min)
+
+| Order | Subject                                                                  |
+| ----- | ------------------------------------------------------------------------ |
+| 15    | `chore(ci): add GitHub Actions workflow (frontend + backend lint + build)` |
+| 16    | `docs(readme): add CI status badge`                                      |
 
 ### Acceptance criteria
 
+- `npm run lint` exits 0 in `frontend/petlyst-webapp-frontend`.
+- `npm run build` exits 0 in `frontend/petlyst-webapp-frontend`.
+- `npm run lint` exits 0 in `backend/petlyst-webapp-backend`.
 - A green CI run exists on `main` for the most recent commit.
-- A pull request with an introduced lint error shows a red CI status before
-  it can be merged.
+- A push that introduces a lint error shows a red CI status.
 - The badge in the README shows a passing state.
 
 ### Risks and mitigations
 
-- **Risk:** Lint produces hundreds of errors and blocks the workflow from
-  ever going green.
-  **Mitigation:** If the count is overwhelming, land the workflow with
-  `continue-on-error: true` on the lint step first, then drop that flag in a
-  follow-up commit once errors are cleared. Avoid disabling rules wholesale —
-  fix or `eslint-disable` per-line with a reason.
+- **Risk:** Replacing `any` reveals frontend/backend contract mismatches
+  (e.g. backend returns `null` where the frontend assumed `string`).
+  **Mitigation:** flag the mismatch in the commit message, fix with
+  frontend-side narrowing or explicit null handling. Do not change backend
+  response shapes as part of this effort.
+- **Risk:** A handful of `any` sites genuinely need dynamic typing (e.g.
+  generic dispatchers).
+  **Mitigation:** replace with `unknown` + targeted assertion at use site,
+  with a one-line comment explaining the intent. No blanket
+  `eslint-disable`.
+- **Risk:** Naive `exhaustive-deps` "fixes" introduce extra renders or
+  infinite loops.
+  **Mitigation:** per-hook review. Each commit message records which hooks
+  changed and why; manual smoke after each commit.
 - **Risk:** `npm ci` is slow on every run.
   **Mitigation:** Use `actions/setup-node@v4` with `cache: 'npm'` and a
-  `cache-dependency-path` pointing to the frontend `package-lock.json`.
+  `cache-dependency-path` per workspace `package-lock.json`.
 
 ---
 
@@ -480,15 +562,14 @@ here so they don't get lost.
 - **Backend startup migrations.** `server.js` runs `ALTER TABLE` and
   bulk-encrypts TC numbers on every boot. Replace with a real migration tool
   (`node-pg-migrate` or `umzug`) and a one-shot encryption script.
-- **`ENCRYPTION_KEY` rotation.** The current value matches the previous
-  hardcoded fallback so existing ciphertexts decrypt. Generate a fresh
-  32-byte key, re-encrypt the `veterinarians.veterinarian_tc_number` column
-  with it, then update the env. AWS access required.
-- **Plaintext password residue.** At least one user record has a non-bcrypt
-  password (`Veteriner123`). DB hygiene task; doesn't block roadmap work.
-- **Backend ESLint + format config.** Adding ESLint and Prettier to the
-  backend in line with the frontend is a small, isolated effort; could be
-  GH-017 once Effort 1 ships.
+- **`ENCRYPTION_KEY` rotation.** Tracked privately. Generate a fresh 32-byte
+  key, re-encrypt the `veterinarians.veterinarian_tc_number` column under
+  the new key, then cut the env over. AWS access required.
+- **Plaintext password residue.** One legacy user record exists with a
+  non-bcrypt password. DB hygiene task; doesn't block roadmap work.
+- **Backend Prettier config.** Effort 1 adds backend ESLint; aligning
+  Prettier between frontend (3.3.3) and backend stays a separate, cosmetic
+  task.
 - **Duplicate `DashboardSidebar.tsx`.** Two files with the same name live
   under `components/dashboard/` and `components/layout/`. Reconcile to one
   during Effort 2.
