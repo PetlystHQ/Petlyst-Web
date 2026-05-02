@@ -7,10 +7,15 @@ import { API_ENDPOINTS } from '../constants/dashboard';
 // Get initial status from localStorage if available
 const getInitialStatus = (): VerificationStatus => {
   const savedStatus = localStorage.getItem('verification_status');
-  if (savedStatus === 'pending' || savedStatus === 'verified' || savedStatus === 'unverified') {
+  if (
+    savedStatus === 'pending' ||
+    savedStatus === 'verified' ||
+    savedStatus === 'not_verified' ||
+    savedStatus === 'archived'
+  ) {
     return savedStatus;
   }
-  return null;
+  return 'pending';
 };
 
 export const useVerificationStatus = () => {
