@@ -74,6 +74,12 @@ Sensitive identifiers (e.g. veterinarian TC numbers) are encrypted at rest with 
 
 If you rotate `ENCRYPTION_KEY`, existing ciphertexts will become unreadable — re-encrypt them with the new key before swapping.
 
+## Roadmap
+
+Planned post-launch improvements (CI, component decomposition, API client
+consolidation, logging discipline, smoke tests) are tracked in
+[ROADMAP.md](ROADMAP.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
