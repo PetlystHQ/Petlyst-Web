@@ -662,14 +662,18 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
   
   // Appointment Modal
   const AppointmentDetailModal = () => {
+    // Warning message for appointments that can't be completed yet.
+    // Hook must run before any early return (rules-of-hooks).
+    const [showTimeWarning, setShowTimeWarning] = useState(false);
+
     if (!appointmentModal.isOpen || !appointmentModal.appointment) return null;
-    
+
     const appointment = appointmentModal.appointment;
     const appointmentStatus = appointment.appointment_status;
     const appointmentDate = new Date(appointment.appointment_date);
     const startTime = formatTime(appointment.appointment_start_hour);
     const endTime = formatTime(appointment.appointment_end_hour);
-    
+
     // Debug appointment data
     console.log('Appointment modal data:', {
       id: appointment.appointment_id,
@@ -678,14 +682,11 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       meetingUrl: appointment.meeting_url,
       date: appointmentDate
     });
-    
+
     // Check if appointment end time has passed
     const now = new Date();
     const appointmentEndTime = new Date(appointment.appointment_end_hour);
     const appointmentHasPassed = appointmentEndTime < now;
-    
-    // Warning message for appointments that can't be completed yet
-    const [showTimeWarning, setShowTimeWarning] = useState(false);
     
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="appointment-modal" role="dialog" aria-modal="true">

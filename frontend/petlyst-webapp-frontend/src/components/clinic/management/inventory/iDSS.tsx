@@ -27,7 +27,7 @@ type ResponseData = TimelineResponse | ThresholdResponse | string | null;
 const STORAGE_KEY_ANALYSIS_TYPE = 'idss_analysis_type';
 const STORAGE_KEY_RESPONSE_DATA = 'idss_response_data';
 
-const iDSS: React.FC = () => {
+const IDSS: React.FC = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisType>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -317,4 +317,4 @@ const iDSS: React.FC = () => {
   );
 };
 
-export default iDSS;
+export default IDSS;

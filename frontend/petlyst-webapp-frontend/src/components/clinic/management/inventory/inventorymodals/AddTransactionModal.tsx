@@ -39,14 +39,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   handleAddTransaction,
   closeModals
 }) => {
-  if (!showAddModal) return null;
-  
-  // Track if fields have been touched by user
+  // Track if fields have been touched by user.
+  // Hook must run before any early return (rules-of-hooks).
   const [touched, setTouched] = useState({
     inventory_item_id: false,
     quantity: false,
     expiry_date: false
   });
+
+  if (!showAddModal) return null;
   
   // Handle field touch
   const handleBlur = (fieldName: string) => {

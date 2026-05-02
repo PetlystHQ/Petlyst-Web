@@ -70,7 +70,7 @@ const PetRecords: React.FC = () => {
         
         // For development: Create mock data if endpoint fails
         if (process.env.NODE_ENV === 'development') {
-          useMockData();
+          applyMockData();
         }
       }
     } catch (err) {
@@ -79,7 +79,7 @@ const PetRecords: React.FC = () => {
       
       // For development: Create mock data
       if (process.env.NODE_ENV === 'development') {
-        useMockData();
+        applyMockData();
       }
     } finally {
       setLoading(false);
@@ -87,7 +87,7 @@ const PetRecords: React.FC = () => {
   };
   
   // Helper function to use mock data
-  const useMockData = () => {
+  const applyMockData = () => {
     console.log('Using mock data');
     const mockPets: Pet[] = [
       {
