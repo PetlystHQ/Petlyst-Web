@@ -1,5 +1,5 @@
 import React from 'react';
-import { PhoneNumberEntry, PhoneTypeEnum } from '../../../types/clinic';
+import { PhoneNumberEntry } from '../../../types/clinic';
 
 interface PhoneNumberSectionProps {
   phoneNumbers: PhoneNumberEntry[];
@@ -17,20 +17,6 @@ interface PhoneNumberSectionProps {
 // Maximum number of phone numbers allowed
 const MAX_PHONE_NUMBERS = 5;
 
-// Function to get user-friendly label for phone type enum values
-const getPhoneTypeLabel = (type: PhoneTypeEnum): string => {
-  switch(type) {
-    case 'fixed_line':
-      return 'Fixed Line';
-    case 'mobile_number':
-      return 'Mobile Number';
-    case '':
-      return 'Select Type';
-    default:
-      return 'Select Type';
-  }
-};
-
 export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
   phoneNumbers,
   handlePhoneNumberChange,
@@ -39,8 +25,6 @@ export const PhoneNumberSection: React.FC<PhoneNumberSectionProps> = ({
   hasExistingClinic,
   loading,
   invalidLengthPhoneNumbers = [],
-  attemptedSubmit = false,
-  setError,
   isEditMode = false
 }) => {
   // Check if maximum number of phone numbers is reached

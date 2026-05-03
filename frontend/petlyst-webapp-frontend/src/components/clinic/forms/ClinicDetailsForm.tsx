@@ -16,9 +16,6 @@ interface ClinicDetailsFormProps {
 export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
   formData,
   handleInputChange,
-  handleSocialMediaChange,
-  handleAddEmptySocialMedia,
-  handleRemoveSocialMedia,
   hasExistingClinic,
   loading,
   isEditMode = false
@@ -54,7 +51,7 @@ export const ClinicDetailsForm: React.FC<ClinicDetailsFormProps> = ({
 
   // Custom handler for date input to add validation
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isValid = validateEstablishmentDate(e.target.value);
+    validateEstablishmentDate(e.target.value);
     // Still update the form data even if invalid, so we can show the error message
     handleInputChange(e);
   };

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Tooltip } from '../shared/Tooltip';
 import { ClinicFormData } from '../../../types/clinic';
 
 interface RegistrationFormProps {

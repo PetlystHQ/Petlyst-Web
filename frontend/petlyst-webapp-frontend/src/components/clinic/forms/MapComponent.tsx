@@ -58,12 +58,6 @@ const ExclamationTriangleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const ArrowPathIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={props.className || "w-6 h-6"}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-  </svg>
-);
-
 // Google Maps yükleme ve yönetme mantığını ayrı bir bileşene taşıyalım
 const MapContainer = ({
   formData,
@@ -84,7 +78,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const marker = useRef<any>(null);
   const geocoder = useRef<any>(null);
-  const [isAddressLoading, setIsAddressLoading] = useState(false);
+  const [, setIsAddressLoading] = useState(false);
   
   // Default coordinates for Turkey
   const defaultCenter = { lat: 39.9334, lng: 32.8597 };

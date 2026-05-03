@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ClinicFormData } from '../../../types/clinic';
 
 // Appointment duration options
 type SlotDuration = '60' | '30' | '20';
@@ -21,18 +20,10 @@ interface EditHoursProps {
   setFormModified?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Function to create a synthetic change event
-const createSyntheticEvent = <T extends string | boolean | number | string[]>(name: string, value: T) => {
-  return {
-    target: { name, value }
-  } as unknown as React.ChangeEvent<HTMLInputElement>;
-};
-
 const EditHours: React.FC<EditHoursProps> = ({
   formData,
   updateField,
   loading,
-  isEditMode = true,
   setFormModified
 }) => {
   // State for emergency service status

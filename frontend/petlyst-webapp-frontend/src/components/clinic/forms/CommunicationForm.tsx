@@ -64,7 +64,7 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
   const [emailError, setEmailError] = useState<string>('');
   const [isEmailValid, setIsEmailValid] = useState(true);
   // Track which form fields have been touched by the user
-  const [formTouched, setFormTouched] = useState({
+  const [, setFormTouched] = useState({
     email: false,
     phone: false
   });
@@ -76,13 +76,6 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
   useEffect(() => {
     // Validate email address
     const isEmailAddressValid = formData.email && isEmailValid;
-    
-    // Validate at least one phone number is provided
-    const hasValidPhoneNumber = formData.phone_numbers.length > 0 && 
-      formData.phone_numbers.some(phone => phone.type && phone.number && phone.number.trim().length > 0);
-    
-    // Telefon numaralarının 11 haneli olup olmadığını kontrol et
-    const hasValidPhoneNumberLength = checkPhoneNumberLength();
     
     // Form is valid only if email is valid
     // NOT: Telefon numarası validasyonları artık yerel olarak ele alınıyor, global hata mesajı göstermiyoruz
@@ -101,27 +94,6 @@ export const CommunicationForm: React.FC<CommunicationFormProps> = ({
       }
     };
   }, [formData.email, isEmailValid, formData.phone_numbers]);
-
-  // Telefon numaralarının uzunluğunu kontrol eden fonksiyon
-  const checkPhoneNumberLength = () => {
-    // Boş telefon numarası girişlerini filtrele
-    const validPhoneEntries = formData.phone_numbers.filter(
-      phone => phone.type && phone.number && phone.number.trim().length > 0
-    );
-    
-    // Hiç telefon numarası yoksa geçersiz
-    if (validPhoneEntries.length === 0) {
-      return false;
-    }
-    
-    // Tüm telefon numaralarının 11 haneli olup olmadığını kontrol et
-    const allPhoneNumbersValid = validPhoneEntries.every(phone => {
-      const trimmedNumber = phone.number.trim().replace(/\s+/g, ''); // Boşlukları temizle
-      return trimmedNumber.length === 11;
-    });
-    
-    return allPhoneNumbersValid;
-  };
 
   // Handle toggle changes
   const handleToggleChange = (field: 'showPhoneNumber' | 'allowDirectMessages' | 'showMailAddress') => {

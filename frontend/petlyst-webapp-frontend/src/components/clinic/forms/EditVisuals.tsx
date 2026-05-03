@@ -249,13 +249,6 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     }
   };
   
-  // Helper function to create full clinic name with type
-  const createFullClinicName = (name: string, type: string): string => {
-    // SADECE klinik ID ve adını kullan
-    const sanitizedName = name.trim().toLowerCase().replace(/\s+/g, '-');
-    return `${clinicId}-${sanitizedName}`;
-  };
-  
   // Remove a newly selected photo (not yet uploaded)
   const handleRemoveNewPhoto = (index: number) => {
     setSelectedNewPhotos(prev => {

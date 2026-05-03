@@ -1,5 +1,4 @@
 import React from 'react';
-import { ClinicFormData } from '../../../types/clinic';
 
 interface EditRegistrationProps {
   formData: {
@@ -14,8 +13,7 @@ interface EditRegistrationProps {
 const EditRegistration: React.FC<EditRegistrationProps> = ({
   formData,
   updateField,
-  loading,
-  isEditMode = true
+  loading
 }) => {
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

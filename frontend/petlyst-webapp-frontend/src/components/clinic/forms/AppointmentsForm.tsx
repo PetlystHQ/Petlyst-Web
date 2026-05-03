@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ClinicFormData } from '../../../types/clinic';
 
 // Appointment duration options
 type SlotDuration = '60' | '30' | '20';
@@ -33,8 +32,6 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
   formData,
   handleInputChange,
   loading,
-  hasExistingClinic = false,
-  isEditMode = false,
   validateOnSubmit = false
 }) => {
   // State added for emergency service status
@@ -120,12 +117,6 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
     setErrors(newErrors);
   };
 
-  // Dışarıdan validate etmek için bir metod
-  // Bu metodu parent componente expose edebiliriz
-  const validate = () => {
-    validateForm();
-    return Object.keys(errors).length === 0;
-  };
 
   // When 24/7 status changes
   useEffect(() => {
@@ -231,20 +222,6 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
       : [...currentDays, day];
       
     handleInputChange(createSyntheticEvent(fieldName, updatedDays));
-  };
-
-  // Handle time input changes
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // If 1 hour slot is selected (60 min), force minutes to be 00
-    if (slotDuration === '60' && (name === 'opening_time' || name === 'closing_time')) {
-      const hourPart = value.split(':')[0];
-      const newValue = `${hourPart}:00`;
-      handleInputChange(createSyntheticEvent(name, newValue));
-    } else {
-      handleInputChange(e);
-    }
   };
 
   return (

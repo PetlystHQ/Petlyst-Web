@@ -208,7 +208,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`animal-${animal}`}
                   checked={formData.servedAnimalTypes.includes(animal)}
-                  onChange={(e) => handleOptionToggle('servedAnimalTypes', animal)}
+                  onChange={() => handleOptionToggle('servedAnimalTypes', animal)}
                   disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -242,7 +242,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`medical-${service}`}
                   checked={formData.medicalServices.includes(service)}
-                  onChange={(e) => handleOptionToggle('medicalServices', service)}
+                  onChange={() => handleOptionToggle('medicalServices', service)}
                   disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                 />
@@ -276,7 +276,7 @@ export const ServicesForm: React.FC<ServicesFormProps> = ({
                   type="checkbox"
                   id={`additional-${service}`}
                   checked={formData.additionalServices.includes(service)}
-                  onChange={(e) => handleOptionToggle('additionalServices', service)}
+                  onChange={() => handleOptionToggle('additionalServices', service)}
                   disabled={(hasExistingClinic && !isEditMode) || loading}
                   className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />

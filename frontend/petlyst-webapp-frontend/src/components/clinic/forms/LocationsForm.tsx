@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Tooltip } from '../shared/Tooltip';
 import { ClinicFormData, LocationCoordinates } from '../../../types/clinic';
 import TurkishCities from "../../../constants/TurkishCities";
@@ -31,44 +31,10 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
     return TurkishCities[province] ? TurkishCities[province].sort() : [];
   }, []);
 
-  // Create a function to refresh the manual address fields based on map coordinates
-  const refreshFromMap = useCallback(() => {
-    // This is just a visual indicator - the actual data update happens in MapComponent
-    if (formData.coordinates) {
-      // Show a brief "refreshing" indicator
-      setRefreshing(true);
-      
-      // Create a synthetic event to trigger the update
-      const event = {
-        target: {
-          name: 'coordinates',
-          // Create a shallow copy of the coordinates to force a refresh
-          value: { ...formData.coordinates }
-        }
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      
-      // Use handleInputChange to refresh the fields
-      handleInputChange(event);
-      
-      // Hide the refreshing indicator after a short delay
-      setTimeout(() => setRefreshing(false), 800);
-    } else {
-      setRefreshing(false);
-    }
-  }, [formData.coordinates, handleInputChange]);
-
-  // State to track refreshing indicator
-  const [refreshing, setRefreshing] = useState(false);
-
   // This function wraps updateCoordinates to add debugging
   const handleCoordinatesUpdate = (coordinates: LocationCoordinates) => {
     console.log("LocationsForm: Updating coordinates:", coordinates);
     updateCoordinates(coordinates);
-  };
-  
-  const handleRefreshMap = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
   };
 
   // Render the address form fields component
