@@ -21,8 +21,8 @@ interface SavedClinic {
 const SavedClinicsPage: React.FC = () => {
   const navigate = useNavigate();
   const token = useSelector((state: RootState) => state.auth.token) || localStorage.getItem('token');
-  const user = useSelector((state: RootState) => state.auth.user);
-  
+
+
   const [savedClinics, setSavedClinics] = useState<SavedClinic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

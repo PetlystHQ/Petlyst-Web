@@ -66,9 +66,9 @@ const VeterinariansListPage: React.FC = () => {
   const generateSlug = (vet: any): string => {
     const firstName = vet.user_name || '';
     const lastName = vet.user_surname || '';
-    const userId = vet.user_id;
-    
-    let slug = `dr-${firstName.toLowerCase()}-${lastName.toLowerCase()}`
+
+
+    const slug = `dr-${firstName.toLowerCase()}-${lastName.toLowerCase()}`
       .replace(/\s+/g, '-')     // Replace spaces with hyphens
       .replace(/[^\w\-]+/g, '') // Remove non-word chars
       .replace(/\-\-+/g, '-')   // Replace multiple hyphens with single

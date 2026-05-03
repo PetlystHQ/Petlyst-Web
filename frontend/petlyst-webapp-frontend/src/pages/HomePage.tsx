@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useAppSelector } from '../hooks/useAppSelector';
 import AuthModal from '../components/modals/AuthModal';
 
 const HomePage: React.FC = () => {
-  const { user } = useAppSelector(state => state.auth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const handleForgotPassword = () => {

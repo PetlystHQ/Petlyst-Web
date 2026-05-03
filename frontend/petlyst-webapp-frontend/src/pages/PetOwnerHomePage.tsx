@@ -2,7 +2,7 @@ import React, { useState, useEffect, KeyboardEvent } from 'react';
 import { useAppSelector } from '../hooks/useAppSelector';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { SearchIcon, LocationIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
+import { SearchIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
 import AuthModal from '../components/modals/AuthModal';
 import { getEmergencyData, createDirectionsUrl } from '../components/emergency/EmergencyService';
@@ -96,8 +96,8 @@ const PetOwnerHomePage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [popularAnimalTypes, setPopularAnimalTypes] = useState<string[]>([]);
-  const [popularServices, setPopularServices] = useState<string[]>([]);
+  const [, setPopularAnimalTypes] = useState<string[]>([]);
+  const [, setPopularServices] = useState<string[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isEmergency, setIsEmergency] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -319,19 +319,6 @@ const PetOwnerHomePage: React.FC = () => {
       params.set('veterinarian', 'all');
     }
     
-    navigate(`/search?${params.toString()}`);
-  };
-
-  // Handle popular search click
-  const handlePopularSearchClick = (term: string) => {
-    setSearchQuery(term);
-    
-    // Prepare URL parameters with veterinarian=all
-    const params = new URLSearchParams();
-    params.set('query', term);
-    params.set('veterinarian', 'all');
-    
-    // Navigate to search results with "All" selected by default
     navigate(`/search?${params.toString()}`);
   };
 

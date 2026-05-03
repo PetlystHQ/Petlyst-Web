@@ -205,16 +205,6 @@ const SingleVeterinarianPage: React.FC = () => {
     return language ? language.name : languageId;
   };
 
-  // Function to generate slug
-  const generateSlug = (name: string, surname: string): string => {
-    return `dr-${name.toLowerCase()}-${surname.toLowerCase()}`
-      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-      .replace(/[^\w\-]+/g, '') // Remove non-word chars
-      .replace(/\-\-+/g, '-')   // Replace multiple hyphens with single
-      .replace(/^-+/, '')       // Trim hyphens from start
-      .replace(/-+$/, '');      // Trim hyphens from end
-  };
-
   // Render loading state with a simpler spinner
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
@@ -26,10 +26,10 @@ const AddClinicPage: React.FC = () => {
   const [formModified, setFormModified] = useState(false);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [exitDestination, setExitDestination] = useState('');
-  const [isEditMode, setIsEditMode] = useState(!!clinicId);
+  const [isEditMode] = useState(!!clinicId);
   const [attemptedRegistrationSubmit, setAttemptedRegistrationSubmit] = useState(false);
   const [attemptedAppointmentsSubmit, setAttemptedAppointmentsSubmit] = useState(false);
-  const [isUserInitiatedSubmit, setIsUserInitiatedSubmit] = useState(false);
+  const [, setIsUserInitiatedSubmit] = useState(false);
   const [formData, setFormData] = useState<ClinicFormData>({
     name: '',
     clinicType: 'Veterinary Clinic',
@@ -83,9 +83,8 @@ const AddClinicPage: React.FC = () => {
   // Photo upload states
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, setUploadProgress] = useState<number>(0);
+  const [, setCurrentPhotoIndex] = useState(0);
 
   // Progress steps
   const steps: { id: FormStep; title: string }[] = [
@@ -335,12 +334,6 @@ const AddClinicPage: React.FC = () => {
     navigate(exitDestination);
   };
 
-  // Navigate without saving
-  const saveAndNavigate = () => {
-    setShowExitConfirmation(false);
-    navigate(exitDestination);
-  };
-
   // Cancel navigation and stay on the page
   const cancelNavigation = () => {
     setShowExitConfirmation(false);
@@ -365,18 +358,6 @@ const AddClinicPage: React.FC = () => {
       ...prev,
       coordinates
     }));
-    setFormModified(true);
-  };
-
-  const handleAddSocialMedia = (platform: string) => {
-    setFormData(prev => {
-      const newSocialMediaLinks = [...(prev.social_media_links || [])];
-      newSocialMediaLinks.push({ platform, url: '' });
-      return {
-        ...prev,
-        social_media_links: newSocialMediaLinks
-      };
-    });
     setFormModified(true);
   };
 
@@ -497,7 +478,7 @@ const AddClinicPage: React.FC = () => {
       formData.append('clinicId', clinicId.toString());
       
       // clinicName'i backend ile aynı şekilde sanitize et
-      let sanitizedClinicName = clinicName;
+      const sanitizedClinicName = clinicName;
       
       // Eğer gerçek ismi kullanmak istiyorsak, backend ile aynı düzeltmeyi yapalım
       formData.append('clinicName', sanitizedClinicName);

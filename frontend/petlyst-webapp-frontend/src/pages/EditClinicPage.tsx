@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../store';
 import { API_URL } from '../config/api';
-import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
+import { ClinicFormData, PhoneTypeEnum } from '../types/clinic';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { EditVisuals } from '../components/clinic/forms/EditVisuals';
 import { EditServices } from '../components/clinic/forms/EditServices';
@@ -130,13 +130,6 @@ const EditClinicPage: React.FC = () => {
     }
   };
   
-  // Helper function to get day name by index
-  const getDayNameByIndex = (index: number): string => {
-    // Backend indeks: 0=Sunday, 1=Monday, 2=Tuesday, ...
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[index] || '';
-  };
-
   // Fetch clinic data on component mount and when activeTab changes
   useEffect(() => {
     fetchClinicData();

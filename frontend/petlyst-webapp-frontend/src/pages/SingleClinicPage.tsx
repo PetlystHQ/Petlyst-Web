@@ -73,16 +73,6 @@ interface Veterinarian {
   slug?: string;
 }
 
-// Update User interface
-interface User {
-  id: number;  // This is the user ID we'll use
-  email: string;
-  name: string;
-  surname: string;
-  user_type?: string; // Add user_type property
-  // Remove user_id as it's not needed
-}
-
 // Add Review interface after other interfaces
 interface Review {
   clinic_review_id: string;
@@ -135,7 +125,7 @@ const SingleClinicPage: React.FC = () => {
   const [hasPendingAppointment, setHasPendingAppointment] = useState(false);
   const [checkingAppointment, setCheckingAppointment] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState<DOMRect | null>(null);
+  const [, setButtonPosition] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -190,7 +180,7 @@ const SingleClinicPage: React.FC = () => {
                       }
                     });
                     console.log("Photos response from private endpoint:", photosResponse.data);
-                  } catch (privateError) {
+                  } catch {
                     console.log("Private endpoint failed, trying public endpoint");
                     // Private endpoint başarısız olursa public endpoint'i dene
                     photosResponse = null;
@@ -493,13 +483,6 @@ const SingleClinicPage: React.FC = () => {
     });
   };
   
-  // Format day names
-  const getDayName = (index: number): string => {
-    // Days starting from Monday, index 0 = Monday
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return days[index];
-  };
-  
   // Format time
   const formatTime = (time: string): string => {
     if (!time) return 'Not specified';
@@ -631,16 +614,6 @@ const SingleClinicPage: React.FC = () => {
     
     // If user is logged in, open appointment modal
     setIsAppointmentModalOpen(true);
-  };
-  
-  // Function to generate slug
-  const generateSlug = (name: string, surname: string): string => {
-    return `dr-${name.toLowerCase()}-${surname.toLowerCase()}`
-      .replace(/\s+/g, '-')      // Replace spaces with hyphens
-      .replace(/[^\w\-]+/g, '')  // Remove non-word chars
-      .replace(/\-\-+/g, '-')    // Replace multiple hyphens with single
-      .replace(/^-+/, '')        // Trim hyphens from start
-      .replace(/-+$/, '');       // Trim hyphens from end
   };
   
   // Handle forgot password

@@ -35,7 +35,7 @@ const ContactUsPage: React.FC = () => {
 
     try {
       // Send data to backend API
-      const response = await axios.post('/api/contact-us', formData);
+      await axios.post('/api/contact-us', formData);
       
       // Show success message
       setSubmitResult({
