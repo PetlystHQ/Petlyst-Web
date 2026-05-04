@@ -4,7 +4,7 @@ interface PetsProps {
   // Gerekli prop'ları buraya ekleyin
 }
 
-const Pets: React.FC<PetsProps> = (props) => {
+const Pets: React.FC<PetsProps> = () => {
   const [loading, setLoading] = useState(true);
   
   // Örnek veri yükleme efekti

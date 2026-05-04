@@ -16,7 +16,6 @@ interface ClinicsProps {
 
 export const Clinics: React.FC<ClinicsProps> = ({
   isLoading: propIsLoading,
-  onEditClinic,
   refreshKey
 }) => {
   const [clinics, setClinics] = useState<Clinic[]>([]);

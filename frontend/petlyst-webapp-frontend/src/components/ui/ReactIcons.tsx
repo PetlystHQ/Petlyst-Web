@@ -1,8 +1,8 @@
 import React from 'react';
 import { IconType } from 'react-icons';
-import { FaPaw, FaHospital, FaSearch, FaArrowRight, FaExclamationCircle, FaUserMd, FaShoppingBag, FaDog, FaCat } from 'react-icons/fa';
-import { BsShop, BsCalendarCheck, BsPerson, BsTelephone, BsEnvelope, BsGeoAlt } from 'react-icons/bs';
-import { MdPets, MdLocalHospital, MdOutlineHealthAndSafety, MdEmail, MdLocationOn } from 'react-icons/md';
+import { FaPaw, FaHospital, FaUserMd, FaShoppingBag, FaDog, FaCat } from 'react-icons/fa';
+import { BsShop, BsCalendarCheck, BsPerson } from 'react-icons/bs';
+import { MdPets, MdLocalHospital, MdOutlineHealthAndSafety } from 'react-icons/md';
 import { HiOutlineMail, HiOutlineLocationMarker, HiOutlinePhone, HiOutlineCalendar, HiSearch, HiArrowRight, HiExclamationCircle } from 'react-icons/hi';
 import { IoIosWarning } from 'react-icons/io';
 

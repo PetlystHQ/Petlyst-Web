@@ -30,4 +30,6 @@ const Dashboard = () => {
   }, [user, token]);
 
   // Rest of the component...
-}; 
+};
+
+export default Dashboard;
