@@ -1,7 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../../store';
-import axios from 'axios';
+import React, { useState } from 'react';
 import InventoryList from '../../../components/clinic/management/inventory/InventoryList';
 import InventoryCategories from '../../../components/clinic/management/inventory/InventoryCategories';
 import InventoryTransactions from '../../../components/clinic/management/inventory/InventoryTransactions';
@@ -12,11 +9,8 @@ type TabType = 'items' | 'categories' | 'transactions' | 'idss';
 
 const InventoryManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('items');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const token = useSelector((state: RootState) => state.auth.token);
-  const clinicId = localStorage.getItem('selectedClinicId');
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
 
   const renderTabContent = () => {
     switch (activeTab) {

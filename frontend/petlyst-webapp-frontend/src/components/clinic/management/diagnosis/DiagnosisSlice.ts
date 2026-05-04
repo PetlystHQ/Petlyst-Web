@@ -13,9 +13,7 @@ import {
   getPetDiagnoses as apiGetPetDiagnoses,
   getExaminationDiagnoses as apiGetExaminationDiagnoses,
   getStandardDiagnoses as apiGetStandardDiagnoses,
-  createStandardDiagnosis as apiCreateStandardDiagnosis,
-  updateStandardDiagnosis as apiUpdateStandardDiagnosis,
-  deleteStandardDiagnosis as apiDeleteStandardDiagnosis
+  createStandardDiagnosis as apiCreateStandardDiagnosis
 } from './diagnosisService';
 import axios from 'axios';
 import { API_URL } from '../../../../config/api';

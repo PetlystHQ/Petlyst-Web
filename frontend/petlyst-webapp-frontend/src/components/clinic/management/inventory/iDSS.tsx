@@ -48,7 +48,7 @@ const IDSS: React.FC = () => {
       if (savedResponseData) {
         try {
           setResponseData(JSON.parse(savedResponseData));
-        } catch (e) {
+        } catch {
           // If parsing fails, use as string
           setResponseData(savedResponseData);
         }

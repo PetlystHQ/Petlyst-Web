@@ -1,4 +1,3 @@
-import axios from 'axios';
 import axiosInstance from '../../../../utils/axiosConfig';
 
 // Interfaces based on the backend model

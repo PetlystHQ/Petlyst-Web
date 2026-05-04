@@ -99,7 +99,7 @@ const PastAppointments: React.FC = () => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };
@@ -109,7 +109,7 @@ const PastAppointments: React.FC = () => {
     try {
       const date = new Date(isoString);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
+    } catch {
       return 'Invalid time';
     }
   };

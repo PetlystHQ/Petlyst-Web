@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -53,11 +53,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const handleBlur = (fieldName: string) => {
     setTouched({...touched, [fieldName]: true});
   };
-  
-  // Seçilen ürünün bilgilerini al
-  const selectedItem = formData.inventory_item_id 
-    ? inventoryItems.find(item => item.id === formData.inventory_item_id) 
-    : null;
   
   // Form submit öncesi veri kontrolü
   const handleSubmit = (e: React.FormEvent) => {

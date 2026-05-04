@@ -220,7 +220,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), 'dd MMMM yyyy');
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };
@@ -229,7 +229,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
   const formatTime = (timeString: string) => {
     try {
       return format(parseISO(timeString), 'HH:mm');
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };

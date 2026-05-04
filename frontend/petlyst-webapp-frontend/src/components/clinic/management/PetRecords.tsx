@@ -28,7 +28,7 @@ const PetRecords: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('name_asc');
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [, setLastRefresh] = useState<Date>(new Date());
   const [chipNumber, setChipNumber] = useState<string>('');
   const [isEditingChip, setIsEditingChip] = useState<boolean>(false);
   const [chipError, setChipError] = useState<string>('');
@@ -176,12 +176,6 @@ const PetRecords: React.FC = () => {
     return () => clearInterval(refreshInterval);
   }, [clinicId]);
 
-  // Add a manual refresh function
-  const handleManualRefresh = () => {
-    console.log('Manual refresh triggered');
-    fetchPets();
-  };
-
   // Filter pets based on search term
   const filteredPets = pets.filter(pet => {
     const searchString = searchTerm.toLowerCase();
@@ -223,7 +217,7 @@ const PetRecords: React.FC = () => {
         return 'N/A';
       }
       return date.toLocaleDateString();
-    } catch (error) {
+    } catch {
       return 'N/A';
     }
   };
@@ -476,86 +470,6 @@ const PetRecords: React.FC = () => {
     }
   };
 
-  // Handle starting an examination
-  const handleStartExamination = (petId: string) => {
-    console.log('Starting examination for pet ID:', petId);
-    
-    // Get clinic ID from localStorage
-    const clinicId = localStorage.getItem('selectedClinicId');
-    
-    if (!clinicId) {
-      alert('Clinic ID not found. Please refresh the page and try again.');
-      return;
-    }
-    
-    if (!petId) {
-      console.error('Pet ID is undefined or null');
-      return;
-    }
-    
-    try {
-      // Store pet ID in localStorage with a delay to ensure persistence
-      const storeAndDispatch = () => {
-        console.log('Storing pet ID in localStorage and dispatching event:', petId);
-        
-        // First, ensure we clear any previous values
-        localStorage.removeItem('startExamForPet');
-        
-        // Then set the new value
-        localStorage.setItem('startExamForPet', petId);
-        
-        // Close the pet details modal if it's open
-        if (isModalOpen) {
-          closePetModal();
-        }
-        
-        // Get the current URL
-        const currentUrl = window.location.href;
-        const isOnDashboard = currentUrl.includes(`/management-dashboard/${clinicId}`);
-        const isOnExaminationsTab = currentUrl.includes('tab=examinations');
-        
-        // If already on the examinations tab, just dispatch the direct event
-        if (isOnDashboard && isOnExaminationsTab) {
-          console.log('Already on examinations tab, dispatching examination event');
-          
-          // Use setTimeout to ensure UI updates before dispatching event
-          setTimeout(() => {
-            // Dispatch the event to trigger modal opening
-            const examEvent = new CustomEvent('startDiagnosis', { 
-              detail: { petId }
-            });
-            window.dispatchEvent(examEvent);
-            console.log('Dispatched startDiagnosis event');
-          }, 100);
-        } 
-        // If on dashboard but not on examinations tab
-        else if (isOnDashboard) {
-          console.log('On dashboard but not on examinations tab, switching tabs');
-          
-          // Dispatch event to switch tabs
-          const switchTabEvent = new CustomEvent('switchToExaminationsTab', {
-            detail: { clinicId, petId }
-          });
-          window.dispatchEvent(switchTabEvent);
-        }
-        // If not on dashboard at all
-        else {
-          console.log('Not on dashboard, navigating to examinations tab');
-          
-          // Navigate to the examinations tab
-          window.location.href = `/management-dashboard/${clinicId}?tab=examinations`;
-        }
-      };
-      
-      // Execute with a small delay to ensure clean execution
-      setTimeout(storeAndDispatch, 50);
-      
-    } catch (error) {
-      console.error('Error during examination start:', error);
-      alert('Failed to start examination. Please try again.');
-    }
-  };
-
   // Close pet details modal
   const closePetModal = () => {
     setSelectedPet(null);
@@ -751,11 +665,6 @@ const PetRecords: React.FC = () => {
         </div>
       </div>
     );
-  };
-
-  // Add timestamp in the UI to show when data was last refreshed
-  const formatRefreshTime = () => {
-    return lastRefresh.toLocaleTimeString();
   };
 
   return (

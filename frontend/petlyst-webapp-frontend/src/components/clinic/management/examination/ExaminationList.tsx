@@ -13,7 +13,6 @@ import { format } from 'date-fns';
 import { FaEdit, FaTrash, FaEye, FaPlus, FaStethoscope } from 'react-icons/fa';
 import ExaminationDetailModal from './ExaminationDetailModal';
 import NewExaminationModal from './NewExaminationModal';
-import axios from 'axios';
 import axiosInstance from '../../../../utils/axiosConfig';
 
 interface ExaminationListProps {
@@ -736,7 +735,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
                       } else {
                         // For many pages, show current page in the middle with 2 pages on each side
                         const start = Math.max(1, currentPage - 2);
-                        const end = Math.min(totalPages, start + 4);
                         pageNum = start + index;
                         if (pageNum > totalPages) return null;
                       }

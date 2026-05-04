@@ -86,7 +86,7 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<ReviewStats | null>(null);
-  const [averageRating, setAverageRating] = useState<number>(0);
+  const [, setAverageRating] = useState<number>(0);
   const [ratingCounts, setRatingCounts] = useState<Record<number, number>>({1: 0, 2: 0, 3: 0, 4: 0, 5: 0});
   const [showGrowingTrustTips, setShowGrowingTrustTips] = useState<boolean>(true);
 

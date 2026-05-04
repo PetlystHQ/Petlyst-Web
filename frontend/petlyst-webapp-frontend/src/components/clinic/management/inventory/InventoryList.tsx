@@ -54,7 +54,7 @@ const InventoryList: React.FC = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentItem, setCurrentItem] = useState<InventoryItem | null>(null);
@@ -200,7 +200,7 @@ const InventoryList: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     
     // Prevent default form behavior to maintain focus (only if it's a real event)
     if (e.preventDefault && typeof e.preventDefault === 'function') {
@@ -262,10 +262,6 @@ const InventoryList: React.FC = () => {
     
     setCurrentItem(itemCopy);
     setShowEditModal(true);
-  };
-
-  const openAddStockModal = (item: InventoryItem) => {
-    // To be implemented for stock transactions
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
@@ -363,57 +359,6 @@ const InventoryList: React.FC = () => {
     } catch (err: any) {
       console.error('Error adding inventory item:', err);
       setError(err.response?.data?.message || 'Failed to add inventory item');
-    }
-  };
-
-  const handleEditItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !clinicId || !currentItem) return;
-
-    try {
-      // Create a copy of formData with proper handling for numeric values and dates
-      const dataToSubmit = {
-        ...formData,
-        // Convert all numeric values to integers (required by the DB schema)
-        current_quantity: typeof formData.current_quantity === 'string' ? 
-          (formData.current_quantity === '' ? 0 : parseInt(formData.current_quantity, 10)) : 
-          parseInt(String(formData.current_quantity || 0), 10),
-        
-        min_quantity: typeof formData.min_quantity === 'string' ? 
-          (formData.min_quantity === '' ? 0 : parseInt(formData.min_quantity, 10)) : 
-          parseInt(String(formData.min_quantity || 0), 10),
-        
-        purchase_price: typeof formData.purchase_price === 'string' ? 
-          (formData.purchase_price === '' ? 0 : parseInt(formData.purchase_price, 10)) : 
-          parseInt(String(formData.purchase_price || 0), 10),
-        
-        sale_price: typeof formData.sale_price === 'string' ? 
-          (formData.sale_price === '' ? 0 : parseInt(formData.sale_price, 10)) : 
-          parseInt(String(formData.sale_price || 0), 10),
-        
-        // Other fields
-        expiry_date: formData.expiry_date === '' ? null : formData.expiry_date
-      };
-
-      console.log('Submitting edit with integer values:', dataToSubmit);
-
-      const response = await axios.put(
-        `${API_URL}/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
-        dataToSubmit,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (response.data.success) {
-        await fetchInventoryItems();
-        closeModals();
-      }
-    } catch (err: any) {
-      console.error('Error updating inventory item:', err);
-      setError(err.response?.data?.message || 'Failed to update inventory item');
     }
   };
 

@@ -381,7 +381,7 @@ const UpcomingAppointments: React.FC = () => {
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };

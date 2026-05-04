@@ -32,7 +32,7 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
   onEditDiagnosis
 }) => {
   const dispatch = useAppDispatch();
-  const { diagnoses, loading, error, totalCount, currentDiagnosis, success } = useAppSelector(state => state.diagnoses);
+  const { diagnoses, loading, error, totalCount, success } = useAppSelector(state => state.diagnoses);
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'diagnoses' | 'standard'>('diagnoses');
