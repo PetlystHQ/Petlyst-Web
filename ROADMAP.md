@@ -570,6 +570,24 @@ here so they don't get lost.
 - **Backend Prettier config.** Effort 1 adds backend ESLint; aligning
   Prettier between frontend (3.3.3) and backend stays a separate, cosmetic
   task.
+- **Dependency vulnerabilities.** GitHub Dependabot surfaces 103 advisories
+  total (3 critical, 53 high, 39 moderate, 8 low) across both lockfiles.
+  After deduplication, the reachable picture is narrower and triages into
+  two very different efforts:
+  - *Frontend (5 advisories):* all auto-fixable via `npm audit fix`. Direct
+    bumps for `axios` (SSRF + DoS class — `GHSA-jr5f-v2jv-69x6` et al.) and
+    `react-router-dom` (XSS + redirect class — `GHSA-2w69-qvjg-hvjx` et
+    al.); the one critical advisory (`form-data` boundary RNG) sits
+    transitively under axios and clears with the axios bump. Plan as a
+    single commit after Effort 1 ships so the diff isn't intermixed with
+    the lint sweep.
+  - *Backend (37 advisories):* direct production dependencies affected —
+    `@aws-sdk/client-s3` (critical), `express`, `nodemailer`, `sequelize`
+    (high), `aws-sdk` v2, `uuid` (moderate), `body-parser` (low). The
+    `aws-sdk` v2 → v3 migration is non-trivial; Sequelize and Express
+    majors have known API deltas. Needs a separate dep-bump sprint that
+    batches each major with a manual smoke check, not a single
+    `npm audit fix`.
 - **Duplicate `DashboardSidebar.tsx`.** Two files with the same name live
   under `components/dashboard/` and `components/layout/`. Reconcile to one
   during Effort 2.
