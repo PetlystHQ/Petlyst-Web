@@ -1,5 +1,4 @@
 import React, { useState, useEffect, KeyboardEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface SearchSuggestion {
@@ -12,12 +11,11 @@ interface SmallSearchBarProps {
   onSearch: (query: string) => void;
 }
 
-const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery, onSearch }) => {
+const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery }) => {
   const [searchQuery, setSearchQuery] = useState(initialQuery || '');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const navigate = useNavigate();
 
   // Update local state when prop changes
   useEffect(() => {

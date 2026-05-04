@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createGoogleMapsDirectionsUrl, openGoogleMapsDirections } from './mapUtils';
+import { createGoogleMapsDirectionsUrl } from './mapUtils';
 
 // Telefon numarası için arayüz
 interface PhoneNumber {

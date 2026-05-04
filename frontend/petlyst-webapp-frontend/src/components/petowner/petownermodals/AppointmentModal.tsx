@@ -58,8 +58,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [reason, setReason] = useState<string>('');
   
   const token = useSelector((state: RootState) => state.auth.token);
-  const user = useSelector((state: RootState) => state.auth.user);
-  
+
   // Close modal with escape key
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -197,8 +196,8 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       
       // Create slots for the selected date
       const slots: TimeSlot[] = [];
-      const selectedDateObj = new Date(selectedDate);
-      
+
+
       // Start time in minutes since midnight
       let startTimeMinutes = openingHour * 60 + openingMinute;
       const endTimeMinutes = closingHour * 60 + closingMinute;

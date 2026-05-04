@@ -184,11 +184,6 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     }
   };
 
-  // Handle toggle for emergency filter
-  const handleEmergencyToggle = () => {
-    updateFilters({ emergency: currentFilters.emergency === 'true' ? '' : 'true' });
-  };
-  
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
       {/* Search Type Filter - NEW SECTION */}

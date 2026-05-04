@@ -57,7 +57,7 @@ const calculateAge = (birthDateString: string): string => {
     } else {
       return `${age} years old`;
     }
-  } catch (e) {
+  } catch {
     return 'Unknown age';
   }
 };

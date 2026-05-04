@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { API_ENDPOINTS } from '../../constants/dashboard';
-import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES, getExpertiseNameById } from '../../constants/VeterinaryExpertise';
-import { VETERINARY_LANGUAGES, LANGUAGE_CATEGORIES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
+import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES } from '../../constants/VeterinaryExpertise';
+import { VETERINARY_LANGUAGES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
 import { API_URL } from '../../config/api';
 
 interface Education {
@@ -180,9 +180,6 @@ const VeterinarianProfile: React.FC = () => {
   // Verification status state
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'unverified' | null>(null);
   const [verificationLoading, setVerificationLoading] = useState<boolean>(false);
-  
-  // New state to track if any join request has been sent
-  const [hasActivePendingRequest, setHasActivePendingRequest] = useState<boolean>(false);
   
   // State for pending request
   const [hasPendingRequest, setHasPendingRequest] = useState<boolean>(false);
@@ -529,11 +526,6 @@ const VeterinarianProfile: React.FC = () => {
   const handleCertificationFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCertificationFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleExpertiseFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setExpertiseFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmitEducation = async (e: React.FormEvent) => {

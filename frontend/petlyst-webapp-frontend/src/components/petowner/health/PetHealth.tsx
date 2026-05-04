@@ -127,22 +127,6 @@ const PetHealth: React.FC<PetHealthProps> = ({ pets, loading, error }) => {
     });
   };
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return '';
-    try {
-      const timePart = timeString.includes('T') 
-        ? timeString.split('T')[1].substring(0, 5) 
-        : timeString.includes(':') 
-          ? timeString.substring(0, 5) 
-          : timeString;
-      
-      return timePart;
-    } catch (e) {
-      console.error('Error formatting time:', e);
-      return '';
-    }
-  };
-
   // Group diagnoses by examination ID for easier rendering
   const diagnosesByExamination: { [key: string]: Diagnosis[] } = {};
   diagnoses.forEach(diagnosis => {

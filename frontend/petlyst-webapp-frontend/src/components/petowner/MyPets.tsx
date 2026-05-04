@@ -105,20 +105,6 @@ const MyPets: React.FC<MyPetsProps> = ({
     petName: ''
   });
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // Check if date is valid before formatting
-    if (isNaN(date.getTime())) {
-      return null; // Return null for invalid dates
-    }
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   // Open modal to add new pet
   const handleAddPet = () => {
     setShowAddModal(true);

@@ -1,6 +1,5 @@
 import React from 'react';
 import { FormStep } from '../../../types/clinic';
-import { useNavigate } from 'react-router-dom';
 
 interface Step {
   id: FormStep;
@@ -22,7 +21,6 @@ export const StepProgressBar: React.FC<StepProgressBarProps> = ({
   loading,
   handleBackToDashboard
 }) => {
-  const navigate = useNavigate();
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
   
   // Icons for each step type

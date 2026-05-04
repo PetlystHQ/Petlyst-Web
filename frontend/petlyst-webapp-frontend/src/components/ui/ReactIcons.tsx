@@ -1,4 +1,3 @@
-import React from 'react';
 import { IconType } from 'react-icons';
 import { FaPaw, FaHospital, FaUserMd, FaShoppingBag, FaDog, FaCat } from 'react-icons/fa';
 import { BsShop, BsCalendarCheck, BsPerson } from 'react-icons/bs';

@@ -4,10 +4,6 @@ import axiosInstance from "../../utils/axiosConfig";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
 
-interface Pet {
-  pet_id: string;
-  pet_name: string;
-}
 
 interface Appointment {
   appointment_id: string;

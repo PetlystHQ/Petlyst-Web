@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import axiosInstance from '../../../utils/axiosConfig';
 import StarRating from './StarRating';
 
@@ -45,7 +44,6 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
   onSubmitSuccess,
   onCancel
 }) => {
-  const navigate = useNavigate();
   const isEditMode = !!existingReview;
   
   // Form state - initialize with existing values if in edit mode

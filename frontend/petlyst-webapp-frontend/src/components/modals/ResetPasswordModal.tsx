@@ -121,7 +121,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
         } else {
           setError(data.message || 'Failed to send verification code');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -157,7 +157,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
         } else {
           setError(data.message || 'Invalid verification code');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -193,7 +193,7 @@ const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ isOpen, onClose
         } else {
           setError(data.message || 'Failed to reset password');
         }
-      } catch (err) {
+      } catch {
         setError('An error occurred. Please try again later.');
       } finally {
         setIsLoading(false);

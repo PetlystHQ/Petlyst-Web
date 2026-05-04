@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import axios from 'axios';
 import { API_ENDPOINTS, DASHBOARD_VIEWS } from '../../constants/dashboard';
@@ -27,7 +26,6 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completionStatus, setCompletionStatus] = useState<ProfileCompletionStatus | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCompletionStatus = async () => {
