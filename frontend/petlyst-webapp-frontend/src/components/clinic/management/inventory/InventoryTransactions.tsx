@@ -4,7 +4,7 @@ import { RootState } from '../../../../store';
 import axios from 'axios';
 import AddTransactionModal from './inventorymodals/AddTransactionModal';
 import { API_URL } from '../../../../config/api';
-
+import { getApiErrorMessage, getApiErrorResponse } from '../../../../utils/errorMessage';
 // Interface for inventory item
 interface InventoryItem {
   id: string;
@@ -141,9 +141,9 @@ const InventoryTransactions: React.FC = () => {
       } else {
         setError('Failed to load transactions');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching transactions:', err);
-      setError(err.response?.data?.message || 'Failed to fetch transactions');
+      setError(getApiErrorMessage(err, 'Failed to fetch transactions'));
     } finally {
       setLoading(false);
     }
@@ -162,7 +162,7 @@ const InventoryTransactions: React.FC = () => {
       if (response.data.success && response.data.items) {
         setInventoryItems(response.data.items);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching inventory items:', err);
     }
   };
@@ -265,10 +265,10 @@ const InventoryTransactions: React.FC = () => {
         await fetchInventoryItems(); // Refresh inventory items as quantities may have changed
         closeModals();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding transaction:', err);
       // Daha detaylı hata mesajı göster
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to add transaction';
+      const errorMessage = getApiErrorResponse(err)?.data?.error || getApiErrorMessage(err, 'Failed to add transaction');
       setError(errorMessage);
     }
   };

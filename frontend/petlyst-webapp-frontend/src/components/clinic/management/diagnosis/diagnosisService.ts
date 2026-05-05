@@ -1,6 +1,7 @@
 import axios from 'axios';
 import axiosInstance from '../../../../utils/axiosConfig';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Diagnosis Interface
 export interface Diagnosis {
@@ -190,9 +191,9 @@ export const getStandardDiagnoses = async (species?: string): Promise<StandardDi
     const params = species ? { species } : {};
     const response = await api.get(url, { params });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching standard diagnoses:', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch standard diagnoses');
+    throw new Error(getApiErrorMessage(error, 'Failed to fetch standard diagnoses'));
   }
 };
 
@@ -201,9 +202,9 @@ export const getVeterinarianDiagnoses = async (): Promise<StandardDiagnosis[]> =
   try {
     const response = await api.get('/api/diagnoses/standard/veterinarian');
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching veterinarian diagnoses:', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch veterinarian diagnoses');
+    throw new Error(getApiErrorMessage(error, 'Failed to fetch veterinarian diagnoses'));
   }
 };
 
@@ -212,9 +213,9 @@ export const getStandardDiagnosisById = async (id: number): Promise<StandardDiag
   try {
     const response = await api.get(`/api/diagnoses/standard/id/${id}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error fetching standard diagnosis ${id}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to fetch standard diagnosis ${id}`);
+    throw new Error(getApiErrorMessage(error, `Failed to fetch standard diagnosis ${id}`));
   }
 };
 
@@ -223,9 +224,9 @@ export const getStandardDiagnosis = async (code: string): Promise<StandardDiagno
   try {
     const response = await api.get(`/api/diagnoses/standard/code/${code}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error fetching standard diagnosis ${code}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to fetch standard diagnosis ${code}`);
+    throw new Error(getApiErrorMessage(error, `Failed to fetch standard diagnosis ${code}`));
   }
 };
 
@@ -234,9 +235,9 @@ export const createStandardDiagnosis = async (diagnosisData: StandardDiagnosisFo
   try {
     const response = await api.post('/api/diagnoses/standard', diagnosisData);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating standard diagnosis:', error);
-    throw new Error(error.response?.data?.message || 'Failed to create standard diagnosis');
+    throw new Error(getApiErrorMessage(error, 'Failed to create standard diagnosis'));
   }
 };
 
@@ -245,9 +246,9 @@ export const updateStandardDiagnosisById = async (id: number, diagnosisData: Par
   try {
     const response = await api.put(`/api/diagnoses/standard/id/${id}`, diagnosisData);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error updating standard diagnosis ${id}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to update standard diagnosis ${id}`);
+    throw new Error(getApiErrorMessage(error, `Failed to update standard diagnosis ${id}`));
   }
 };
 
@@ -256,9 +257,9 @@ export const updateStandardDiagnosis = async (code: string, diagnosisData: Parti
   try {
     const response = await api.put(`/api/diagnoses/standard/code/${code}`, diagnosisData);
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error updating standard diagnosis ${code}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to update standard diagnosis ${code}`);
+    throw new Error(getApiErrorMessage(error, `Failed to update standard diagnosis ${code}`));
   }
 };
 
@@ -266,9 +267,9 @@ export const updateStandardDiagnosis = async (code: string, diagnosisData: Parti
 export const deleteStandardDiagnosisById = async (id: number): Promise<void> => {
   try {
     await api.delete(`/api/diagnoses/standard/id/${id}`);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error deleting standard diagnosis ${id}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to delete standard diagnosis ${id}`);
+    throw new Error(getApiErrorMessage(error, `Failed to delete standard diagnosis ${id}`));
   }
 };
 
@@ -276,8 +277,8 @@ export const deleteStandardDiagnosisById = async (id: number): Promise<void> => 
 export const deleteStandardDiagnosis = async (code: string): Promise<void> => {
   try {
     await api.delete(`/api/diagnoses/standard/code/${code}`);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error deleting standard diagnosis ${code}:`, error);
-    throw new Error(error.response?.data?.message || `Failed to delete standard diagnosis ${code}`);
+    throw new Error(getApiErrorMessage(error, `Failed to delete standard diagnosis ${code}`));
   }
 };

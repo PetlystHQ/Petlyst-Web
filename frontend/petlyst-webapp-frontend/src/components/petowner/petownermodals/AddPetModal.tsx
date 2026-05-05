@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import axiosInstance from '../../../utils/axiosConfig';
 import PET_TYPES_AND_BREEDS, { getBreedsByPetTypeName, PetBreed } from '../../../constants/PetTypesAndBreeds';
-
+import { getApiErrorMessage, getApiErrorResponse, isApiError } from '../../../utils/errorMessage';
 // Pet form data interface
 interface PetFormData {
   name: string;
@@ -524,18 +524,18 @@ const AddPetModal: React.FC<AddPetModalProps> = ({
           submit: response.data.message || "Failed to add pet. Please try again."
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error adding pet:", error);
       
       // Enhanced error handling
       let errorMessage = "Failed to add pet. Please try again.";
       
-      if (error.response) {
+      if (getApiErrorResponse(error)) {
         // Server returned an error response
-        if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message;
+        if (getApiErrorResponse(error)?.data && getApiErrorMessage(error)) {
+          errorMessage = getApiErrorMessage(error);
         }
-      } else if (error.request) {
+      } else if (isApiError(error) && error.request) {
         // Request was made but no response received
         errorMessage = "No response from server. Please check your internet connection.";
       }

@@ -67,7 +67,7 @@ export const listExaminations = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -84,7 +84,7 @@ export const getExamination = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -101,7 +101,7 @@ export const createExamination = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -118,7 +118,7 @@ export const updateExamination = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -135,7 +135,7 @@ export const updateExaminationStatus = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -152,7 +152,7 @@ export const getPetExaminationHistory = createAsyncThunk(
       }
       
       return response;
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }
@@ -172,7 +172,7 @@ export const deleteExamination = createAsyncThunk(
         success: true, 
         examinationId 
       };
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(handleApiError(error));
     }
   }

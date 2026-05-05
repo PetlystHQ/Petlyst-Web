@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { API_URL } from '../../config/api';
+import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface ViewClinicModalProps {
   isOpen: boolean;
@@ -30,9 +31,9 @@ const ViewClinicModal: React.FC<ViewClinicModalProps> = ({ isOpen, onClose, clin
           }
         );
         setPhotos(response.data.photos || []);
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching photos:', err);
-        setError(err.response?.data?.message || 'Failed to fetch photos');
+        setError(getApiErrorMessage(err, 'Failed to fetch photos'));
       } finally {
         setLoading(false);
       }

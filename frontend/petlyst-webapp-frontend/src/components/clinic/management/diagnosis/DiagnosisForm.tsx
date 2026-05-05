@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../../../hooks/useAppDispatch';
 import { useAppSelector } from '../../../../hooks/useAppSelector';
+import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../../../../utils/errorMessage';
 import { 
   createDiagnosis, 
   updateDiagnosis,
@@ -277,12 +278,12 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           }));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('DiagnosisForm - Error fetching clinic examinations:', error);
       console.error('DiagnosisForm - Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
+        message: getApiErrorMessage(error),
+        status: getApiErrorStatus(error),
+        data: getApiErrorResponse(error)?.data
       });
       
       setErrors(prev => ({ ...prev, examinations: 'Failed to load clinic examinations' }));
@@ -364,12 +365,12 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         setExaminations([]);
         setHasExaminations(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('DiagnosisForm - Error fetching examinations:', error);
       console.error('DiagnosisForm - Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
+        message: getApiErrorMessage(error),
+        status: getApiErrorStatus(error),
+        data: getApiErrorResponse(error)?.data
       });
       
       setErrors(prev => ({ ...prev, examinations: 'Failed to load examinations' }));

@@ -5,6 +5,7 @@ import axios from 'axios';
 import AddCategoryModal from './inventorymodals/AddCategoryModal';
 import EditCategoryModal from './inventorymodals/EditCategoryModal';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Interface for category
 interface Category {
@@ -97,9 +98,9 @@ const InventoryCategories: React.FC = () => {
       } else {
         setError('Failed to load categories');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching categories:', err);
-      setError(err.response?.data?.message || 'Failed to fetch categories');
+      setError(getApiErrorMessage(err, 'Failed to fetch categories'));
     } finally {
       setLoading(false);
     }
@@ -173,9 +174,9 @@ const InventoryCategories: React.FC = () => {
         await fetchCategories();
         closeModals();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding category:', err);
-      setError(err.response?.data?.message || 'Failed to add category');
+      setError(getApiErrorMessage(err, 'Failed to add category'));
     }
   };
 
@@ -198,9 +199,9 @@ const InventoryCategories: React.FC = () => {
         await fetchCategories();
         closeModals();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating category:', err);
-      setError(err.response?.data?.message || 'Failed to update category');
+      setError(getApiErrorMessage(err, 'Failed to update category'));
     }
   };
 

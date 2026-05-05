@@ -10,6 +10,7 @@ import { EditVisuals } from '../components/clinic/forms/EditVisuals';
 import { EditServices } from '../components/clinic/forms/EditServices';
 import EditHours from '../components/clinic/forms/EditHours';
 import EditRegistration from '../components/clinic/forms/EditRegistration';
+import { getApiErrorMessage } from '../utils/errorMessage';
 
 const EditClinicPage: React.FC = () => {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -122,9 +123,9 @@ const EditClinicPage: React.FC = () => {
           } : undefined
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinic data:', err);
-      setError(err.response?.data?.message || 'Failed to load clinic information');
+      setError(getApiErrorMessage(err, 'Failed to load clinic information'));
     } finally {
       setLoading(false);
     }
@@ -369,9 +370,9 @@ const EditClinicPage: React.FC = () => {
           setSuccess(null);
         }, 3000);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating clinic:', err);
-      setError(err.response?.data?.message || 'Failed to update clinic');
+      setError(getApiErrorMessage(err, 'Failed to update clinic'));
     } finally {
       setSaving(false);
     }

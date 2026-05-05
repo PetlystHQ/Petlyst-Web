@@ -5,7 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { updateProfile } from '../../store/slices/authSlice';
 import axiosInstance from '../../utils/axiosConfig';
 import { PencilIcon, CheckIcon, ArrowUpTrayIcon, UserCircleIcon } from '@heroicons/react/24/outline';
-
+import { getApiErrorMessage, getApiErrorResponse } from '../../utils/errorMessage';
 interface MyProfileProps {
   loading?: boolean;
   error?: string | null;
@@ -51,9 +51,9 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
           profilePhoto: userData.profile_photo || '',
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching profile data:', err);
-      setFetchError(err.response?.data?.message || 'Failed to fetch profile data');
+      setFetchError(getApiErrorMessage(err, 'Failed to fetch profile data'));
     } finally {
       setFetchLoading(false);
     }
@@ -213,9 +213,9 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
           fetchProfileData();
         }, 500);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Profile photo removal error:', err);
-      setUpdateError(err.response?.data?.message || 'Failed to remove profile photo');
+      setUpdateError(getApiErrorMessage(err, 'Failed to remove profile photo'));
     } finally {
       setUpdateLoading(false);
     }
@@ -303,10 +303,10 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
           profilePhoto: updatedProfile.profile_photo || ''
         }));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Profile update error:', err);
-      console.error('Error response:', err.response?.data);
-      setUpdateError(err.response?.data?.message || 'Failed to update profile');
+      console.error('Error response:', getApiErrorResponse(err)?.data);
+      setUpdateError(getApiErrorMessage(err, 'Failed to update profile'));
     } finally {
       setUpdateLoading(false);
     }

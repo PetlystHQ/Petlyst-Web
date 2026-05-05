@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import { getApiErrorStatus } from '../utils/errorMessage';
 
 // Saved clinic interface
 interface SavedClinic {
@@ -50,9 +51,9 @@ const SavedClinicsPage: React.FC = () => {
         } else {
           setError('Failed to load saved clinics');
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching saved clinics:', err);
-        if (err.response?.status === 403) {
+        if (getApiErrorStatus(err) === 403) {
           setError('Only pet owners can access saved clinics');
         } else {
           setError('Failed to load saved clinics. Please try again later.');

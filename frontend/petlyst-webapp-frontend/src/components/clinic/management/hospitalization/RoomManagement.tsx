@@ -5,6 +5,7 @@ import { RootState } from '../../../../store';
 import RoomCard from './RoomCard';
 import RoomForm from './RoomForm';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Define interfaces
 interface Room {
@@ -67,9 +68,9 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
       } else {
         setError('Failed to fetch rooms');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching rooms:', err);
-      setError(err.response?.data?.message || 'Failed to fetch rooms');
+      setError(getApiErrorMessage(err, 'Failed to fetch rooms'));
     } finally {
       setLoading(false);
     }
@@ -143,9 +144,9 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
           setError('Failed to create room');
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error submitting room:', err);
-      setError(err.response?.data?.message || 'Failed to save room');
+      setError(getApiErrorMessage(err, 'Failed to save room'));
     } finally {
       setLoading(false);
     }
@@ -176,9 +177,9 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
       } else {
         setError('Failed to delete room');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error deleting room:', err);
-      setError(err.response?.data?.message || 'Failed to delete room');
+      setError(getApiErrorMessage(err, 'Failed to delete room'));
     } finally {
       setLoading(false);
     }
@@ -208,9 +209,9 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
       } else {
         setError('Failed to update room status');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating room status:', err);
-      setError(err.response?.data?.message || 'Failed to update room status');
+      setError(getApiErrorMessage(err, 'Failed to update room status'));
     } finally {
       setLoading(false);
     }

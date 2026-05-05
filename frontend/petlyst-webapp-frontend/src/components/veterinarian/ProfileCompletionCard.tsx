@@ -44,7 +44,7 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
         } else {
           setError(response.data.message || 'Failed to load profile completion status');
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error fetching profile completion status:', error);
         setError('Failed to load profile completion status');
       } finally {

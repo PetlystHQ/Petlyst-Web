@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axiosInstance from '../../../utils/axiosConfig';
 import StarRating from './StarRating';
-
+import { getApiErrorMessage, getApiErrorResponse } from '../../../utils/errorMessage';
 interface Review {
   clinic_review_id: string;
   clinic_id: string;
@@ -140,20 +140,20 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
           }
         }, 1500);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error submitting review:', err);
       
       // Handle duplicate key error specifically
-      if (err.response?.data?.message?.includes('duplicate key value violates unique constraint') ||
-          err.response?.data?.message?.includes('A review already exists for this appointment')) {
+      if (getApiErrorMessage(err)?.includes('duplicate key value violates unique constraint') ||
+          getApiErrorMessage(err)?.includes('A review already exists for this appointment')) {
         setError('You have already submitted a review for this appointment. Please edit your existing review instead.');
       } else {
-        setError(err.response?.data?.message || 'Failed to submit review. Please try again.');
+        setError(getApiErrorMessage(err, 'Failed to submit review. Please try again.'));
       }
       
       // If this is a development environment, log additional details
       if (process.env.NODE_ENV === 'development') {
-        console.log('Error details:', err.response?.data);
+        console.log('Error details:', getApiErrorResponse(err)?.data);
       }
     } finally {
       setIsSubmitting(false);

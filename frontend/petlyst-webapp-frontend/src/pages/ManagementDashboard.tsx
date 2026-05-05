@@ -14,7 +14,7 @@ import DiagnosisList from '../components/clinic/management/diagnosis/DiagnosisLi
 import Calendar from '../components/clinic/management/Calendar';
 import ClinicReviews from '../components/clinic/management/review/ClinicReviews';
 import { API_URL } from '../config/api';
-
+import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 interface ClinicData {
   clinic_id: string;
   clinic_name: string;
@@ -497,9 +497,9 @@ const ManagementDashboard: React.FC = () => {
       } else {
         setStaffError('Failed to load staff members');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinic veterinarians:', err);
-      setStaffError(err.response?.data?.message || 'Failed to fetch staff members');
+      setStaffError(getApiErrorMessage(err, 'Failed to fetch staff members'));
     } finally {
       setStaffLoading(false);
     }
@@ -545,9 +545,9 @@ const ManagementDashboard: React.FC = () => {
       } else {
         setStaffError(`Failed to ${status === 'approved' ? 'approve' : 'reject'} request`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error ${status === 'approved' ? 'approving' : 'rejecting'} request:`, err);
-      setStaffError(err.response?.data?.message || `Failed to ${status === 'approved' ? 'approve' : 'reject'} request`);
+      setStaffError(getApiErrorResponse(err)?.data?.message || `Failed to ${status === 'approved' ? 'approve' : 'reject'} request`);
     } finally {
       setActionInProgress(null);
     }
@@ -583,9 +583,9 @@ const ManagementDashboard: React.FC = () => {
       } else {
         setStaffError('Failed to remove veterinarian');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error removing veterinarian:', err);
-      setStaffError(err.response?.data?.message || 'Failed to remove veterinarian');
+      setStaffError(getApiErrorMessage(err, 'Failed to remove veterinarian'));
     } finally {
       setActionInProgress(null);
     }
@@ -869,19 +869,19 @@ const ManagementDashboard: React.FC = () => {
           console.log('User is the clinic operator - authorization successful');
           setClinic(clinicData);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching clinic data:', err);
-        if (err.response) {
+        if (getApiErrorResponse(err)) {
           console.error('API response error:', {
-            status: err.response.status,
-            data: err.response.data
+            status: getApiErrorStatus(err),
+            data: getApiErrorResponse(err)?.data
           });
         }
         
-        if (err.response?.status === 403) {
+        if (getApiErrorStatus(err) === 403) {
           setUnauthorized(true);
         } else {
-          setError(err.response?.data?.message || 'Failed to fetch clinic data');
+          setError(getApiErrorMessage(err, 'Failed to fetch clinic data'));
         }
       } finally {
         setLoading(false);
@@ -978,9 +978,9 @@ const ManagementDashboard: React.FC = () => {
       } else {
         setError(`Failed to ${action} clinic`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error ${action}ing clinic:`, err);
-      setError(err.response?.data?.message || `Failed to ${action} clinic`);
+      setError(getApiErrorMessage(err, `Failed to ${action} clinic`));
     } finally {
       setLoading(false);
     }

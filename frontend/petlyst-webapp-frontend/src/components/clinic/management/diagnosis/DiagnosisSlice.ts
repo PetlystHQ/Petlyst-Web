@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 import { 
   Diagnosis, 
   DiagnosisData, 
@@ -65,7 +66,7 @@ api.interceptors.request.use(
 
 // Helper function to handle API errors
 const handleApiError = (error: any, rejectWithValue: any) => {
-  const errorMessage = error.response?.data?.message || 'An error occurred';
+  const errorMessage = getApiErrorMessage(error, 'An error occurred');
   return rejectWithValue(errorMessage);
 };
 
@@ -75,8 +76,8 @@ export const createDiagnosis = createAsyncThunk(
   async (diagnosisData: DiagnosisData, { rejectWithValue }) => {
     try {
       return await apiCreateDiagnosis(diagnosisData);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create diagnosis');
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to create diagnosis'));
     }
   }
 );
@@ -86,8 +87,8 @@ export const getDiagnosis = createAsyncThunk(
   async (diagnosisId: number, { rejectWithValue }) => {
     try {
       return await apiGetDiagnosis(diagnosisId);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to get diagnosis ${diagnosisId}`);
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, `Failed to get diagnosis ${diagnosisId}`));
     }
   }
 );
@@ -97,8 +98,8 @@ export const listDiagnoses = createAsyncThunk(
   async (filters: DiagnosisFilters = {}, { rejectWithValue }) => {
     try {
       return await apiListDiagnoses(filters);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to list diagnoses');
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to list diagnoses'));
     }
   }
 );
@@ -108,8 +109,8 @@ export const updateDiagnosis = createAsyncThunk(
   async ({ diagnosisId, diagnosisData }: { diagnosisId: number, diagnosisData: Partial<DiagnosisData> }, { rejectWithValue }) => {
     try {
       return await apiUpdateDiagnosis(diagnosisId, diagnosisData);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to update diagnosis ${diagnosisId}`);
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, `Failed to update diagnosis ${diagnosisId}`));
     }
   }
 );
@@ -120,8 +121,8 @@ export const deleteDiagnosis = createAsyncThunk(
     try {
       await apiDeleteDiagnosis(diagnosisId);
       return diagnosisId;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to delete diagnosis ${diagnosisId}`);
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, `Failed to delete diagnosis ${diagnosisId}`));
     }
   }
 );
@@ -131,8 +132,8 @@ export const getPetDiagnoses = createAsyncThunk(
   async (petId: number, { rejectWithValue }) => {
     try {
       return await apiGetPetDiagnoses(petId);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to get diagnoses for pet ${petId}`);
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, `Failed to get diagnoses for pet ${petId}`));
     }
   }
 );
@@ -142,8 +143,8 @@ export const getExaminationDiagnoses = createAsyncThunk(
   async (examinationId: number, { rejectWithValue }) => {
     try {
       return await apiGetExaminationDiagnoses(examinationId);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || `Failed to get diagnoses for examination ${examinationId}`);
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, `Failed to get diagnoses for examination ${examinationId}`));
     }
   }
 );
@@ -153,8 +154,8 @@ export const getStandardDiagnoses = createAsyncThunk(
   async (species: string | undefined, { rejectWithValue }) => {
     try {
       return await apiGetStandardDiagnoses(species);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to get standard diagnoses');
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to get standard diagnoses'));
     }
   }
 );
@@ -165,8 +166,8 @@ export const createStandardDiagnosis = createAsyncThunk(
   async (diagnosisData: CreateStandardDiagnosisData, { rejectWithValue }) => {
     try {
       return await apiCreateStandardDiagnosis(diagnosisData as StandardDiagnosisFormData);
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create standard diagnosis');
+    } catch (error) {
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to create standard diagnosis'));
     }
   }
 );
@@ -195,7 +196,7 @@ export const updateStandardDiagnosis = createAsyncThunk(
       }
       
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
       return handleApiError(error, rejectWithValue);
     }
   }
@@ -216,7 +217,7 @@ export const deleteStandardDiagnosis = createAsyncThunk(
       }
       
       return { id: diagnosisIdOrCode, response: response.data };
-    } catch (error: any) {
+    } catch (error) {
       return handleApiError(error, rejectWithValue);
     }
   }

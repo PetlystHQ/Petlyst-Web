@@ -6,7 +6,7 @@ import { VETERINARY_EXPERTISE_AREAS } from '../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES } from '../constants/VeterinaryLanguages';
 import { useAppSelector } from '../hooks/useAppSelector';
 import { API_URL } from '../config/api';
-
+import { getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 // Veterinarian profile interfaces
 interface VeterinarianProfile {
   user_id: number;
@@ -130,10 +130,10 @@ const SingleVeterinarianPage: React.FC = () => {
         } else {
           setError(response.data.message || 'Failed to load veterinarian profile');
         }
-      } catch (error: any) {
-        if (error.response && error.response.status === 403) {
+      } catch (error) {
+        if (getApiErrorResponse(error) && getApiErrorStatus(error) === 403) {
           setError('This veterinarian profile is private');
-        } else if (error.response && error.response.status === 404) {
+        } else if (getApiErrorResponse(error) && getApiErrorStatus(error) === 404) {
           setError('Veterinarian profile not found');
         } else {
           setError('Failed to load veterinarian profile. Please try again later.');

@@ -16,6 +16,7 @@ import { VisualsForm } from '../components/clinic/forms/VisualsForm';
 import { ServicesForm } from '../components/clinic/forms/ServicesForm';
 import { RegistrationForm } from '../components/clinic/forms/RegistrationForm';
 import { AppointmentsForm } from '../components/clinic/forms/AppointmentsForm';
+import { getApiErrorMessage, getApiErrorResponse } from '../utils/errorMessage';
 
 const AddClinicPage: React.FC = () => {
   const navigate = useNavigate();
@@ -542,19 +543,19 @@ const AddClinicPage: React.FC = () => {
         }
         
         return response.data;
-      } catch (err: any) {
-        const errorDetails = err.response?.data || { message: err.message };
+      } catch (err) {
+        const errorDetails = getApiErrorResponse(err)?.data || { message: getApiErrorMessage(err) };
         console.error(`Error uploading photo ${index + 1}:`, errorDetails);
-        throw new Error(`Failed to upload photo ${index + 1}: ${errorDetails.message || err.message}`);
+        throw new Error(`Failed to upload photo ${index + 1}: ${errorDetails.message || getApiErrorMessage(err)}`);
       }
     });
 
     try {
       await Promise.all(uploadPromises);
       console.log('All photos uploaded successfully');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error uploading photos:', err);
-      setError(`Upload failed: ${err.message}`);
+      setError(`Upload failed: ${getApiErrorMessage(err)}`);
       throw err;
     }
   };
@@ -1119,12 +1120,12 @@ const AddClinicPage: React.FC = () => {
         // Navigate directly without setTimeout
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      console.error('Clinic addition error:', err.response || err);
+    } catch (err) {
+      console.error('Clinic addition error:', getApiErrorResponse(err) || err);
       setError(
-        err.response?.data?.message || 
-        err.response?.statusText || 
-        err.message || 
+        getApiErrorResponse(err)?.data?.message || 
+        getApiErrorResponse(err)?.statusText || 
+        getApiErrorMessage(err) || 
         'Failed to add clinic. Please try again.'
       );
     } finally {

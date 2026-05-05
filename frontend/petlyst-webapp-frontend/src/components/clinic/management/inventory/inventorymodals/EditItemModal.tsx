@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../../store';
 import axios from 'axios';
 import { API_URL } from '../../../../../config/api';
+import { getApiErrorMessage } from '../../../../../utils/errorMessage';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -282,9 +283,9 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
         // Close modal
         closeModal();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating inventory item:', err);
-      setError(err.response?.data?.message || 'Failed to update inventory item');
+      setError(getApiErrorMessage(err, 'Failed to update inventory item'));
     } finally {
       setIsLoading(false);
     }

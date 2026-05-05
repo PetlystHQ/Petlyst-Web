@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../../config/api';
+import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface VerificationRequest {
     veterinarian_id: string;
@@ -77,8 +78,8 @@ const AdminDashboard: React.FC = () => {
                 }
             );
             setPendingRequests(response.data.pendingVerifications);
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to fetch pending requests');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to fetch pending requests'));
             console.error('Error fetching pending requests:', err);
         } finally {
             setLoading(false);
@@ -111,8 +112,8 @@ const AdminDashboard: React.FC = () => {
             }));
             
             setPendingClinics(mappedClinics);
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to fetch pending clinics');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to fetch pending clinics'));
             console.error('Error fetching pending clinics:', err);
         }
     };
@@ -129,8 +130,8 @@ const AdminDashboard: React.FC = () => {
                 }
             );
             setPendingReviews(response.data.reviews || []);
-        } catch (err: any) {
-            setReviewError(err.response?.data?.message || 'Failed to fetch pending reviews');
+        } catch (err) {
+            setReviewError(getApiErrorMessage(err, 'Failed to fetch pending reviews'));
             console.error('Error fetching pending reviews:', err);
         } finally {
             setReviewsLoading(false);
@@ -153,8 +154,8 @@ const AdminDashboard: React.FC = () => {
             // Refresh the list after successful update
             await fetchPendingRequests();
             
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to update status');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to update status'));
             console.error('Error updating status:', err);
         } finally {
             setActionLoading(null);
@@ -177,8 +178,8 @@ const AdminDashboard: React.FC = () => {
             // Refresh the list after successful update
             await fetchPendingClinics();
             
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to update clinic status');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to update clinic status'));
             console.error('Error updating clinic status:', err);
         } finally {
             setActionLoading(null);
@@ -219,8 +220,8 @@ const AdminDashboard: React.FC = () => {
             // Refresh the list after successful update
             await fetchPendingReviews();
             
-        } catch (err: any) {
-            setReviewError(err.response?.data?.message || `Failed to ${action} review`);
+        } catch (err) {
+            setReviewError(getApiErrorMessage(err, `Failed to ${action} review`));
             console.error(`Error ${action} review:`, err);
         } finally {
             setActionLoading(null);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Tooltip } from '../shared/Tooltip';
 import { API_URL } from '../../../config/api';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface EditServicesProps {
   clinicId: string | number;
@@ -236,9 +237,9 @@ export const EditServices: React.FC<EditServicesProps> = ({
       } else {
         setError('Failed to fetch clinic services');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinic services:', err);
-      setError(err.response?.data?.message || 'Failed to fetch clinic services');
+      setError(getApiErrorMessage(err, 'Failed to fetch clinic services'));
     } finally {
       setLoading(false);
     }
@@ -296,9 +297,9 @@ export const EditServices: React.FC<EditServicesProps> = ({
       } else {
         setError('Failed to update clinic services');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating clinic services:', err);
-      setError(err.response?.data?.message || 'Failed to update clinic services');
+      setError(getApiErrorMessage(err, 'Failed to update clinic services'));
     } finally {
       setSaving(false);
     }

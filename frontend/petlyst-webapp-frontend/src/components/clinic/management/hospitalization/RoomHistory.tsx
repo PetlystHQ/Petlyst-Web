@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface Hospitalization {
   id: string;
@@ -75,9 +76,9 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
       } else {
         setError('Failed to fetch hospitalization history');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching hospitalization history:', err);
-      setError(err.response?.data?.message || 'Failed to fetch hospitalization history');
+      setError(getApiErrorMessage(err, 'Failed to fetch hospitalization history'));
     } finally {
       setLoading(false);
     }

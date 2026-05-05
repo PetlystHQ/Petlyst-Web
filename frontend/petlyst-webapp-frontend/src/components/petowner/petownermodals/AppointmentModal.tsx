@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../store';
 import axiosInstance from '../../../utils/axiosConfig';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface Pet {
   pet_id: string;
@@ -279,7 +280,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       } else {
         throw new Error(response.data.message || 'Failed to fetch pets');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching pets:', err);
       setError('Failed to fetch your pets. Please try again.');
     } finally {
@@ -369,9 +370,9 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
           throw apiError; // Re-throw in production
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error booking appointment:', err);
-      setError(err.message || 'Failed to book appointment. Please try again.');
+      setError(getApiErrorMessage(err) || 'Failed to book appointment. Please try again.');
     } finally {
       setLoading(false);
     }

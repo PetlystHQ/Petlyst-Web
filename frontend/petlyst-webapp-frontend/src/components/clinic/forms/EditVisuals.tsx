@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Tooltip } from '../shared/Tooltip';
 import { API_URL } from '../../../config/api';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface ClinicPhoto {
   clinic_album_photo_id: number;
@@ -75,9 +76,9 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
       } else {
         setError('Failed to fetch clinic photos');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinic photos:', err);
-      setError(err.response?.data?.message || 'Failed to fetch clinic photos');
+      setError(getApiErrorMessage(err, 'Failed to fetch clinic photos'));
     } finally {
       setLoading(false);
     }
@@ -241,9 +242,9 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
       if (onPhotoChange) {
         onPhotoChange();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error uploading photos:', err);
-      setError(err.response?.data?.message || 'Failed to upload photos');
+      setError(getApiErrorMessage(err, 'Failed to upload photos'));
     } finally {
       setUploading(false);
     }
@@ -295,9 +296,9 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
       if (onPhotoChange) {
         onPhotoChange();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error deleting photo:', err);
-      setError(err.response?.data?.message || 'Failed to delete photo');
+      setError(getApiErrorMessage(err, 'Failed to delete photo'));
     } finally {
       setDeleting(null);
     }

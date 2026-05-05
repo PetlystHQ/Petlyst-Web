@@ -7,7 +7,7 @@ import { API_URL } from '../config/api';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
-
+import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 // Add missing type definitions for window.google
 declare global {
   interface Window {
@@ -287,16 +287,16 @@ const ClinicPreviewPage: React.FC = () => {
         }
         
         setLoading(false);
-      } catch (err: any) {
+      } catch (err) {
         console.error('===== ERROR FETCHING CLINIC DETAILS =====');
         console.error('Error object:', err);
-        console.error('Response data:', err.response?.data);
-        console.error('Status code:', err.response?.status);
+        console.error('Response data:', getApiErrorResponse(err)?.data);
+        console.error('Status code:', getApiErrorStatus(err));
         
-        if (err.response?.status === 403 || err.response?.status === 401) {
+        if (getApiErrorStatus(err) === 403 || getApiErrorStatus(err) === 401) {
           setUnauthorized(true);
         } else {
-          setError(err.response?.data?.message || 'Failed to load clinic details');
+          setError(getApiErrorMessage(err, 'Failed to load clinic details'));
         }
         setLoading(false);
       }

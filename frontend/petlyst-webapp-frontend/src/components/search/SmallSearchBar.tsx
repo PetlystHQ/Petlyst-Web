@@ -54,7 +54,7 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery }) => {
         // Only show suggestions if there are results AND if user has actively typed
         // This prevents showing suggestions just because initial value was set
         setShowSuggestions(allSuggestions.length > 0 && document.activeElement === document.querySelector('input[type="text"]'));
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error fetching suggestions:', error);
       }
     };

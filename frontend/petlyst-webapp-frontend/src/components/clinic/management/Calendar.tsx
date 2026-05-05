@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_URL } from '../../../config/api';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 // Define interface for calendar appointments
 interface CalendarAppointment {
@@ -316,9 +317,9 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
         });
         setAppointmentError('Failed to fetch some appointments');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching appointments:', error);
-      setAppointmentError(error.response?.data?.message || 'Failed to fetch appointments');
+      setAppointmentError(getApiErrorMessage(error, 'Failed to fetch appointments'));
     } finally {
       setLoadingAppointments(false);
     }
@@ -453,9 +454,9 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       } else {
         setActionError('Failed to update appointment status');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating appointment status:', error);
-      setActionError(error.response?.data?.message || 'Failed to update appointment status');
+      setActionError(getApiErrorMessage(error, 'Failed to update appointment status'));
     } finally {
       setAppointmentModal(prev => ({ ...prev, isLoading: false }));
     }

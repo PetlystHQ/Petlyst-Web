@@ -5,6 +5,7 @@ import { RootState } from '../../../store';
 import axios from 'axios';
 import { Clinic } from '../../../types/dashboard';
 import { API_URL } from '../../../config/api';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 import './Clinics.css';
 
 interface ClinicsProps {
@@ -48,9 +49,9 @@ export const Clinics: React.FC<ClinicsProps> = ({
         console.error('Invalid API response:', response.data);
         setError('Invalid data received from server');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinics:', err);
-      setError(err.response?.data?.message || 'Failed to fetch clinics');
+      setError(getApiErrorMessage(err, 'Failed to fetch clinics'));
     } finally {
       setIsLoading(false);
     }
@@ -65,9 +66,9 @@ export const Clinics: React.FC<ClinicsProps> = ({
         }
       });
       await fetchClinics(); // Refresh the list after deleting
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error deleting clinic:', err);
-      setError(err.response?.data?.message || 'Failed to Delete Clinic Submission');
+      setError(getApiErrorMessage(err, 'Failed to Delete Clinic Submission'));
     } finally {
       setActionLoading(null);
     }

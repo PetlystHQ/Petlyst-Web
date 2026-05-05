@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../../utils/axiosConfig';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface Pet {
   pet_id: string;
@@ -109,9 +110,9 @@ const PetHealth: React.FC<PetHealthProps> = ({ pets, loading, error }) => {
       if (diagnosesResponse.data.success) {
         setDiagnoses(diagnosesResponse.data.diagnoses || []);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching pet health data:', err);
-      setDataError(err.response?.data?.message || 'Failed to fetch health records.');
+      setDataError(getApiErrorMessage(err, 'Failed to fetch health records.'));
     } finally {
       setDataLoading(false);
     }

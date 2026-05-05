@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import axios from 'axios';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 type AnalysisType = 'timeline' | 'threshold' | null;
 
@@ -98,9 +99,9 @@ const IDSS: React.FC = () => {
       localStorage.setItem(STORAGE_KEY_RESPONSE_DATA, JSON.stringify(apiResponse));
       
       console.log('API Response:', apiResponse);
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Error fetching ${type} analysis:`, err);
-      setError(err.response?.data?.message || `Failed to get ${type} analysis. Please try again.`);
+      setError(getApiErrorMessage(err, `Failed to get ${type} analysis. Please try again.`));
     } finally {
       setIsLoading(false);
     }

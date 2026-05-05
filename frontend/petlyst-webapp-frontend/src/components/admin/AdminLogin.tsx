@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../../config/api';
+import { getApiErrorMessage } from '../../utils/errorMessage';
 
 const AdminLogin: React.FC = () => {
     const navigate = useNavigate();
@@ -62,11 +63,10 @@ const AdminLogin: React.FC = () => {
             localStorage.setItem('adminUser', JSON.stringify(userData));
 
             navigate('/admin/dashboard');
-        } catch (err: any) {
+        } catch (err) {
             console.error('Login Error:', err);
             setError(
-                err.response?.data?.message || 
-                'Login failed. Please check your credentials and try again.'
+                getApiErrorMessage(err, 'Login failed. Please check your credentials and try again.')
             );
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminUser');

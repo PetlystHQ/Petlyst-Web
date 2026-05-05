@@ -5,6 +5,7 @@ import axios from 'axios';
 import AddItemModal from './inventorymodals/AddItemModal';
 import EditItemModal from './inventorymodals/EditItemModal';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Interface for inventory item
 interface InventoryItem {
@@ -173,9 +174,9 @@ const InventoryList: React.FC = () => {
       } else {
         setError('Failed to load inventory items');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching inventory items:', err);
-      setError(err.response?.data?.message || 'Failed to fetch inventory items');
+      setError(getApiErrorMessage(err, 'Failed to fetch inventory items'));
     } finally {
       setLoading(false);
     }
@@ -194,7 +195,7 @@ const InventoryList: React.FC = () => {
       if (response.data.success && response.data.categories) {
         setCategories(response.data.categories);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching categories:', err);
     }
   };
@@ -356,9 +357,9 @@ const InventoryList: React.FC = () => {
         
         closeModals();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding inventory item:', err);
-      setError(err.response?.data?.message || 'Failed to add inventory item');
+      setError(getApiErrorMessage(err, 'Failed to add inventory item'));
     }
   };
 

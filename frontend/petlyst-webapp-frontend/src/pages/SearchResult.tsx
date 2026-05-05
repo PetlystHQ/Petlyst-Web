@@ -4,7 +4,7 @@ import axios from 'axios';
 import ClinicCard from '../components/search/ClinicCard';
 import SearchFilter from '../components/search/SearchFilter';
 import SmallSearchBar from '../components/search/SmallSearchBar';
-
+import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse, isApiError } from '../utils/errorMessage';
 // Types for our data
 interface Clinic {
   clinic_id: number;
@@ -147,26 +147,26 @@ const SearchResult: React.FC = () => {
         }
         
         return response; // Return the response for chaining
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching search results:', err);
         
         // Enhanced error reporting
         let errorMessage = 'An error occurred';
         
-        if (err.message) {
-          errorMessage += `: ${err.message}`;
+        if (getApiErrorMessage(err)) {
+          errorMessage += `: ${getApiErrorMessage(err)}`;
         }
         
         // Extract more details from axios error
-        if (err.response) {
-          console.error('Response status:', err.response.status);
-          console.error('Response data:', err.response.data);
-          errorMessage += ` (Status: ${err.response.status})`;
+        if (getApiErrorResponse(err)) {
+          console.error('Response status:', getApiErrorStatus(err));
+          console.error('Response data:', getApiErrorResponse(err)?.data);
+          errorMessage += ` (Status: ${getApiErrorStatus(err)})`;
           
-          if (err.response.data && err.response.data.message) {
-            errorMessage += ` - ${err.response.data.message}`;
+          if (getApiErrorResponse(err)?.data && getApiErrorMessage(err)) {
+            errorMessage += ` - ${getApiErrorMessage(err)}`;
           }
-        } else if (err.request) {
+        } else if (isApiError(err) && err.request) {
           // Request was made but no response received
           console.error('No response received:', err.request);
           errorMessage += ' - No response from server';
@@ -216,15 +216,15 @@ const SearchResult: React.FC = () => {
         }
         
         return response; // Return the response for chaining
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching veterinarian results:', err);
         
         let errorMessage = 'An error occurred while searching for veterinarians';
         
-        if (err.response) {
-          errorMessage += ` (${err.response.status})`;
-          if (err.response.data && err.response.data.message) {
-            errorMessage += ` - ${err.response.data.message}`;
+        if (getApiErrorResponse(err)) {
+          errorMessage += ` (${getApiErrorStatus(err)})`;
+          if (getApiErrorResponse(err)?.data && getApiErrorMessage(err)) {
+            errorMessage += ` - ${getApiErrorMessage(err)}`;
           }
         }
         

@@ -8,7 +8,7 @@ import AuthModal from '../components/modals/AuthModal';
 import { getEmergencyData, createDirectionsUrl } from '../components/emergency/EmergencyService';
 import EmergencyModal from '../components/emergency/EmergencyModal';
 import { Toaster, toast } from 'react-hot-toast';
-
+import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 interface SearchSuggestion {
   text: string;
   type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
@@ -132,12 +132,12 @@ const PetOwnerHomePage: React.FC = () => {
         const additionalServices = servicesRes.data.services.additional.map((item: any) => item.service_name);
         setPopularServices([...medicalServices, ...additionalServices]);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching popular searches:', error);
-      console.error('Error details:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
+      console.error('Error details:', getApiErrorMessage(error));
+      if (getApiErrorResponse(error)) {
+        console.error('Response status:', getApiErrorStatus(error));
+        console.error('Response data:', getApiErrorResponse(error)?.data);
       }
     }
   };
@@ -174,12 +174,12 @@ const PetOwnerHomePage: React.FC = () => {
         
         setSuggestions(allSuggestions);
         setShowSuggestions(allSuggestions.length > 0);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error fetching suggestions:', error);
-        console.error('Error details:', error.message);
-        if (error.response) {
-          console.error('Response status:', error.response.status);
-          console.error('Response data:', error.response.data);
+        console.error('Error details:', getApiErrorMessage(error));
+        if (getApiErrorResponse(error)) {
+          console.error('Response status:', getApiErrorStatus(error));
+          console.error('Response data:', getApiErrorResponse(error)?.data);
         }
       }
     };
@@ -262,8 +262,8 @@ const PetOwnerHomePage: React.FC = () => {
         
         // Modalı aç - modal açıldığında toast gösterme
         setIsEmergencyModalOpen(true);
-      } catch (error: any) {
-        notifyError(error.message || 'En yakın kliniğe yönlendirme sırasında bir hata oluştu');
+      } catch (error) {
+        notifyError(getApiErrorMessage(error) || 'En yakın kliniğe yönlendirme sırasında bir hata oluştu');
         console.error('Emergency navigation error:', error);
       } finally {
         setIsNavigatingToEmergency(false);

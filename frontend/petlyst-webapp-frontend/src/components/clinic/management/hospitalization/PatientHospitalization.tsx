@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import AdmitForm from './AdmitForm';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface Room {
   id: string;
@@ -108,9 +109,9 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       } else {
         setError('Failed to fetch current hospitalizations');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching current hospitalizations:', err);
-      setError(err.response?.data?.message || 'Failed to fetch current hospitalizations');
+      setError(getApiErrorMessage(err, 'Failed to fetch current hospitalizations'));
     } finally {
       setLoading(false);
     }
@@ -136,9 +137,9 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       } else {
         setError('Failed to fetch available rooms');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching available rooms:', err);
-      setError(err.response?.data?.message || 'Failed to fetch available rooms');
+      setError(getApiErrorMessage(err, 'Failed to fetch available rooms'));
     } finally {
       setLoading(false);
     }
@@ -171,9 +172,9 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       } else {
         setError('Failed to fetch clinic patients');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching clinic patients:', err);
-      setError(err.response?.data?.message || 'Failed to fetch clinic patients');
+      setError(getApiErrorMessage(err, 'Failed to fetch clinic patients'));
       
       // No need for mock data anymore as we're now using the correct endpoint
       setClinicPatients([]);
@@ -211,9 +212,9 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       } else {
         setError('Failed to admit patient');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error admitting patient:', err);
-      setError(err.response?.data?.message || 'Failed to admit patient');
+      setError(getApiErrorMessage(err, 'Failed to admit patient'));
     } finally {
       setIsSubmitting(false);
     }
@@ -243,9 +244,9 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       } else {
         setError('Failed to discharge patient');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error discharging patient:', err);
-      setError(err.response?.data?.message || 'Failed to discharge patient');
+      setError(getApiErrorMessage(err, 'Failed to discharge patient'));
     } finally {
       setIsSubmitting(false);
     }

@@ -6,6 +6,7 @@ import { CreateExaminationData, Examination, UpdateExaminationData } from './exa
 import { FaTimes, FaCalendarCheck } from 'react-icons/fa';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface NewExaminationModalProps {
   petId?: number;
@@ -246,9 +247,9 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
         } else {
           setFetchError('No patients found for this clinic');
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching pets:', err);
-        setFetchError(err.response?.data?.message || 'Failed to fetch pets');
+        setFetchError(getApiErrorMessage(err, 'Failed to fetch pets'));
       } finally {
         setFetchingPets(false);
       }

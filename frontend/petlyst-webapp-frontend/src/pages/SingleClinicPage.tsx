@@ -7,6 +7,7 @@ import AuthModal from '../components/modals/AuthModal';
 import ResetPasswordModal from '../components/modals/ResetPasswordModal';
 import AppointmentModal from '../components/petowner/petownermodals/AppointmentModal';
 import { createPortal } from 'react-dom';
+import { getApiErrorMessage, getApiErrorResponse, isApiError } from '../utils/errorMessage';
 
 // Clinic interface
 interface Clinic {
@@ -253,7 +254,7 @@ const SingleClinicPage: React.FC = () => {
         // Set clinic data
         setClinic(clinicData);
         
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching clinic data:', err);
         setError('Failed to load clinic data. Please try again later.');
       } finally {
@@ -322,7 +323,7 @@ const SingleClinicPage: React.FC = () => {
             setHasPendingAppointment(response.data.hasPendingAppointment);
             console.log("Pending appointment status:", response.data.hasPendingAppointment);
           }
-        } catch (error: any) {
+        } catch (error) {
           console.warn("Could not check pending appointment status:", error);
           // Silently fail, default is false
         } finally {
@@ -686,28 +687,30 @@ const SingleClinicPage: React.FC = () => {
           setTimeout(() => setFavoriteAnimation(false), 500);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error toggling favorite status:', error);
       // More detailed error logging
-      console.error("Error details:", error.message);
-      console.error("Error config:", error.config);
-      console.error("Error response:", error.response?.data);
-      
+      console.error("Error details:", getApiErrorMessage(error));
+      console.error("Error config:", isApiError(error) ? error.config : undefined);
+      console.error("Error response:", getApiErrorResponse(error)?.data);
+
       // More specific error messages based on the response
-      if (error.response) {
-        const { status, data } = error.response;
-        
+      const response = getApiErrorResponse(error);
+      if (response) {
+        const status = response.status;
+        const data = response.data as { message?: string } | undefined;
+
         // Handle different error codes
         if (status === 403) {
-          alert(data.message || 'Only pet owners can favorite clinics');
+          alert(data?.message || 'Only pet owners can favorite clinics');
         } else if (status === 404) {
-          alert(data.message || 'Clinic or user not found');
+          alert(data?.message || 'Clinic or user not found');
         } else if (status === 500) {
           alert('Server error. Please try again later.');
         } else {
-          alert(data.message || 'An error occurred. Please try again later.');
+          alert(data?.message || 'An error occurred. Please try again later.');
         }
-      } else if (error.request) {
+      } else if (isApiError(error) && error.request) {
         // Network error - request was made but no response received
         alert('Network error. Please check your connection and try again.');
       } else {

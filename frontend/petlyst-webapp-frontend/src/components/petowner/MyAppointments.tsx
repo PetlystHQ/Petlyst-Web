@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosConfig";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store";
+import { getApiErrorResponse } from '../../utils/errorMessage';
 
 
 interface Appointment {
@@ -183,10 +184,10 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
           setError(response.data.error);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching appointments:", err);
-      console.error("Error response:", err.response?.data);
-      setError(err.response?.data?.error || "Failed to fetch appointments");
+      console.error("Error response:", getApiErrorResponse(err)?.data);
+      setError(getApiErrorResponse(err)?.data?.error || "Failed to fetch appointments");
     } finally {
       setLoading(false);
     }
@@ -263,9 +264,9 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
           onAppointmentCanceled();
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error canceling appointment:", err);
-      setError(err.response?.data?.error || "Failed to cancel appointment");
+      setError(getApiErrorResponse(err)?.data?.error || "Failed to cancel appointment");
     } finally {
       setCancelingId(null);
       setShowCancelModal(false);

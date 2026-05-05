@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import axiosInstance from '../../../utils/axiosConfig';
 import PET_TYPES_AND_BREEDS, { getBreedsByPetTypeName, PetBreed } from '../../../constants/PetTypesAndBreeds';
-
+import { getApiErrorMessage, getApiErrorResponse, isApiError } from '../../../utils/errorMessage';
 // Pet interface from backend
 interface Pet {
   pet_id: string;
@@ -691,16 +691,16 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
           submit: response.data.message || "Failed to update pet. Please try again."
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating pet:", error);
       
       let errorMessage = "Failed to update pet. Please try again.";
       
-      if (error.response) {
-        if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message;
+      if (getApiErrorResponse(error)) {
+        if (getApiErrorResponse(error)?.data && getApiErrorMessage(error)) {
+          errorMessage = getApiErrorMessage(error);
         }
-      } else if (error.request) {
+      } else if (isApiError(error) && error.request) {
         errorMessage = "No response from server. Please check your internet connection.";
       }
       

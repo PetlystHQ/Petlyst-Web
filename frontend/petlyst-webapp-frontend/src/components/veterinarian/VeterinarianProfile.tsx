@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES } from '../../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
 import { API_URL } from '../../config/api';
+import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface Education {
   education_id: number;
@@ -2235,9 +2236,9 @@ const VeterinarianProfile: React.FC = () => {
       } else {
         setClinicJoinError('Failed to send join request. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error sending join request:', error);
-      setClinicJoinError(error.response?.data?.message || 'An error occurred while sending the join request. Please try again.');
+      setClinicJoinError(getApiErrorMessage(error, 'An error occurred while sending the join request. Please try again.'));
     } finally {
       setClinicJoinLoading(false);
     }
@@ -2635,9 +2636,9 @@ const VeterinarianProfile: React.FC = () => {
       } else {
         setLeaveClinicError('Failed to leave clinic. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error leaving clinic:', error);
-      setLeaveClinicError(error.response?.data?.message || 'An error occurred while leaving the clinic. Please try again.');
+      setLeaveClinicError(getApiErrorMessage(error, 'An error occurred while leaving the clinic. Please try again.'));
     } finally {
       setLeavingClinicLoading(false);
     }

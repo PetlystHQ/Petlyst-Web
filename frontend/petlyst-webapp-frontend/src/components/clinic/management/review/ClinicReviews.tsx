@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../../../../store';
 import { API_URL } from '../../../../config/api';
-
+import { getApiErrorMessage, getApiErrorResponse } from '../../../../utils/errorMessage';
 // Set to true to show sample data when no reviews exist (for development)
 const SHOW_SAMPLE_DATA = false;
 
@@ -206,10 +206,10 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
         console.log("Successfully set reviews:", reviewsData.length);
         console.log("Rating counts:", counts);
         
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error fetching reviews:', err);
-        console.error('Error details:', err.response?.data);
-        setError(err.response?.data?.message || `Error fetching reviews: ${err.message}`);
+        console.error('Error details:', getApiErrorResponse(err)?.data);
+        setError(getApiErrorMessage(err, `Error fetching reviews: ${getApiErrorMessage(err)}`));
       } finally {
         setLoading(false);
       }

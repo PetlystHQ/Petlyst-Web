@@ -4,7 +4,7 @@ import { RootState } from '../../store';
 import axiosInstance from '../../utils/axiosConfig';
 import axios from 'axios';
 import { API_URL } from '../../config/api';
-
+import { getApiErrorMessage, getApiErrorResponse } from '../../utils/errorMessage';
 interface VerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -144,9 +144,9 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
         setSuccess(false);
       }, 3000);
 
-    } catch (err: any) {
-      console.error('Verification error:', err.response || err);
-      setError(err.response?.data?.message || 'Failed to submit verification details');
+    } catch (err) {
+      console.error('Verification error:', getApiErrorResponse(err) || err);
+      setError(getApiErrorMessage(err, 'Failed to submit verification details'));
     } finally {
       setLoading(false);
     }

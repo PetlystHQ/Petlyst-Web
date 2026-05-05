@@ -6,6 +6,7 @@ import RoomManagement from './RoomManagement';
 import PatientHospitalization from './PatientHospitalization';
 import RoomHistory from './RoomHistory';
 import { API_URL } from '../../../../config/api';
+import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface HospitalizationStats {
   totalRooms: number;
@@ -74,9 +75,9 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
           currentHospitalizations
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching hospitalization stats:', err);
-      setError(err.response?.data?.message || 'Failed to fetch hospitalization statistics');
+      setError(getApiErrorMessage(err, 'Failed to fetch hospitalization statistics'));
     } finally {
       setLoading(false);
     }
