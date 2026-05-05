@@ -131,12 +131,12 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
   // Helper function to generate slug
   const generateSlug = (firstName: string, lastName: string): string => {
     // Create a base slug with the name
-    let slug = `dr-${firstName.toLowerCase()}-${lastName.toLowerCase()}`
-      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-      .replace(/[^\w\-]+/g, '') // Remove non-word chars
-      .replace(/\-\-+/g, '-')   // Replace multiple hyphens with single
-      .replace(/^-+/, '')       // Trim hyphens from start
-      .replace(/-+$/, '');      // Trim hyphens from end
+    const slug = `dr-${firstName.toLowerCase()}-${lastName.toLowerCase()}`
+      .replace(/\s+/g, '-')    // Replace spaces with hyphens
+      .replace(/[^\w-]+/g, '') // Remove non-word chars
+      .replace(/--+/g, '-')    // Collapse multiple hyphens to single
+      .replace(/^-+/, '')      // Trim hyphens from start
+      .replace(/-+$/, '');     // Trim hyphens from end
       
     return slug;
   };

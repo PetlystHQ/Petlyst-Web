@@ -100,7 +100,7 @@ const SingleVeterinarianPage: React.FC = () => {
           setIsPrivateProfile(response.data.is_private || false);
           
           // Backend'in gönderdiği is_owner bilgisini öncelikle kullan
-          if (response.data.hasOwnProperty('is_owner')) {
+          if (Object.prototype.hasOwnProperty.call(response.data, 'is_owner')) {
             setIsProfileOwner(response.data.is_owner);
             console.log("Using backend is_owner info:", response.data.is_owner);
           } 

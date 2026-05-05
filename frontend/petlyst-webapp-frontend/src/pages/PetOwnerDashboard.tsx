@@ -225,7 +225,6 @@ const PetOwnerDashboard: React.FC = () => {
           response.data.appointments.length,
         );
         setAppointments(response.data.appointments || []);
-      } else {
       }
     } catch (err) {
       console.error("Error fetching appointments:", err);

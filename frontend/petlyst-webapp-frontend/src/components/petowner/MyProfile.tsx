@@ -159,7 +159,7 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
     try {
       // Extract the S3 key from the current profile photo URL if available
       let photoKey = null;
-      let fullPhotoUrl = user?.profile_photo || '';
+      const fullPhotoUrl = user?.profile_photo || '';
       
       if (user?.profile_photo && user.profile_photo.includes('amazonaws.com/')) {
         photoKey = user.profile_photo.split('amazonaws.com/')[1];

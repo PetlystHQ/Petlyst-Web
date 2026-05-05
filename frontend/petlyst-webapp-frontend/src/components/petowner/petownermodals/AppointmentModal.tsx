@@ -135,7 +135,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
     
     // Skip today if closing time has passed
     const skipToday = isTodayClosingTimePassed();
-    let startDayOffset = skipToday ? 1 : 0;
+    const startDayOffset = skipToday ? 1 : 0;
     
     // Find 7 open days starting from today or tomorrow
     while (daysCount < 7 && daysChecked < maxDaysToCheck) {

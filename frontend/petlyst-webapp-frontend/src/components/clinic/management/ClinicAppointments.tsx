@@ -103,7 +103,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
         if (approvedAppointment) {
           const updatedAppointment = {
             ...approvedAppointment,
-            appointment_status: 'confirmed' as 'confirmed'
+            appointment_status: 'confirmed' as const
           };
           
           setConfirmedAppointments(prev => [...prev, updatedAppointment]);
@@ -138,7 +138,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
           // Move appointment from pending to canceled
           const updatedAppointment = {
             ...pendingAppointment,
-            appointment_status: 'canceled' as 'canceled'
+            appointment_status: 'canceled' as const
           };
           
           setCanceledAppointments(prev => [...prev, updatedAppointment]);
@@ -155,7 +155,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
             // Move appointment from confirmed to canceled
             const updatedAppointment = {
               ...confirmedAppointment,
-              appointment_status: 'canceled' as 'canceled'
+              appointment_status: 'canceled' as const
             };
             
             setCanceledAppointments(prev => [...prev, updatedAppointment]);
@@ -188,7 +188,7 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
         if (confirmedAppointment) {
           const updatedAppointment = {
             ...confirmedAppointment,
-            appointment_status: 'completed' as 'completed'
+            appointment_status: 'completed' as const
           };
           
           setCompletedAppointments(prev => [...prev, updatedAppointment]);

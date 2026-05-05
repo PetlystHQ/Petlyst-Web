@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-interface PetsProps {
-  // Gerekli prop'ları buraya ekleyin
-}
-
-const Pets: React.FC<PetsProps> = () => {
+const Pets: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Örnek veri yükleme efekti

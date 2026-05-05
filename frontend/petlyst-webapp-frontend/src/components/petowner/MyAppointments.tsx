@@ -237,7 +237,7 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         // Yeni bir dizi oluştur, sadece iptal edilen randevuyu güncelle
         const updatedAppointments = appointments.map((appointment) =>
           appointment.appointment_id === appointmentId
-            ? { ...appointment, appointment_status: "canceled" as "canceled" }
+            ? { ...appointment, appointment_status: "canceled" as const }
             : appointment,
         );
 
@@ -248,7 +248,7 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         const updatedFilteredAppointments = filteredAppointments.map(
           (appointment) =>
             appointment.appointment_id === appointmentId
-              ? { ...appointment, appointment_status: "canceled" as "canceled" }
+              ? { ...appointment, appointment_status: "canceled" as const }
               : appointment,
         );
 
