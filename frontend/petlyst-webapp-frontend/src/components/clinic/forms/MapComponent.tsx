@@ -3,10 +3,13 @@ import { ClinicFormData } from '../../../types/clinic';
 import { ErrorBoundary } from '../../common/ErrorBoundary';
 // Heroicons kütüphanesi yüklü değil, SVG ikonlarını manuel olarak tanımlayalım
 
-// Define interface for the Google Maps API
+// `window.google` is the runtime entry point for the Google Maps JS SDK.
+// The `google` namespace itself is declared globally by `@types/google.maps`,
+// so we just expose it as a Window field. `initMap?` is the optional global
+// callback hook our async script loader uses.
 declare global {
   interface Window {
-    google: any;
+    google: typeof google;
     initMap?: () => void;
   }
 }
@@ -75,9 +78,16 @@ const MapContainer = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [, setMapReady] = useState(false);
   const mapReadyRef = useRef(false);
-  const mapInstance = useRef<any>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  // The marker code path falls back between legacy `google.maps.Marker` (uses
+  // `.setPosition` / `.getPosition`) and the newer `AdvancedMarkerElement`
+  // (uses `.position` directly). The two types share almost no methods, so
+  // typing this union here would require narrowing at every access site.
+  // Tracked as an Out-of-scope follow-up in ROADMAP.md ("Reconcile Marker /
+  // AdvancedMarkerElement migration in MapComponent").
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const marker = useRef<any>(null);
-  const geocoder = useRef<any>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
   const [, setIsAddressLoading] = useState(false);
   
   // Default coordinates for Turkey
@@ -127,9 +137,9 @@ const MapContainer = ({
       
       // Callback function adını global pencerede tanımla
       const callbackName = 'googleMapsInitCallback' + Date.now();
-      (window as any)[callbackName] = () => {
+      (window as unknown as Record<string, unknown>)[callbackName] = () => {
         console.log('[DEBUG] Google Maps script loaded via callback');
-        delete (window as any)[callbackName];
+        delete (window as unknown as Record<string, unknown>)[callbackName];
         resolve();
       };
       
@@ -173,14 +183,18 @@ const MapContainer = ({
     try {
       console.log('[DEBUG] Starting reverse geocoding for:', lat, lng);
       const results = await new Promise<GeocodingResult[]>((resolve, reject) => {
+        if (!geocoder.current) {
+          reject(new Error('Geocoder not initialized'));
+          return;
+        }
         geocoder.current.geocode(
           { location: { lat, lng } },
           (
-            results: GeocodingResult[],
-            status: string
+            results: google.maps.GeocoderResult[] | null,
+            status: google.maps.GeocoderStatus
           ) => {
-            if (status === "OK" && results && results.length > 0) {
-              resolve(results);
+            if (status === ('OK' as google.maps.GeocoderStatus) && results && results.length > 0) {
+              resolve(results as GeocodingResult[]);
             } else {
               reject(new Error(`Geocoding failed with status: ${status}`));
             }
@@ -305,7 +319,7 @@ const MapContainer = ({
           marker.current = new google.maps.marker.AdvancedMarkerElement({
             position: center,
             map: mapInstance.current,
-            draggable: !hasExistingClinic && !loading,
+            gmpDraggable: !hasExistingClinic && !loading,
             title: "Clinic Location"
           });
           
@@ -331,8 +345,9 @@ const MapContainer = ({
       // Add map click event
       if (!hasExistingClinic) {
         console.log('[DEBUG] Adding map click event listener');
-        google.maps.event.addListener(mapInstance.current, 'click', async (event: any) => {
+        google.maps.event.addListener(mapInstance.current, 'click', async (event: google.maps.MapMouseEvent) => {
           const latLng = event.latLng;
+          if (!latLng) return;
           const lat = latLng.lat();
           const lng = latLng.lng();
           

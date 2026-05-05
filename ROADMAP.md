@@ -591,3 +591,13 @@ here so they don't get lost.
 - **Duplicate `DashboardSidebar.tsx`.** Two files with the same name live
   under `components/dashboard/` and `components/layout/`. Reconcile to one
   during Effort 2.
+- **Reconcile Marker / AdvancedMarkerElement migration in MapComponent.**
+  `MapComponent.tsx` keeps `marker.current` typed as `any` (with an
+  `eslint-disable-next-line` and a pointer to this entry) because the
+  current code path falls back between the legacy `google.maps.Marker`
+  (uses `.setPosition` / `.getPosition`) and the newer
+  `AdvancedMarkerElement` (uses `.position` directly). The two types
+  share almost no methods, so typing the union safely needs runtime
+  narrowing at every access site. Cleanest path is to commit to one API
+  (probably AdvancedMarkerElement, since Google has deprecated the legacy
+  Marker for new keys) and remove the fallback branch.

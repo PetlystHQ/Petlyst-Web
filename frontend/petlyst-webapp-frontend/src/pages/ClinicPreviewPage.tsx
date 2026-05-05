@@ -8,10 +8,11 @@ import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
 import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
-// Add missing type definitions for window.google
+// Window augmentation for the Google Maps SDK loaded via script tag.
+// The `google` namespace itself comes from `@types/google.maps`.
 declare global {
   interface Window {
-    google: any;
+    google: typeof google;
     initMap?: () => void;
   }
 }
