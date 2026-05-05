@@ -14,7 +14,7 @@ interface EditHoursProps {
     closing_time: string;
     allow_online_meetings: boolean;
   };
-  updateField: (name: string, value: any) => void;
+  updateField: (name: string, value: unknown) => void;
   loading: boolean;
   isEditMode?: boolean;
   setFormModified?: React.Dispatch<React.SetStateAction<boolean>>;

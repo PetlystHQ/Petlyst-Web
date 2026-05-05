@@ -130,7 +130,7 @@ const InventoryList: React.FC = () => {
         console.log('Fetched inventory items:', response.data.items);
         
         // Process the items to ensure numeric values are properly parsed and field names are corrected
-        const processedItems = response.data.items.map((item: any) => {
+        const processedItems = response.data.items.map((item: InventoryItem & { unit?: string; quantity?: number | string }) => {
           // Deep copy the item object first
           const processedItem: InventoryItem = {
             id: item.id,

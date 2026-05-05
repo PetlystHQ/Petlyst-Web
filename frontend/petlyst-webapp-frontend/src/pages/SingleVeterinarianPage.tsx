@@ -106,8 +106,9 @@ const SingleVeterinarianPage: React.FC = () => {
           } 
           // Eğer backend is_owner bilgisi yoksa, client tarafında hesapla
           else if (user && response.data.profile) {
-            // Farklı ID formatlarını destekle
-            const userId = user.id || (user as any)?.user_id || (user as any)?.userId;
+            // Farklı ID formatlarını destekle (older payload aliases).
+            const legacyUser = user as Partial<{ user_id: number; userId: number }>;
+            const userId = user.id || legacyUser?.user_id || legacyUser?.userId;
             const profileUserId = response.data.profile.user_id;
             
             // ID'leri string formatına çevirip karşılaştır

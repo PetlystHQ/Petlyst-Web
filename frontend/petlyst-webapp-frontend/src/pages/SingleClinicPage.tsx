@@ -286,12 +286,12 @@ const SingleClinicPage: React.FC = () => {
           if (favoriteCheckResponse.data.success) {
             setIsSaved(favoriteCheckResponse.data.isFavorite);
           }
-        } catch (favoriteError: any) {
+        } catch (favoriteError) {
           console.warn("Could not check favorite status:", favoriteError);
           // Log more details about the error
-          console.error("Error details:", favoriteError.message);
-          console.error("Error config:", favoriteError.config);
-          console.error("Error response:", favoriteError.response?.data);
+          console.error("Error details:", getApiErrorMessage(favoriteError));
+          console.error("Error config:", isApiError(favoriteError) ? favoriteError.config : undefined);
+          console.error("Error response:", getApiErrorResponse(favoriteError)?.data);
           // Don't show error to user, silently fail and assume not favorited
           setIsSaved(false);
         }

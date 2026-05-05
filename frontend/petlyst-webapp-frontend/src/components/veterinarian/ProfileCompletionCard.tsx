@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import axios from 'axios';
 import { API_ENDPOINTS, DASHBOARD_VIEWS } from '../../constants/dashboard';
+import { DashboardView } from '../../types/dashboard';
 
 interface ProfileCompletionCardProps {
   className?: string;
-  onViewChange?: (view: any) => void;
+  onViewChange?: (view: DashboardView) => void;
 }
 
 interface ProfileCompletionStatus {

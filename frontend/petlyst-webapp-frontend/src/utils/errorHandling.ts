@@ -1,4 +1,5 @@
 import { NavigateFunction } from 'react-router-dom';
+import { getApiErrorStatus } from './errorMessage';
 
 /**
  * Navigate to the appropriate error page based on error status
@@ -9,10 +10,10 @@ import { NavigateFunction } from 'react-router-dom';
 export const handleErrorNavigation = (
   navigate: NavigateFunction,
   status: number = 500,
-  error?: any
+  error?: unknown
 ): void => {
   console.error('Error occurred:', error);
-  
+
   switch (status) {
     case 404:
       navigate('/404');
@@ -36,13 +37,12 @@ export const handleErrorNavigation = (
  * @param error - Error object from catch block
  * @param navigate - React Router's navigate function
  */
-export const handleApiError = (error: any, navigate: NavigateFunction): void => {
-  if (!error.response) {
+export const handleApiError = (error: unknown, navigate: NavigateFunction): void => {
+  const status = getApiErrorStatus(error);
+  if (status === undefined) {
     // Network error or server not responding
     handleErrorNavigation(navigate, 500, error);
     return;
   }
-
-  const status = error.response.status;
   handleErrorNavigation(navigate, status, error);
-}; 
+};

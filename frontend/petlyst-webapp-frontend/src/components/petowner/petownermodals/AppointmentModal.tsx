@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../store';
 import axiosInstance from '../../../utils/axiosConfig';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { getApiErrorMessage } from '../../../utils/errorMessage';
+import { getApiErrorMessage, getApiErrorResponse } from '../../../utils/errorMessage';
 
 interface Pet {
   pet_id: string;
@@ -350,12 +350,13 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
         } else {
           throw new Error('Failed to create appointment - empty response');
         }
-      } catch (apiError: any) {
+      } catch (apiError) {
         console.error("API error creating appointment:", apiError);
-        
+
         // If we received a specific error message from the API, show it
-        if (apiError.response?.data?.error) {
-          throw new Error(apiError.response.data.error);
+        const apiErrorBody = getApiErrorResponse(apiError)?.data as { error?: string } | undefined;
+        if (apiErrorBody?.error) {
+          throw new Error(apiErrorBody.error);
         }
         
         // For development mode: simulate success if API doesn't exist yet

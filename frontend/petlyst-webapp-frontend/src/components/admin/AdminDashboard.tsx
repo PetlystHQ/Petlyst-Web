@@ -98,7 +98,20 @@ const AdminDashboard: React.FC = () => {
             );
             
             // Map the clinic data from new column names to the ones expected by the component
-            const mappedClinics = response.data.pendingClinics.map((clinic: any) => ({
+            const mappedClinics = response.data.pendingClinics.map((clinic: {
+                clinic_id: number;
+                clinic_name: string;
+                clinic_address: string;
+                clinic_phone: string;
+                clinic_description: string;
+                clinic_verification_status: string;
+                operator_name: string;
+                operator_surname: string;
+                tax_identification_number?: string;
+                clinic_tax_id?: string;
+                veterinary_license_number?: string;
+                clinic_license_number?: string;
+            }) => ({
                 id: clinic.clinic_id,
                 name: clinic.clinic_name,
                 address: clinic.clinic_address,

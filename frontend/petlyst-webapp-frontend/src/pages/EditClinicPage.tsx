@@ -388,7 +388,7 @@ const EditClinicPage: React.FC = () => {
   };
   
   // Create updateField function for MapComponent
-  const updateField = (name: string, value: any) => {
+  const updateField = (name: string, value: unknown) => {
     // First update the form data
     setFormData(prev => prev ? {
       ...prev,
@@ -398,11 +398,11 @@ const EditClinicPage: React.FC = () => {
     setFormModified(true);
     
     // Manually validate for social media links
-    if (name === 'social_media_links') {
+    if (name === 'social_media_links' && Array.isArray(value)) {
       // Check if there's a platform selected but empty URL
-      const hasInvalidSocialMedia = value.some((link: any) => 
+      const hasInvalidSocialMedia = value.some((link: { platform?: string; url?: string }) =>
         link.platform && (!link.url || link.url.trim() === ''));
-      
+
       if (hasInvalidSocialMedia) {
         setError("Please provide URLs for all selected social media platforms");
         setContactValid(false);

@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import examinationService, { 
+import examinationService, {
   Examination,
   ExaminationFilters,
   CreateExaminationData,
   UpdateExaminationData
 } from './examinationService';
+import { getApiErrorMessage, getApiErrorResponse, isApiError } from '../../../../utils/errorMessage';
 
 // Define the state interface
 interface ExaminationState {
@@ -29,23 +30,24 @@ const initialState: ExaminationState = {
 };
 
 // Helper to handle API errors consistently
-const handleApiError = (error: any): string => {
+const handleApiError = (error: unknown): string => {
   console.error('API Error:', error);
-  
-  if (error.response) {
+
+  const response = getApiErrorResponse(error);
+  if (response) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
-    console.error('Error response:', error.response.data);
-    return error.response.data?.message || 
-           `Server error: ${error.response.status} ${error.response.statusText}`;
-  } else if (error.request) {
+    console.error('Error response:', response.data);
+    return getApiErrorMessage(error) ||
+           `Server error: ${response.status} ${response.statusText}`;
+  }
+  if (isApiError(error) && error.request) {
     // The request was made but no response was received
     console.error('Error request:', error.request);
     return 'No response received from server. Please check your connection.';
-  } else {
-    // Something happened in setting up the request that triggered an Error
-    return error.message || 'An unknown error occurred';
   }
+  // Something happened in setting up the request that triggered an Error
+  return getApiErrorMessage(error, 'An unknown error occurred');
 };
 
 // Async thunks

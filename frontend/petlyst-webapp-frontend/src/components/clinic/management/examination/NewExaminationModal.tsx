@@ -219,13 +219,13 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
         if (patientsResponse.data.success && patientsResponse.data.pets) {
           // Format the pets data
           const formattedPets = patientsResponse.data.pets.map((pet: {
-            pet_id: any;
+            pet_id: number | string;
             pet_name: string;
             pet_type?: string;
             pet_species?: string;
             pet_breed?: string;
           }) => ({
-            pet_id: parseInt(pet.pet_id, 10), // Ensure pet_id is a number
+            pet_id: parseInt(String(pet.pet_id), 10), // Ensure pet_id is a number
             pet_name: pet.pet_name,
             pet_species: pet.pet_type || pet.pet_species,
             pet_breed: pet.pet_breed

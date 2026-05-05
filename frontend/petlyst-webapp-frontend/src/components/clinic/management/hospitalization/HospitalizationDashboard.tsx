@@ -62,9 +62,10 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
         
         // Calculate statistics
         const totalRooms = rooms.length;
-        const occupiedRooms = rooms.filter((room: any) => room.room_status === 'occupied').length;
-        const maintenanceRooms = rooms.filter((room: any) => room.room_status === 'maintenance').length;
-        const availableRooms = rooms.filter((room: any) => room.room_status === 'vacant').length;
+        type RoomLite = { room_status: string };
+        const occupiedRooms = rooms.filter((room: RoomLite) => room.room_status === 'occupied').length;
+        const maintenanceRooms = rooms.filter((room: RoomLite) => room.room_status === 'maintenance').length;
+        const availableRooms = rooms.filter((room: RoomLite) => room.room_status === 'vacant').length;
         const currentHospitalizations = hospitalizations.length;
         
         setStats({

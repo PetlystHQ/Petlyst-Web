@@ -175,7 +175,7 @@ const VeterinarianProfile: React.FC = () => {
   const [showJoinConfirmationModal, setShowJoinConfirmationModal] = useState<boolean>(false);
   const [clinicJoinError, setClinicJoinError] = useState<string | null>(null);
   const [clinicJoinSuccess, setClinicJoinSuccess] = useState<string | null>(null);
-  const [myClinic, setMyClinic] = useState<any | null>(null);
+  const [myClinic, setMyClinic] = useState<{ clinic_id: number; clinic_name: string; [key: string]: unknown } | null>(null);
   const [myClinicLoading, setMyClinicLoading] = useState<boolean>(false);
   
   // Verification status state
@@ -184,7 +184,7 @@ const VeterinarianProfile: React.FC = () => {
   
   // State for pending request
   const [hasPendingRequest, setHasPendingRequest] = useState<boolean>(false);
-  const [pendingRequestDetails, setPendingRequestDetails] = useState<any>(null);
+  const [pendingRequestDetails, setPendingRequestDetails] = useState<{ clinic_id?: number; clinic_name?: string; status?: string; created_at?: string; [key: string]: unknown } | null>(null);
   
   // Önce yeni bir state ekleyelim - klinikten ayrılma modalı için
   const [showLeaveConfirmationModal, setShowLeaveConfirmationModal] = useState<boolean>(false);
@@ -2348,7 +2348,7 @@ const VeterinarianProfile: React.FC = () => {
                   You cannot send new join requests until this request is approved or canceled.
                 </p>
                 <p className="text-xs text-yellow-500 mt-1">
-                  Request sent on {new Date(pendingRequestDetails.created_at).toLocaleDateString()}
+                  Request sent on {pendingRequestDetails.created_at ? new Date(pendingRequestDetails.created_at).toLocaleDateString() : 'recently'}
                 </p>
               </div>
             </div>

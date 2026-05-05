@@ -1,4 +1,5 @@
 import axiosInstance from '../../../../utils/axiosConfig';
+import { getApiErrorMessage, getApiErrorResponse, isApiError } from '../../../../utils/errorMessage';
 
 // Interfaces based on the backend model
 export interface Examination {
@@ -52,22 +53,23 @@ export interface UpdateExaminationData {
 }
 
 // Helper for logging API calls with context
-const logApiCall = (method: string, endpoint: string, data?: any) => {
+const logApiCall = (method: string, endpoint: string, data?: unknown) => {
   console.log(`API ${method} - ${endpoint}`, data ? { data } : '');
 };
 
 // Helper for handling API errors
-const handleApiCallError = (error: any, context: string) => {
-  if (error.response) {
+const handleApiCallError = (error: unknown, context: string) => {
+  const response = getApiErrorResponse(error);
+  if (response) {
     console.error(`API Error (${context}) - Response:`, {
-      status: error.response.status,
-      data: error.response.data,
-      headers: error.response.headers,
+      status: response.status,
+      data: response.data,
+      headers: response.headers,
     });
-  } else if (error.request) {
+  } else if (isApiError(error) && error.request) {
     console.error(`API Error (${context}) - Request:`, error.request);
   } else {
-    console.error(`API Error (${context}):`, error.message);
+    console.error(`API Error (${context}):`, getApiErrorMessage(error));
   }
   throw error;
 };

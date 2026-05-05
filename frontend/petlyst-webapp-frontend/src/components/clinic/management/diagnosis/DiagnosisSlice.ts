@@ -64,11 +64,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Helper function to handle API errors
-const handleApiError = (error: any, rejectWithValue: any) => {
-  const errorMessage = getApiErrorMessage(error, 'An error occurred');
-  return rejectWithValue(errorMessage);
-};
 
 // Async thunks for API operations
 export const createDiagnosis = createAsyncThunk(
@@ -197,7 +192,7 @@ export const updateStandardDiagnosis = createAsyncThunk(
       
       return response.data;
     } catch (error) {
-      return handleApiError(error, rejectWithValue);
+      return rejectWithValue(getApiErrorMessage(error, 'An error occurred'));
     }
   }
 );
@@ -218,7 +213,7 @@ export const deleteStandardDiagnosis = createAsyncThunk(
       
       return { id: diagnosisIdOrCode, response: response.data };
     } catch (error) {
-      return handleApiError(error, rejectWithValue);
+      return rejectWithValue(getApiErrorMessage(error, 'An error occurred'));
     }
   }
 );
@@ -404,11 +399,12 @@ const diagnosisSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(deleteStandardDiagnosis.fulfilled, (state, action: PayloadAction<string>) => {
+      .addCase(deleteStandardDiagnosis.fulfilled, (state, action: PayloadAction<{ id: number | string; response: unknown }>) => {
         state.loading = false;
         state.success = true;
+        // Match by id (number) or code (string) depending on which form was passed.
         state.standardDiagnoses = state.standardDiagnoses.filter(
-          diagnosis => diagnosis.code !== action.payload
+          diagnosis => diagnosis.diagnosis_id !== action.payload.id && diagnosis.code !== action.payload.id
         );
       })
       .addCase(deleteStandardDiagnosis.rejected, (state, action) => {

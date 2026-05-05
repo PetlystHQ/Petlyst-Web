@@ -267,21 +267,21 @@ const ClinicPreviewPage: React.FC = () => {
           
           if (photosResponse.data.success && photosResponse.data.photos && photosResponse.data.photos.length > 0) {
             // clinicalbum tablosundan gelen fotoğrafları URL'ye dönüştür
-            const photos = photosResponse.data.photos.map((photo: any) => ({
+            const photos = photosResponse.data.photos.map((photo: { clinic_album_photo_url: string }) => ({
               url: photo.clinic_album_photo_url
             }));
-            
+
             console.log('Processed photos:', photos);
             setClinicPhotos(photos);
-            
+
             // Yükleme durumlarını ayarla
             const newLoadingState: {[key: number]: boolean} = {};
-            photos.forEach((_: any, index: number) => {
+            photos.forEach((_photo: { url: string }, index: number) => {
               newLoadingState[index] = true;
             });
             setLoadingImages(newLoadingState);
           }
-        } catch (photoErr: any) {
+        } catch (photoErr) {
           console.error('Error fetching clinic photos:', photoErr);
           // Fotoğraflar yoksa devam et, sadece boş array kalır
         }
@@ -509,7 +509,7 @@ const ClinicPreviewPage: React.FC = () => {
   }
 
   // Add a dummy updateField function to pass to MapComponent
-  const dummyUpdateField = (name: string, value: any) => {
+  const dummyUpdateField = (name: string, value: unknown) => {
     console.log(`Preview page would update ${name} to:`, value);
     // No actual update in preview mode
   };

@@ -63,7 +63,7 @@ const VeterinariansListPage: React.FC = () => {
   });
 
   // Add a new function to generate a slug
-  const generateSlug = (vet: any): string => {
+  const generateSlug = (vet: { user_name?: string; user_surname?: string }): string => {
     const firstName = vet.user_name || '';
     const lastName = vet.user_surname || '';
 

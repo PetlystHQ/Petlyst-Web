@@ -124,12 +124,12 @@ const PetOwnerHomePage: React.FC = () => {
       ]);
 
       if (animalTypesRes.data.success) {
-        setPopularAnimalTypes(animalTypesRes.data.animalTypes.map((item: any) => item.animal_type_name));
+        setPopularAnimalTypes(animalTypesRes.data.animalTypes.map((item: { animal_type_name: string }) => item.animal_type_name));
       }
 
       if (servicesRes.data.success) {
-        const medicalServices = servicesRes.data.services.medical.map((item: any) => item.service_name);
-        const additionalServices = servicesRes.data.services.additional.map((item: any) => item.service_name);
+        const medicalServices = servicesRes.data.services.medical.map((item: { service_name: string }) => item.service_name);
+        const additionalServices = servicesRes.data.services.additional.map((item: { service_name: string }) => item.service_name);
         setPopularServices([...medicalServices, ...additionalServices]);
       }
     } catch (error) {

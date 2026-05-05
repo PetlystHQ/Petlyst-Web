@@ -5,7 +5,7 @@ interface EditRegistrationProps {
     taxIdentificationNumber: string;
     veterinaryLicenseNumber: string;
   };
-  updateField: (name: string, value: any) => void;
+  updateField: (name: string, value: unknown) => void;
   loading: boolean;
   isEditMode?: boolean;
 }

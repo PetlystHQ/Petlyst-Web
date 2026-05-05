@@ -79,17 +79,20 @@ const ManagementDashboard: React.FC = () => {
   const userId = useSelector((state: RootState) => state.auth.user?.id);
   const user = useSelector((state: RootState) => state.auth.user);
   
-  // Extract veterinarian name safely using a more generic approach
+  // Extract veterinarian name safely using a more generic approach.
+  // Older payloads may carry snake_case aliases instead of the canonical
+  // User shape; cast once into a permissive type for those fallbacks.
+  type LegacyUser = { user_name?: string; user_surname?: string; name?: string; surname?: string };
   const getVetName = () => {
     if (!user) return '';
-    // Try to access name property regardless of exact field name
-    return (user as any).user_name || (user as any).name || '';
+    const legacy = user as LegacyUser;
+    return legacy.user_name || legacy.name || '';
   };
-  
+
   const getVetSurname = () => {
     if (!user) return '';
-    // Try to access surname property regardless of exact field name
-    return (user as any).user_surname || (user as any).surname || '';
+    const legacy = user as LegacyUser;
+    return legacy.user_surname || legacy.surname || '';
   };
   
   // Get clinicId from URL params, fallback to localStorage if not present

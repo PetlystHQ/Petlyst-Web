@@ -159,8 +159,8 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
                   handleInputChange(syntheticEvent);
                   
                   // If this is updating coordinates, also call updateCoordinates
-                  if (name === 'coordinates' && typeof value === 'object') {
-                    handleCoordinatesUpdate(value);
+                  if (name === 'coordinates' && value && typeof value === 'object') {
+                    handleCoordinatesUpdate(value as LocationCoordinates);
                   }
                 }}
                 hasExistingClinic={hasExistingClinic}

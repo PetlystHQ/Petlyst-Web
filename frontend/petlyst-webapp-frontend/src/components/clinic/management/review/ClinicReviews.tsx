@@ -532,7 +532,7 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
           <div className="flex space-x-3 mt-2 sm:mt-0">
             <select 
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'highest' | 'lowest')}
               className="rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm"
             >
               <option value="newest">Newest First</option>

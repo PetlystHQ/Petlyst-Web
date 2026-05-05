@@ -124,15 +124,20 @@ const InventoryTransactions: React.FC = () => {
         console.log('Raw transactions from API:', response.data.transactions);
         
         // Process the transactions to ensure numeric values are properly parsed
-        const processedTransactions = response.data.transactions.map((transaction: any) => ({
+        const processedTransactions = response.data.transactions.map((transaction: {
+          quantity?: string | number;
+          unit_price?: string | number | null;
+          total_price?: string | number | null;
+          [key: string]: unknown;
+        }) => ({
           ...transaction,
           // Convert to number and handle null/undefined
-          quantity: parseFloat(transaction.quantity || '0'),
-          unit_price: transaction.unit_price !== null && transaction.unit_price !== undefined 
-            ? parseFloat(transaction.unit_price) 
+          quantity: parseFloat(String(transaction.quantity ?? '0')),
+          unit_price: transaction.unit_price !== null && transaction.unit_price !== undefined
+            ? parseFloat(String(transaction.unit_price))
             : null,
-          total_price: transaction.total_price !== null && transaction.total_price !== undefined 
-            ? parseFloat(transaction.total_price) 
+          total_price: transaction.total_price !== null && transaction.total_price !== undefined
+            ? parseFloat(String(transaction.total_price))
             : null
         }));
         

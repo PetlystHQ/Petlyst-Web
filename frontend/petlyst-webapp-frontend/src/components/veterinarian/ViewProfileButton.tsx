@@ -81,8 +81,18 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       return;
     }
 
+    // Older payloads may carry snake_case aliases instead of the canonical
+    // User shape. Narrow once and reuse across the slug-generation paths.
+    const legacyUser = user as Partial<{
+      user_id: number;
+      user_name: string;
+      user_surname: string;
+      first_name: string;
+      last_name: string;
+    }>;
+
     // Get user ID safely
-    const userId = user?.id ?? (user as any)?.user_id;
+    const userId = user?.id ?? legacyUser?.user_id;
     
     if (!userId) {
       console.error("No user ID found");
@@ -106,8 +116,8 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       }
 
       // Slug yoksa generate edelim
-      const firstName = response.data?.user_name || (user as any).first_name || '';
-      const lastName = response.data?.user_surname || (user as any).last_name || '';
+      const firstName = response.data?.user_name || legacyUser.first_name || '';
+      const lastName = response.data?.user_surname || legacyUser.last_name || '';
       
       const slug = generateSlug(firstName, lastName);
       console.log("Generated slug:", slug);
@@ -118,8 +128,8 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       console.error("Error getting profile information:", error);
       
       // Bir hata durumunda yedek olarak user objesi üzerinden slug oluşturalım
-      const firstName = (user as any).first_name || (user as any).user_name || '';
-      const lastName = (user as any).last_name || (user as any).user_surname || '';
+      const firstName = legacyUser.first_name || legacyUser.user_name || '';
+      const lastName = legacyUser.last_name || legacyUser.user_surname || '';
       
       const slug = generateSlug(firstName, lastName);
       console.log("Fallback generated slug:", slug);

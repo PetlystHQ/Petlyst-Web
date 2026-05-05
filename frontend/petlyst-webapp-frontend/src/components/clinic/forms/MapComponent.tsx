@@ -41,7 +41,7 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 interface MapComponentProps {
   formData: ClinicFormData;
-  updateField: (name: string, value: any) => void;
+  updateField: (name: string, value: unknown) => void;
   hasExistingClinic: boolean;
   loading: boolean;
 }
@@ -67,7 +67,7 @@ const MapContainer = ({
   onError
 }: {
   formData: ExtendedClinicFormData,
-  updateField: (name: string, value: any) => void,
+  updateField: (name: string, value: unknown) => void,
   hasExistingClinic: boolean,
   loading: boolean,
   onError: (error: string) => void
@@ -491,14 +491,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   }, [formData.coordinates]);
   
   // updateField fonksiyonunu konsola log ile saran bir fonksiyon oluştur
-  const wrappedUpdateField = (name: string, value: any) => {
+  const wrappedUpdateField = (name: string, value: unknown) => {
     console.log(`MapComponent.wrappedUpdateField called: ${name}`, value);
     
     // Özellikle coordinates değerini güncellerken detaylı log tut
-    if (name === 'coordinates') {
+    if (name === 'coordinates' && value && typeof value === 'object') {
+      const coords = value as { lat?: number; lng?: number };
       console.log('Updating coordinates with values:', {
-        lat: value?.lat,
-        lng: value?.lng
+        lat: coords.lat,
+        lng: coords.lng
       });
     }
     

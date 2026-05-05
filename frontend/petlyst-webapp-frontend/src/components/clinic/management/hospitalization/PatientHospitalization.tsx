@@ -160,7 +160,16 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       
       if (response.data.success) {
         // The endpoint returns the patient data in the 'pets' property
-        setClinicPatients(response.data.pets.map((pet: any) => ({
+        setClinicPatients(response.data.pets.map((pet: {
+          pet_id: number | string;
+          pet_name: string;
+          pet_type?: string;
+          pet_species?: string;
+          pet_breed: string;
+          owner_id: number | string;
+          pet_owner_name: string;
+          pet_owner_surname: string;
+        }) => ({
           pet_id: pet.pet_id.toString(),
           pet_name: pet.pet_name,
           pet_species: pet.pet_type || pet.pet_species,

@@ -11,15 +11,15 @@ interface TimelineResponse {
   title?: string;
   code?: string;
   raw?: string;
-  stockDays?: any;
-  [key: string]: any; // For any other properties
+  stockDays?: unknown;
+  [key: string]: unknown; // For any other properties
 }
 
 interface ThresholdResponse {
   title?: string;
   code?: string;
   raw?: string;
-  [key: string]: any; // For any other properties
+  [key: string]: unknown; // For any other properties
 }
 
 type ResponseData = TimelineResponse | ThresholdResponse | string | null;

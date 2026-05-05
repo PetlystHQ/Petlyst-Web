@@ -29,6 +29,19 @@ interface ExaminationOption {
   pet_id?: number;
 }
 
+// Raw shape returned by the examinations endpoint, before mapping into
+// `ExaminationOption`. Distinct from `ExaminationOption` because the API
+// uses `veterinarian_name` while the UI displays it as `vet_name`.
+interface RawExaminationFromApi {
+  examination_id: number;
+  examination_date?: string;
+  created_at?: string;
+  status: string;
+  veterinarian_name?: string;
+  pet_name?: string;
+  pet_id?: number;
+}
+
 const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   diagnosis,
   examinationId,
@@ -210,9 +223,9 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       }
       
       // Get approved vets only
-      const approvedVets = vetResponse.data.veterinarians
-        .filter((vet: any) => vet.status === 'approved')
-        .map((vet: any) => vet.veterinarian_id);
+      const approvedVets = (vetResponse.data.veterinarians as Array<{ status: string; veterinarian_id: number }>)
+        .filter((vet) => vet.status === 'approved')
+        .map((vet) => vet.veterinarian_id);
       
       console.log('DiagnosisForm - Approved vets in clinic:', approvedVets);
       
@@ -240,15 +253,15 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         
         batchResults.forEach(response => {
           if (response.data.success && response.data.examinations) {
-            const exams = response.data.examinations.map((exam: any) => ({
+            const exams = (response.data.examinations as RawExaminationFromApi[]).map((exam): ExaminationOption => ({
               examination_id: exam.examination_id,
-              examination_date: new Date(exam.examination_date || exam.created_at).toLocaleDateString(),
+              examination_date: new Date(exam.examination_date || exam.created_at || '').toLocaleDateString(),
               status: exam.status,
               vet_name: exam.veterinarian_name,
               pet_name: exam.pet_name,
               pet_id: exam.pet_id
             }));
-            
+
             allExaminations.push(...exams);
           }
         });
@@ -329,21 +342,21 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       
       if (response.data && response.data.success && response.data.examinations && response.data.examinations.length > 0) {
         // Map the examination data from the response
-        const exams = response.data.examinations.map((exam: any) => {
+        const exams = (response.data.examinations as RawExaminationFromApi[]).map((exam): ExaminationOption => {
           console.log('Raw examination data from API:', exam);
           return {
             examination_id: exam.examination_id,
-            examination_date: new Date(exam.examination_date || exam.created_at).toLocaleDateString(),
+            examination_date: new Date(exam.examination_date || exam.created_at || '').toLocaleDateString(),
             status: exam.status,
             vet_name: exam.veterinarian_name,
             pet_name: exam.pet_name
           };
         });
-        
+
         console.log('DiagnosisForm - Mapped examinations:', exams);
-        
+
         // Only use examinations with status "in_progress" or "completed"
-        const filteredExams = exams.filter((exam: any) => 
+        const filteredExams = exams.filter((exam) =>
           exam.status === 'in_progress' || exam.status === 'completed'
         );
         
@@ -394,16 +407,16 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         if (fallbackResponse.data && fallbackResponse.data.success && 
             fallbackResponse.data.examinations && fallbackResponse.data.examinations.length > 0) {
           
-          const exams = fallbackResponse.data.examinations.map((exam: any) => ({
+          const exams = (fallbackResponse.data.examinations as RawExaminationFromApi[]).map((exam): ExaminationOption => ({
             examination_id: exam.examination_id,
-            examination_date: new Date(exam.examination_date || exam.created_at).toLocaleDateString(),
+            examination_date: new Date(exam.examination_date || exam.created_at || '').toLocaleDateString(),
             status: exam.status,
             vet_name: exam.veterinarian_name,
             pet_name: exam.pet_name
           }));
-          
+
           // Only use examinations with status "in_progress" or "completed"
-          const filteredExams = exams.filter((exam: any) => 
+          const filteredExams = exams.filter((exam) =>
             exam.status === 'in_progress' || exam.status === 'completed'
           );
           
