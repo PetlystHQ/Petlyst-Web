@@ -63,12 +63,14 @@ const EditHours: React.FC<EditHoursProps> = ({
     setHasEmergencyService(formData.has_emergency_service);
     setIsOpen24_7(formData.is_open_24_7);
     setSlotDuration(
-      formData.slot_duration === 60 ? '60' : 
-      formData.slot_duration === 30 ? '30' : 
+      formData.slot_duration === 60 ? '60' :
+      formData.slot_duration === 30 ? '30' :
       formData.slot_duration === 20 ? '20' : '60'
     );
-    
+
     validateWorkingHours();
+    // validateWorkingHours is in-component and reads `formData` via closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
   const validateWorkingHours = () => {
@@ -107,6 +109,9 @@ const EditHours: React.FC<EditHoursProps> = ({
     } else {
       updateField('is_open_24_7', false);
     }
+    // updateField is a parent prop; including it would re-fire on every
+    // parent render. Effect should fire only on the toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen24_7]);
 
   // When emergency service status changes
@@ -115,8 +120,11 @@ const EditHours: React.FC<EditHoursProps> = ({
     if (!hasEmergencyService && formData.emergency_available_days?.length > 0) {
       updateField('emergency_available_days', []);
     }
+    // formData.emergency_available_days is a guard; updateField is a parent
+    // prop. Effect should only react to hasEmergencyService transitions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasEmergencyService]);
-  
+
   // When slot duration changes, check opening and closing times
   useEffect(() => {
     // Adjust current opening and closing hours to correct minute values
@@ -126,6 +134,9 @@ const EditHours: React.FC<EditHoursProps> = ({
     if (formData.closing_time) {
       handleTimeAdjustment('closing_time', formData.closing_time);
     }
+    // Effect intentionally re-runs only when slotDuration toggles; current
+    // opening/closing times are read inside via closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slotDuration]);
 
   // 24/7 toggle handler

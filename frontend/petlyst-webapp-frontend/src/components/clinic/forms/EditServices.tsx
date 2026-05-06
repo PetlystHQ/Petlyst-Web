@@ -191,6 +191,8 @@ export const EditServices: React.FC<EditServicesProps> = ({
   // Fetch clinic services on component mount
   useEffect(() => {
     fetchClinicServices();
+    // fetchClinicServices is in-component and closes over clinicId.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
   // Check for changes to enable/disable save button

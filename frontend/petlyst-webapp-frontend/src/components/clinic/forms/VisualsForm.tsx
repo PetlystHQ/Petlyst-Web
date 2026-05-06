@@ -63,6 +63,9 @@ export const VisualsForm: React.FC<VisualsFormProps> = ({
         ...newLoadingState
       }));
     }
+    // Track count, not the array reference, to avoid re-seeding on every
+    // mutation of `loadingImages` itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photoPreviewUrls.length]);
   
   // Handle drag events

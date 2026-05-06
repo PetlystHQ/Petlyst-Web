@@ -448,6 +448,11 @@ const MapContainer = ({
         }
       }
     };
+    // Map initialization is intentionally a one-shot mount effect.
+    // initializeMap is in-component and reads coordinates / hasExistingClinic
+    // via closure; subsequent updates are handled by the dedicated coordinate
+    // effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Update map when coordinates change

@@ -45,6 +45,8 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
   // Fetch existing photos on component mount
   useEffect(() => {
     fetchClinicPhotos();
+    // fetchClinicPhotos is in-component and closes over clinicId.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
   
   // Create URL previews when new photos are selected
@@ -113,6 +115,10 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
         ...newLoadingState
       }));
     }
+    // The effect tracks the *count* of photos to seed loading state for new
+    // entries; tracking the arrays themselves (or `loadingImages`) would
+    // re-set state on every render that mutates the loading map.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingPhotos.length, newPhotoPreviewUrls.length]);
   
   // Handle drag events
