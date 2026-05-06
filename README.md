@@ -1,5 +1,7 @@
 # Petlyst Web
 
+[![CI](https://github.com/PetlystHQ/Petlyst-Web/actions/workflows/ci.yml/badge.svg)](https://github.com/PetlystHQ/Petlyst-Web/actions/workflows/ci.yml)
+
 Web platform for Petlyst — a system connecting pet owners, veterinarians, and clinics. Includes appointment booking, clinic management, hospitalization tracking, inventory, medical examinations, and reviews.
 
 ## Tech Stack
