@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
+import axiosInstance from '../utils/axiosConfig';
 const ContactUsPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -35,7 +34,7 @@ const ContactUsPage: React.FC = () => {
 
     try {
       // Send data to backend API
-      await axios.post('/api/contact-us', formData);
+      await axiosInstance.post('/api/contact-us', formData);
       
       // Show success message
       setSubmitResult({

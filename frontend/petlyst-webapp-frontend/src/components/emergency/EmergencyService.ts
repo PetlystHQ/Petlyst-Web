@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { createGoogleMapsDirectionsUrl } from './mapUtils';
 
 // Telefon numarası için arayüz
@@ -93,7 +93,7 @@ export const findNearestClinics = async (
 ): Promise<Clinic[]> => {
   try {
     // Backend API'ye istek gönder
-    const response = await axios.get<NearestClinicResponse>(`/api/emergency/nearest-clinic`, {
+    const response = await axiosInstance.get<NearestClinicResponse>(`/emergency/nearest-clinic`, {
       params: { latitude, longitude }
     });
     

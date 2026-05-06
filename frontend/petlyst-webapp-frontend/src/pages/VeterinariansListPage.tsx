@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { API_ENDPOINTS } from '../constants/dashboard';
 import { VETERINARY_LANGUAGES } from '../constants/VeterinaryLanguages';
 
@@ -25,7 +25,7 @@ const VeterinariansListPage: React.FC = () => {
     const fetchVeterinarians = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(API_ENDPOINTS.PUBLIC_PROFILES);
+        const response = await axiosInstance.get(API_ENDPOINTS.PUBLIC_PROFILES);
         
         if (response.data.success) {
           setVeterinarians(response.data.veterinarians);

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import RoomCard from './RoomCard';
 import RoomForm from './RoomForm';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Define interfaces
@@ -62,10 +61,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     setError(null);
     
     try {
-      const response = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/rooms`);
 
       if (response.data.success) {
         setRooms(response.data.rooms);
@@ -107,14 +103,10 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     try {
       if (editingRoom) {
         // Update existing room
-        const response = await axios.put(
-          `${API_URL}/api/hospitalization/rooms/${editingRoom.id}`,
-          {
+        const response = await axiosInstance.put(`/hospitalization/rooms/${editingRoom.id}`, {
             roomName: formData.roomName,
             roomType: formData.roomType
-          },
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+          });
         
         if (response.data.success) {
           setRooms(rooms.map(room => 
@@ -129,14 +121,10 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
         }
       } else {
         // Add new room
-        const response = await axios.post(
-          `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
-          {
+        const response = await axiosInstance.post(`/clinics/${clinicId}/hospitalization/rooms`, {
             roomName: formData.roomName,
             roomType: formData.roomType
-          },
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+          });
         
         if (response.data.success) {
           setRooms([...rooms, response.data.room]);
@@ -168,10 +156,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     setError(null);
     
     try {
-      const response = await axios.delete(
-        `${API_URL}/api/hospitalization/rooms/${roomId}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.delete(`/hospitalization/rooms/${roomId}`);
       
       if (response.data.success) {
         setRooms(rooms.filter(room => room.id !== roomId));
@@ -197,11 +182,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
     setError(null);
     
     try {
-      const response = await axios.put(
-        `${API_URL}/api/hospitalization/rooms/${roomId}/status`,
-        { status },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.put(`/hospitalization/rooms/${roomId}/status`, { status });
       
       if (response.data.success) {
         setRooms(rooms.map(room => 

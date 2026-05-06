@@ -1,6 +1,6 @@
 import React, { useState, useEffect, KeyboardEvent } from 'react';
 import { useAppSelector } from '../hooks/useAppSelector';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchIcon, WarningIcon, ArrowRightIcon } from '../components/ui/ReactIcons';
 import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
@@ -119,8 +119,8 @@ const PetOwnerHomePage: React.FC = () => {
       console.log("Using relative URLs with Vite proxy");
       
       const [animalTypesRes, servicesRes] = await Promise.all([
-        axios.get(`/api/pet-owners/popular-animal-types`),
-        axios.get(`/api/pet-owners/popular-services`)
+        axiosInstance.get(`/pet-owners/popular-animal-types`),
+        axiosInstance.get(`/pet-owners/popular-services`)
       ]);
 
       if (animalTypesRes.data.success) {
@@ -156,9 +156,7 @@ const PetOwnerHomePage: React.FC = () => {
         console.log("Searching for:", searchQuery);
         
         // Get API suggestions
-        const response = await axios.get(`/api/pet-owners/search-suggestions`, {
-          params: { query: searchQuery }
-        });
+        const response = await axiosInstance.get(`/pet-owners/search-suggestions`, { params: { query: searchQuery } });
 
         console.log("Suggestion response:", response.data);
 

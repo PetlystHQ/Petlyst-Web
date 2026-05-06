@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { RootState } from '../store';
-import { API_URL } from '../config/api';
 import { ClinicFormData, PhoneTypeEnum } from '../types/clinic';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { EditVisuals } from '../components/clinic/forms/EditVisuals';
@@ -33,10 +32,8 @@ const EditClinicPage: React.FC = () => {
     
     try {
       setLoading(true);
-      const apiUrl = API_URL;
-      const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
+      const response = await axiosInstance.get(`/clinics/${clinicId}`, {
         headers: {
-          'Authorization': `Bearer ${token || localStorage.getItem('token')}`,
           'Cache-Control': 'no-cache, no-store',
           'Pragma': 'no-cache'
         },
@@ -225,9 +222,7 @@ const EditClinicPage: React.FC = () => {
       
       // Log to check the phone numbers data structure
       console.log('Phone numbers data:', formData.phone_numbers);
-      
-      const apiUrl = API_URL;
-      
+
       // Modify clinic name to include the clinic type if it doesn't already end with it
       let clinic_name = formData.name;
       if (formData.name && formData.clinicType) {
@@ -319,34 +314,22 @@ const EditClinicPage: React.FC = () => {
       });
       
       // First update the main clinic data
-      const response = await axios.put(`${apiUrl}/api/clinics/${clinicId}`, requestData, {
-        headers: {
-          'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-        }
-      });
+      const response = await axiosInstance.put(`/clinics/${clinicId}`, requestData);
       
       if (response.status === 200) {
         // If we're on the contact tab, update phone numbers and social media links
         if (activeTab === 'contact') {
           // Update phone numbers
           if (formData.phone_numbers) {
-            await axios.put(`${apiUrl}/api/clinics/${clinicId}/phone-numbers`, {
+            await axiosInstance.put(`/clinics/${clinicId}/phone-numbers`, {
               phone_numbers: formData.phone_numbers
-            }, {
-              headers: {
-                'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-              }
             });
           }
           
           // Update social media links
           if (formData.social_media_links) {
-            await axios.put(`${apiUrl}/api/clinics/${clinicId}/social-media`, {
+            await axiosInstance.put(`/clinics/${clinicId}/social-media`, {
               social_media_links: formData.social_media_links
-            }, {
-              headers: {
-                'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-              }
             });
           }
         }

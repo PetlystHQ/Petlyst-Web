@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import AddCategoryModal from './inventorymodals/AddCategoryModal';
 import EditCategoryModal from './inventorymodals/EditCategoryModal';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Interface for category
@@ -89,11 +88,7 @@ const InventoryCategories: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/categories`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/categories`);
 
       if (response.data.success && response.data.categories) {
         setCategories(response.data.categories);
@@ -162,15 +157,7 @@ const InventoryCategories: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.post(
-        `${API_URL}/api/clinics/${clinicId}/inventory/categories`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.post(`/clinics/${clinicId}/inventory/categories`, formData);
 
       if (response.data.success) {
         await fetchCategories();
@@ -187,15 +174,7 @@ const InventoryCategories: React.FC = () => {
     if (!token || !clinicId || !currentCategory) return;
 
     try {
-      const response = await axios.put(
-        `${API_URL}/api/clinics/${clinicId}/inventory/categories/${currentCategory.id}`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.put(`/clinics/${clinicId}/inventory/categories/${currentCategory.id}`, formData);
 
       if (response.data.success) {
         await fetchCategories();

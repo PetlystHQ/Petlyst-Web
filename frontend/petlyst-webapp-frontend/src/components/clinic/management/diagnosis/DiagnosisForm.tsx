@@ -9,8 +9,8 @@ import {
 } from './DiagnosisSlice';
 import { Diagnosis, DiagnosisData, StandardDiagnosis } from './diagnosisService';
 import { FaTimes, FaSearch, FaExclamationTriangle, FaNotesMedical } from 'react-icons/fa';
-import axios from 'axios';
 
+import axiosInstance from '../../../../utils/axiosConfig';
 interface DiagnosisFormProps {
   diagnosis: Diagnosis | null;
   examinationId?: number;
@@ -113,12 +113,7 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       
       const fetchExaminationDetails = async () => {
         try {
-          const token = localStorage.getItem('token');
-          const response = await axios.get(`/api/examinations/${examinationId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
+          const response = await axiosInstance.get(`/examinations/${examinationId}`);
           
           if (response.data.success && response.data.examination) {
             const petIdFromExam = response.data.examination.pet_id;
@@ -216,11 +211,7 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       console.log('DiagnosisForm - Token found?', !!token);
       
       // Get all veterinarians in this clinic
-      const vetResponse = await axios.get(`/api/clinics/${clinicId}/veterinarians`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const vetResponse = await axiosInstance.get(`/clinics/${clinicId}/veterinarians`);
       
       if (!vetResponse.data.success || !vetResponse.data.veterinarians) {
         throw new Error('Failed to fetch clinic veterinarians');
@@ -248,9 +239,7 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       for (let i = 0; i < approvedVets.length; i += 5) {
         const batchVets = approvedVets.slice(i, i + 5);
         const batchPromises = batchVets.map((vetId: number) => 
-          axios.get(`/api/examinations?vet_id=${vetId}&status=in_progress,completed`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          axiosInstance.get(`/examinations?vet_id=${vetId}&status=in_progress,completed`)
         );
         
         const batchResults = await Promise.all(batchPromises);
@@ -328,18 +317,11 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     console.log('DiagnosisForm - Requesting API endpoint:', apiUrl);
     
     try {
-      const token = localStorage.getItem('token');
-      console.log('DiagnosisForm - Token found?', !!token);
-      
       // Log request details
       console.log('DiagnosisForm - Making API request to:', apiUrl);
-      
+
       const startTime = Date.now();
-      const response = await axios.get(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(apiUrl);
       const endTime = Date.now();
       
       console.log(`DiagnosisForm - API response received in ${endTime - startTime}ms:`, response.data);
@@ -397,14 +379,9 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       // Try without the status parameter as a fallback
       try {
         console.log('DiagnosisForm - Trying fallback without status parameter...');
-        const token = localStorage.getItem('token');
-        const fallbackUrl = `/api/examinations/pet-history/${petId}`;
-        
-        const fallbackResponse = await axios.get(fallbackUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const fallbackUrl = `/examinations/pet-history/${petId}`;
+
+        const fallbackResponse = await axiosInstance.get(fallbackUrl);
         
         console.log('DiagnosisForm - Fallback response:', fallbackResponse.data);
         

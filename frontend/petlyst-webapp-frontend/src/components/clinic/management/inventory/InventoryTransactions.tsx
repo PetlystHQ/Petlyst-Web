@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import AddTransactionModal from './inventorymodals/AddTransactionModal';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage, getApiErrorResponse } from '../../../../utils/errorMessage';
 // Interface for inventory item
 interface InventoryItem {
@@ -116,11 +115,7 @@ const InventoryTransactions: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/transactions`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/transactions`);
 
       if (response.data.success && response.data.transactions) {
         console.log('Raw transactions from API:', response.data.transactions);
@@ -160,11 +155,7 @@ const InventoryTransactions: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/items`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/items`);
 
       if (response.data.success && response.data.items) {
         setInventoryItems(response.data.items);
@@ -257,15 +248,7 @@ const InventoryTransactions: React.FC = () => {
 
       console.log('Submitting transaction with integer values:', processedData);
 
-      const response = await axios.post(
-        `${API_URL}/api/clinics/${clinicId}/inventory/transactions`,
-        processedData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.post(`/clinics/${clinicId}/inventory/transactions`, processedData);
 
       if (response.data.success) {
         await fetchTransactions();

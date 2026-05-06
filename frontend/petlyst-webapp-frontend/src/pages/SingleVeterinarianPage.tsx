@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { API_ENDPOINTS } from '../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS } from '../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES } from '../constants/VeterinaryLanguages';
 import { useAppSelector } from '../hooks/useAppSelector';
-import { API_URL } from '../config/api';
 import { getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 // Veterinarian profile interfaces
 interface VeterinarianProfile {
@@ -91,9 +90,7 @@ const SingleVeterinarianPage: React.FC = () => {
         setLoading(true);
         
         // Auth token'ı her zaman gönderiyoruz (eğer varsa), böylece profil sahibi olabilir
-        const response = await axios.get(`${API_ENDPOINTS.PUBLIC_PROFILE_BY_SLUG}/${slug}`, { 
-          headers: token ? { Authorization: `Bearer ${token}` } : {} 
-        });
+        const response = await axiosInstance.get(`${API_ENDPOINTS.PUBLIC_PROFILE_BY_SLUG}/${slug}`);
         
         if (response.data.success) {
           setProfile(response.data.profile);
@@ -153,7 +150,7 @@ const SingleVeterinarianPage: React.FC = () => {
   // Function to fetch the approved clinic for the veterinarian
   const fetchApprovedClinic = async (veterinarianId: number) => {
     try {
-      const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${veterinarianId}`);
+      const response = await axiosInstance.get(`/veterinarian/approved-clinic/${veterinarianId}`);
       
       if (response.data && response.data.success) {
         setApprovedClinic(response.data.clinic);
@@ -172,11 +169,7 @@ const SingleVeterinarianPage: React.FC = () => {
     try {
       setIsProfileVisibilityUpdating(true);
       
-      const response = await axios.put(
-        API_ENDPOINTS.PROFILE_VISIBILITY, 
-        { is_profile_public: makePublic },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.put(API_ENDPOINTS.PROFILE_VISIBILITY, { is_profile_public: makePublic });
       
       if (response.data.success) {
         setIsPrivateProfile(!makePublic);

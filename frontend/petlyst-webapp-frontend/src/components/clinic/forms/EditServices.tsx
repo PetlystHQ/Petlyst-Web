@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../utils/axiosConfig';
 import { Tooltip } from '../shared/Tooltip';
-import { API_URL } from '../../../config/api';
 import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface EditServicesProps {
@@ -164,7 +163,6 @@ const ServiceCategory: React.FC<ServiceCategoryProps> = ({
 
 export const EditServices: React.FC<EditServicesProps> = ({
   clinicId,
-  token,
   onServicesChange
 }) => {
   const [loading, setLoading] = useState(true);
@@ -211,12 +209,7 @@ export const EditServices: React.FC<EditServicesProps> = ({
     setError(null);
     
     try {
-      const apiUrl = API_URL;
-      const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}/services`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/services`);
       
       if (response.data.success) {
         const fetchedServices = {
@@ -267,21 +260,11 @@ export const EditServices: React.FC<EditServicesProps> = ({
     setSuccess(null);
     
     try {
-      const apiUrl = API_URL;
-      const response = await axios.put(
-        `${apiUrl}/api/clinics/${clinicId}/services`,
-        {
+      const response = await axiosInstance.put(`/clinics/${clinicId}/services`, {
           animalTypes: services.servedAnimalTypes,
           medicalServices: services.medicalServices,
           additionalServices: services.additionalServices
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+        }, { headers: { 'Content-Type': 'application/json' } });
       
       if (response.data.success) {
         setSuccess('Clinic services updated successfully');

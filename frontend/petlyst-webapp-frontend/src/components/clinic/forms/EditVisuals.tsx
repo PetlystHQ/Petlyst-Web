@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../utils/axiosConfig';
 import { Tooltip } from '../shared/Tooltip';
-import { API_URL } from '../../../config/api';
 import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 interface ClinicPhoto {
@@ -22,7 +21,6 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
   clinicId,
   clinicName,
   clinicType,
-  token,
   onPhotoChange
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,12 +64,7 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     setError(null);
     
     try {
-      const apiUrl = API_URL;
-      const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}/photos`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/photos`);
       
       if (response.data.success) {
         setExistingPhotos(response.data.photos);
@@ -199,8 +192,6 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     setSuccess(null);
     
     try {
-      const apiUrl = API_URL;
-      
       // SADECE klinik ID ve adını gönder, tip ekleme (tip backend'de eklenecek)
       const sanitizedClinicName = clinicName.toLowerCase().replace(/\s+/g, '-');
       const folderName = `${clinicId}-${sanitizedClinicName}`;
@@ -221,16 +212,10 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
         formData.append('clinicName', folderName);
         formData.append('clinicType', dbFormatClinicType); // Use database format
         
-        return axios.post(`${apiUrl}/api/clinics/upload-photo`, formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          },
-          onUploadProgress: (progressEvent) => {
+        return axiosInstance.post(`/clinics/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress: (progressEvent) => {
             const progress = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
             console.log(`Upload progress for photo ${index + 1}: ${progress}%`);
-          }
-        });
+          } });
       });
       
       await Promise.all(uploadPromises);
@@ -286,12 +271,7 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
     }
     
     try {
-      const apiUrl = API_URL;
-      await axios.delete(`${apiUrl}/api/clinics/${clinicId}/photos/${photoId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      await axiosInstance.delete(`/clinics/${clinicId}/photos/${photoId}`);
       
       // Update the local state to remove the deleted photo
       setExistingPhotos(prev => prev.filter(photo => photo.clinic_album_photo_id !== photoId));

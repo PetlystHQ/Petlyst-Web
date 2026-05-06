@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { API_ENDPOINTS } from '../../constants/dashboard';
 import { VETERINARY_EXPERTISE_AREAS, EXPERTISE_CATEGORIES } from '../../constants/VeterinaryExpertise';
 import { VETERINARY_LANGUAGES, getLanguageNameById } from '../../constants/VeterinaryLanguages';
-import { API_URL } from '../../config/api';
 import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface Education {
@@ -216,7 +215,7 @@ const VeterinarianProfile: React.FC = () => {
   useEffect(() => {
     fetchVerificationStatus();
     // fetchVerificationStatus is in-component; adding it would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [token]);
 
   // Check for selectedProfileTab in localStorage and switch to that tab if available
@@ -243,11 +242,7 @@ const VeterinarianProfile: React.FC = () => {
   const fetchEducation = async () => {
     try {
       setEducationLoading(true);
-      const response = await axios.get(API_ENDPOINTS.EDUCATION, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.EDUCATION);
       setEducationList(response.data);
       setEducationError(null);
     } catch (error) {
@@ -261,11 +256,7 @@ const VeterinarianProfile: React.FC = () => {
   const fetchCertifications = async () => {
     try {
       setCertificationLoading(true);
-      const response = await axios.get(API_ENDPOINTS.CERTIFICATIONS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.CERTIFICATIONS);
       setCertificationList(response.data);
       setCertificationError(null);
     } catch (error) {
@@ -279,11 +270,7 @@ const VeterinarianProfile: React.FC = () => {
   const fetchExpertise = async () => {
     try {
       setExpertiseLoading(true);
-      const response = await axios.get(API_ENDPOINTS.EXPERTISE, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.EXPERTISE);
       setExpertiseList(response.data);
       setExpertiseError(null);
     } catch (error) {
@@ -297,11 +284,7 @@ const VeterinarianProfile: React.FC = () => {
   const fetchProfile = async () => {
     try {
       setProfileLoading(true);
-      const response = await axios.get(API_ENDPOINTS.PROFILE, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.PROFILE);
       
       setProfileData(response.data);
       
@@ -321,11 +304,7 @@ const VeterinarianProfile: React.FC = () => {
   const fetchPhotos = async () => {
     try {
       setPhotosLoading(true);
-      const response = await axios.get(API_ENDPOINTS.VET_PHOTOS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.VET_PHOTOS);
       
       if (response.data.success) {
         setPhotos(response.data.photos || []);
@@ -380,11 +359,7 @@ const VeterinarianProfile: React.FC = () => {
       if (photos.length > 0) {
         try {
           const photoId = photos[0].veterinarian_album_photo_id;
-          await axios.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
+          await axiosInstance.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`);
           console.log('Existing photo deleted before upload');
         } catch (deleteError) {
           console.error('Error deleting existing photo:', deleteError);
@@ -392,16 +367,7 @@ const VeterinarianProfile: React.FC = () => {
         }
       }
       
-      const response = await axios.post(
-        API_ENDPOINTS.UPLOAD_VET_PHOTO, 
-        formData, 
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
+      const response = await axiosInstance.post(API_ENDPOINTS.UPLOAD_VET_PHOTO, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       
       if (response.data.success) {
         // Reset file input for future uploads
@@ -429,11 +395,7 @@ const VeterinarianProfile: React.FC = () => {
     try {
       setDeletePhotoLoading(true);
       
-      const response = await axios.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`);
       
       if (response.data.success) {
         // Update photos state by removing the deleted photo
@@ -551,20 +513,10 @@ const VeterinarianProfile: React.FC = () => {
 
       if (editingEducationId) {
         // Update existing education
-        await axios.put(`${API_ENDPOINTS.EDUCATION}/${editingEducationId}`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await axiosInstance.put(`${API_ENDPOINTS.EDUCATION}/${editingEducationId}`, payload, { headers: { 'Content-Type': 'application/json' } });
       } else {
         // Add new education
-        await axios.post(API_ENDPOINTS.EDUCATION, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await axiosInstance.post(API_ENDPOINTS.EDUCATION, payload, { headers: { 'Content-Type': 'application/json' } });
       }
       
       // Reset form and fetch updated data
@@ -590,20 +542,10 @@ const VeterinarianProfile: React.FC = () => {
 
       if (editingCertificationId) {
         // Update existing certification
-        await axios.put(`${API_ENDPOINTS.CERTIFICATIONS}/${editingCertificationId}`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await axiosInstance.put(`${API_ENDPOINTS.CERTIFICATIONS}/${editingCertificationId}`, payload, { headers: { 'Content-Type': 'application/json' } });
       } else {
         // Add new certification
-        await axios.post(API_ENDPOINTS.CERTIFICATIONS, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await axiosInstance.post(API_ENDPOINTS.CERTIFICATIONS, payload, { headers: { 'Content-Type': 'application/json' } });
       }
       
       // Reset form and fetch updated data
@@ -629,12 +571,7 @@ const VeterinarianProfile: React.FC = () => {
         };
         
         // Update existing expertise
-        await axios.put(`${API_ENDPOINTS.EXPERTISE}/${editingExpertiseId}`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        await axiosInstance.put(`${API_ENDPOINTS.EXPERTISE}/${editingExpertiseId}`, payload, { headers: { 'Content-Type': 'application/json' } });
       } else {
         // Add multiple new expertise areas
         if (selectedExpertiseAreas.length === 0) {
@@ -649,12 +586,7 @@ const VeterinarianProfile: React.FC = () => {
             expertise_area: expertiseArea
           };
           
-          await axios.post(API_ENDPOINTS.EXPERTISE, payload, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          await axiosInstance.post(API_ENDPOINTS.EXPERTISE, payload, { headers: { 'Content-Type': 'application/json' } });
         }
       }
       
@@ -693,25 +625,13 @@ const VeterinarianProfile: React.FC = () => {
   const confirmDelete = async () => {
     try {
       if (deleteType === 'education' && deleteEducationId) {
-        await axios.delete(`${API_ENDPOINTS.EDUCATION}/${deleteEducationId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        await axiosInstance.delete(`${API_ENDPOINTS.EDUCATION}/${deleteEducationId}`);
         fetchEducation();
       } else if (deleteType === 'certification' && deleteCertificationId) {
-        await axios.delete(`${API_ENDPOINTS.CERTIFICATIONS}/${deleteCertificationId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        await axiosInstance.delete(`${API_ENDPOINTS.CERTIFICATIONS}/${deleteCertificationId}`);
         fetchCertifications();
       } else if (deleteType === 'expertise' && deleteExpertiseId) {
-        await axios.delete(`${API_ENDPOINTS.EXPERTISE}/${deleteExpertiseId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        await axiosInstance.delete(`${API_ENDPOINTS.EXPERTISE}/${deleteExpertiseId}`);
         fetchExpertise();
       } else if (deleteType === 'photo' && photoToDelete) {
         await deletePhoto(photoToDelete);
@@ -1633,12 +1553,7 @@ const VeterinarianProfile: React.FC = () => {
         preferred_languages: selectedLanguages.length > 0 ? selectedLanguages : null
       };
       
-      await axios.put(API_ENDPOINTS.PROFILE, payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await axiosInstance.put(API_ENDPOINTS.PROFILE, payload, { headers: { 'Content-Type': 'application/json' } });
       
       // Update profile data and hide form
       setShowBiographyForm(false);
@@ -2066,11 +1981,7 @@ const VeterinarianProfile: React.FC = () => {
     try {
       setMyClinicLoading(true);
       
-      const response = await axios.get(`${API_URL}/api/veterinarian/my-clinic`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/veterinarian/my-clinic`);
       
       if (response.data && response.data.success) {
         setMyClinic(response.data.clinic);
@@ -2096,11 +2007,7 @@ const VeterinarianProfile: React.FC = () => {
       setVerificationLoading(true);
       console.log("Fetching verification status...");
       
-      const response = await axios.get(API_ENDPOINTS.VERIFICATION_STATUS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.VERIFICATION_STATUS);
       
       console.log("Verification API response:", response.data);
       
@@ -2129,12 +2036,10 @@ const VeterinarianProfile: React.FC = () => {
       setClinicSearchError(null);
       setClinics([]);
       
-      const response = await axios.get(`${API_URL}/api/pet-owners/search-clinics`, {
-        params: {
+      const response = await axiosInstance.get(`/pet-owners/search-clinics`, { params: {
           query: clinicSearchQuery,
           limit: 50
-        }
-      });
+        } });
       
       if (response.data && response.data.success && Array.isArray(response.data.clinics)) {
         const clinicsData = response.data.clinics;
@@ -2145,15 +2050,7 @@ const VeterinarianProfile: React.FC = () => {
         if (clinicIds.length > 0) {
           try {
             // Fetch operators for all clinics in a single request
-            const operatorsResponse = await axios.post(
-              `${API_URL}/api/veterinarian/clinic-operators`,
-              { clinicIds },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              }
-            );
+            const operatorsResponse = await axiosInstance.post(`/veterinarian/clinic-operators`, { clinicIds });
             
             if (operatorsResponse.data && operatorsResponse.data.success) {
               const operatorsMap = operatorsResponse.data.operators;
@@ -2219,15 +2116,7 @@ const VeterinarianProfile: React.FC = () => {
       setClinicJoinLoading(true);
       setClinicJoinError(null);
       
-      const response = await axios.post(
-        `${API_URL}/api/veterinarian/request-join-clinic/${selectedClinic.clinic_id}`,
-        {}, 
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.post(`/veterinarian/request-join-clinic/${selectedClinic.clinic_id}`, {});
       
       if (response.data && response.data.success) {
         setClinicJoinSuccess(`Your request to join ${selectedClinic.clinic_name} has been sent successfully!`);
@@ -2593,11 +2482,7 @@ const VeterinarianProfile: React.FC = () => {
   // Function to check if veterinarian has pending requests
   const checkPendingRequests = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/veterinarian/check-pending-requests`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/veterinarian/check-pending-requests`);
       
       if (response.data && response.data.success) {
         setHasPendingRequest(response.data.hasPendingRequest);
@@ -2621,14 +2506,7 @@ const VeterinarianProfile: React.FC = () => {
       setLeavingClinicLoading(true);
       setLeaveClinicError(null);
       
-      const response = await axios.delete(
-        `${API_URL}/api/veterinarian/leave-clinic/${myClinic.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.delete(`/veterinarian/leave-clinic/${myClinic.id}`);
       
       if (response.data && response.data.success) {
         // Başarıyla ayrılındı

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
-
+import axiosInstance from '../../utils/axiosConfig';
 interface ProtectedClinicRouteProps {
   children: React.ReactNode;
 }
@@ -22,11 +20,7 @@ const ProtectedClinicRoute: React.FC<ProtectedClinicRouteProps> = ({ children })
       }
 
       try {
-        const response = await axios.get(`${API_URL}/api/veterinarian/check-pending-requests`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(`/veterinarian/check-pending-requests`);
         
         if (response.data && response.data.success) {
           setHasPendingRequest(response.data.hasPendingRequest);

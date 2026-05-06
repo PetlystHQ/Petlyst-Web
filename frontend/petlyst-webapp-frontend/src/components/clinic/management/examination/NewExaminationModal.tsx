@@ -4,7 +4,7 @@ import { useAppSelector } from '../../../../hooks/useAppSelector';
 import { createExamination, updateExamination } from './examinationSlice';
 import { CreateExaminationData, Examination, UpdateExaminationData } from './examinationService';
 import { FaTimes, FaCalendarCheck } from 'react-icons/fa';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import { format } from 'date-fns';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
@@ -144,11 +144,7 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
     
     try {
       setFetchingAppointments(true);
-      const response = await axios.get(`/api/examinations/pet-appointments/${petId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await axiosInstance.get(`/examinations/pet-appointments/${petId}`);
       
       if (response.data.success && response.data.appointments) {
         setAppointments(response.data.appointments);
@@ -195,11 +191,7 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
         setFetchError(null);
         
         // Get user's clinics to find their clinic ID
-        const clinicResponse = await axios.get('/api/clinics/my-clinics', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const clinicResponse = await axiosInstance.get('/api/clinics/my-clinics');
         
         if (!clinicResponse.data.clinics || clinicResponse.data.clinics.length === 0) {
           console.error('No clinics found for this veterinarian');
@@ -212,11 +204,7 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
         const clinicId = clinicResponse.data.clinics[0].clinic_id;
         
         // Fetch patients (pets) from this clinic
-        const patientsResponse = await axios.get(`/api/clinics/${clinicId}/patients`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const patientsResponse = await axiosInstance.get(`/clinics/${clinicId}/patients`);
         
         if (patientsResponse.data.success && patientsResponse.data.pets) {
           // Format the pets data

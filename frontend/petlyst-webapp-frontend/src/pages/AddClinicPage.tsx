@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RootState } from '../store';
-import axios from 'axios';
-import { API_URL } from '../config/api';
+import axiosInstance from '../utils/axiosConfig';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import { ClinicFormData, FormStep, LocationCoordinates } from '../types/clinic';
 import { ClinicDetailsForm } from '../components/clinic/forms/ClinicDetailsForm';
@@ -137,14 +136,7 @@ const AddClinicPage: React.FC = () => {
   useEffect(() => {
     const checkExistingClinics = async () => {
       try {
-        // API URL'yi kontrol et
-        const apiUrl = API_URL;
-        
-        const response = await axios.get(`${apiUrl}/api/clinics/my-clinics`, {
-          headers: {
-            'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-          }
-        });
+        const response = await axiosInstance.get(`/clinics/my-clinics`);
         
         // Kullanıcının kliniği varsa
         if (response.data.clinics && response.data.clinics.length > 0) {
@@ -197,12 +189,7 @@ const AddClinicPage: React.FC = () => {
       if (clinicId) {
         try {
           setLoading(true);
-          const apiUrl = API_URL;
-          const response = await axios.get(`${apiUrl}/api/clinics/${clinicId}`, {
-            headers: {
-              'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-            }
-          });
+          const response = await axiosInstance.get(`/clinics/${clinicId}`);
 
           if (response.data && response.data.clinic) {
             const clinic = response.data.clinic;
@@ -460,9 +447,6 @@ const AddClinicPage: React.FC = () => {
   };
 
   const uploadPhotos = async (clinicId: string | number, clinicName: string) => {
-    // API URL'yi kontrol et
-    const apiUrl = API_URL;
-    
     if (selectedPhotos.length === 0) return;
     
     // Ensure clinicId is valid
@@ -510,23 +494,13 @@ const AddClinicPage: React.FC = () => {
       console.log(`Expected S3 path: clinic-photos/${clinicId.toString()}-${expectedPathName}/`);
 
       try {
-        const response = await axios.post(
-          `${apiUrl}/api/clinics/upload-photo`,
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-              'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-            },
-            onUploadProgress: (progressEvent) => {
+        const response = await axiosInstance.post(`/clinics/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress: (progressEvent) => {
               if (progressEvent.total) {
                 const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                 setUploadProgress(progress);
                 console.log(`Upload progress for photo ${index + 1}: ${progress}%`);
               }
-            }
-          }
-        );
+            } });
         console.log(`Photo ${index + 1} upload response:`, response.data);
         
         // Yanıtı kontrol et
@@ -986,9 +960,6 @@ const AddClinicPage: React.FC = () => {
         }
       }
 
-      // API URL'yi kontrol et
-      const apiUrl = API_URL;
-      
       // Parse establishment_date into year and month
       let establishmentYear = null;
       let establishmentMonth = null;
@@ -1003,8 +974,8 @@ const AddClinicPage: React.FC = () => {
       }
       
       // First, create the clinic
-      const response = await axios.post(
-        `${apiUrl}/api/clinics/add`,
+      const response = await axiosInstance.post(
+        `/clinics/add`,
         {
           clinic_name: submissionData.name, // Use the modified name with clinic type
           clinic_type: formData.clinicType,
@@ -1051,11 +1022,6 @@ const AddClinicPage: React.FC = () => {
 
           is_partial_submission: false,
           verification_status: 'pending'
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-          }
         }
       );
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import AddItemModal from './inventorymodals/AddItemModal';
 import EditItemModal from './inventorymodals/EditItemModal';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 // Interface for inventory item
@@ -122,11 +121,7 @@ const InventoryList: React.FC = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/items`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/items`);
 
       if (response.data.success && response.data.items) {
         console.log('Fetched inventory items:', response.data.items);
@@ -188,11 +183,7 @@ const InventoryList: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/inventory/categories`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/categories`);
 
       if (response.data.success && response.data.categories) {
         setCategories(response.data.categories);
@@ -305,15 +296,7 @@ const InventoryList: React.FC = () => {
 
       console.log('Submitting data with forced integers:', dataToSubmit);
 
-      const response = await axios.post(
-        `${API_URL}/api/clinics/${clinicId}/inventory/items`,
-        dataToSubmit,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.post(`/clinics/${clinicId}/inventory/items`, dataToSubmit);
 
       if (response.data.success) {
         console.log('Item created successfully:', response.data);

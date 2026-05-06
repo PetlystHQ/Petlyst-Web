@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import ClinicAppointments from '../components/clinic/management/ClinicAppointments';
 import UpcomingAppointments from '../components/clinic/management/UpcomingAppointments';
 import PastAppointments from '../components/clinic/management/PastAppointments';
@@ -13,7 +13,6 @@ import ExaminationList from '../components/clinic/management/examination/Examina
 import DiagnosisList from '../components/clinic/management/diagnosis/DiagnosisList';
 import Calendar from '../components/clinic/management/Calendar';
 import ClinicReviews from '../components/clinic/management/review/ClinicReviews';
-import { API_URL } from '../config/api';
 import { getApiErrorMessage, getApiErrorStatus, getApiErrorResponse } from '../utils/errorMessage';
 interface ClinicData {
   clinic_id: string;
@@ -480,11 +479,7 @@ const ManagementDashboard: React.FC = () => {
 
     try {
       // Fetch all veterinarians (both approved and pending)
-      const response = await axios.get(`${API_URL}/api/clinics/${clinicId}/veterinarians`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/${clinicId}/veterinarians`);
 
       console.log('Fetched veterinarians:', response.data);
 
@@ -515,15 +510,7 @@ const ManagementDashboard: React.FC = () => {
     setActionInProgress(requestId);
 
     try {
-      const response = await axios.put(
-        `${API_URL}/api/clinics/${clinicId}/veterinarian/${requestId}/status`,
-        { status },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.put(`/clinics/${clinicId}/veterinarian/${requestId}/status`, { status });
 
       console.log(`Request ${status} response:`, response.data);
 
@@ -563,14 +550,7 @@ const ManagementDashboard: React.FC = () => {
     setActionInProgress(vetId);
 
     try {
-      const response = await axios.delete(
-        `${API_URL}/api/clinics/${clinicId}/veterinarian/${vetId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.delete(`/clinics/${clinicId}/veterinarian/${vetId}`);
 
       console.log('Remove veterinarian response:', response.data);
 
@@ -844,11 +824,7 @@ const ManagementDashboard: React.FC = () => {
         console.log('Fetching clinic data for clinic ID:', clinicId);
         console.log('Current user ID:', userId);
         
-        const response = await axios.get(`${API_URL}/api/clinics/${clinicId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(`/clinics/${clinicId}`);
 
         const clinicData = response.data.clinic;
         console.log('Clinic data received:', clinicData);
@@ -957,15 +933,7 @@ const ManagementDashboard: React.FC = () => {
     setLoading(true);
     
     try {
-      const response = await axios.put(
-        `${API_URL}/api/clinics/${action}/${clinicId}`,
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.put(`/clinics/${action}/${clinicId}`, {});
       
       console.log(`Clinic ${action} response:`, response.data);
       

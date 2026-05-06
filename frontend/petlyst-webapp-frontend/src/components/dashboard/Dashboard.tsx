@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { API_ENDPOINTS } from '../../constants/dashboard';
 import { useAppSelector } from '../../hooks/useAppSelector';
 
@@ -13,11 +13,7 @@ const Dashboard = () => {
       const ensureSlug = async () => {
         try {
           console.log('Ensuring veterinarian has a slug...');
-          const response = await axios.post(API_ENDPOINTS.ENSURE_SLUG, {}, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
+          const response = await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
           
           console.log('Slug ensure response:', response.data);
         } catch (error) {

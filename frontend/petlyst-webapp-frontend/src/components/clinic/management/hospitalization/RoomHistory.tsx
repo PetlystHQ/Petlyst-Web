@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface Hospitalization {
@@ -46,10 +45,7 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
     
     try {
       // First, get current hospitalizations
-      const currentResponse = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const currentResponse = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/current`);
       
       // Now we need to get all hospitalization records (including discharged)
       // We'll use a custom endpoint or query to get all records
@@ -92,10 +88,7 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
     try {
       // We can use the existing endpoint and then filter on the frontend
       // In a real implementation, we would ideally have a backend endpoint that provides this data directly
-      const response = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/all`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/all`);
       
       if (response.data.success) {
         // Return only discharged hospitalizations

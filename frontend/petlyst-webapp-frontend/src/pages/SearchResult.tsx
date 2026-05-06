@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import ClinicCard from '../components/search/ClinicCard';
 import SearchFilter from '../components/search/SearchFilter';
 import SmallSearchBar from '../components/search/SmallSearchBar';
@@ -134,8 +134,8 @@ const SearchResult: React.FC = () => {
         console.log("Sending request with params:", params);
         
         // Call the search API with relative URL (proxy will handle the rest)
-        const response = await axios.get<SearchResponse>(
-          `/api/pet-owners/search-clinics`, 
+        const response = await axiosInstance.get<SearchResponse>(
+          `/pet-owners/search-clinics`,
           { params }
         );
         
@@ -200,8 +200,8 @@ const SearchResult: React.FC = () => {
         console.log("VeterinarianName parameter:", veterinarianName);
         
         // Call the veterinarian search API
-        const response = await axios.get<VeterinarianSearchResponse>(
-          `/api/pet-owners/search-veterinarians`, 
+        const response = await axiosInstance.get<VeterinarianSearchResponse>(
+          `/pet-owners/search-veterinarians`,
           { params }
         );
         

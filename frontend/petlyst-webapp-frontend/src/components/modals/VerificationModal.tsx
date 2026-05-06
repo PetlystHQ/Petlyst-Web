@@ -2,8 +2,6 @@ import { useState, FC, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import axiosInstance from '../../utils/axiosConfig';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
 import { getApiErrorMessage, getApiErrorResponse } from '../../utils/errorMessage';
 interface VerificationModalProps {
   isOpen: boolean;
@@ -25,14 +23,7 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
   useEffect(() => {
     const checkVerificationStatus = async () => {
       try {
-        const response = await axios.get(
-          `${API_URL}/api/veterinarian/verification-status`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
+        const response = await axiosInstance.get(`/veterinarian/verification-status`);
         setVerificationStatus(response.data.verification_status);
       } catch (error) {
         console.error('Error fetching verification status:', error);

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import AdmitForm from './AdmitForm';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface Room {
@@ -76,10 +75,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     setError(null);
     
     try {
-      const response = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/current`);
       
       if (response.data.success) {
         console.log('Hospitalizations received:', response.data.hospitalizations?.length || 0);
@@ -127,10 +123,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     setError(null);
     
     try {
-      const response = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/rooms`);
       
       if (response.data.success) {
         // Filter out only vacant rooms
@@ -155,10 +148,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     setError(null);
     
     try {
-      const response = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/patients`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.get(`/clinics/${clinicId}/patients`);
       
       if (response.data.success) {
         // The endpoint returns the patient data in the 'pets' property
@@ -207,11 +197,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     setError(null);
     
     try {
-      const response = await axios.post(
-        `${API_URL}/api/hospitalization/admit`,
-        formData,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.post(`/hospitalization/admit`, formData);
       
       if (response.data.success) {
         // Reset form and fetch updated data
@@ -239,11 +225,7 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
     setError(null);
     
     try {
-      const response = await axios.put(
-        `${API_URL}/api/hospitalization/${selectedHospitalization.id}/discharge`,
-        { actualDischargeDate: dischargeDate },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await axiosInstance.put(`/hospitalization/${selectedHospitalization.id}/discharge`, { actualDischargeDate: dischargeDate });
       
       if (response.data.success) {
         setShowDischargeModal(false);

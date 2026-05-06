@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
+import axiosInstance from '../../utils/axiosConfig';
 import { getApiErrorMessage } from '../../utils/errorMessage';
 
 const AdminLogin: React.FC = () => {
@@ -26,16 +25,7 @@ const AdminLogin: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(
-                `${API_URL}/api/users/login`, 
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Request': 'true'
-                    }
-                }
-            );
+            const response = await axiosInstance.post(`/users/login`, formData, { headers: { 'Content-Type': 'application/json', 'X-Admin-Request': 'true' } });
             
             if (!response.data.user) {
                 throw new Error('No user data received');

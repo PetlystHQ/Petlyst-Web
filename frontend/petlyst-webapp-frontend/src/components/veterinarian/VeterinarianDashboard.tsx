@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { DashboardView, VerificationStatus, Clinic } from '../../types/dashboard';
@@ -174,7 +174,7 @@ const VeterinarianDashboard: React.FC = () => {
       window.history.replaceState({}, document.title);
     }
     // fetchVerificationStatus is in-component; adding it would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [token, navigate, location]);
 
   useEffect(() => {
@@ -184,17 +184,13 @@ const VeterinarianDashboard: React.FC = () => {
     }
     // fetchClinics / fetchIncompleteClinics are in-component; adding them
     // would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [verificationStatus, token]);
 
   const fetchVerificationStatus = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_ENDPOINTS.VERIFICATION_STATUS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.VERIFICATION_STATUS);
       
       setVerificationStatus(response.data.status);
     } catch (err) {
@@ -208,11 +204,7 @@ const VeterinarianDashboard: React.FC = () => {
   const fetchClinics = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_ENDPOINTS.CLINICS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.CLINICS);
       
       setClinics(response.data.clinics);
     } catch (err) {
@@ -226,11 +218,7 @@ const VeterinarianDashboard: React.FC = () => {
   const fetchIncompleteClinics = async () => {
     try {
       console.log('Fetching incomplete clinics from:', API_ENDPOINTS.INCOMPLETE_CLINICS);
-      const response = await axios.get(API_ENDPOINTS.INCOMPLETE_CLINICS, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.INCOMPLETE_CLINICS);
       
       console.log('Incomplete clinics response:', response.data);
       setIncompleteClinics(response.data.clinics);

@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../../store';
-import axios from 'axios';
+import axiosInstance from '../../../utils/axiosConfig';
 import { Clinic } from '../../../types/dashboard';
-import { API_URL } from '../../../config/api';
 import { getApiErrorMessage } from '../../../utils/errorMessage';
 import './Clinics.css';
 
@@ -31,11 +30,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/clinics/my-clinics`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(`/clinics/my-clinics`);
 
       if (response.data && Array.isArray(response.data.clinics)) {
         console.log('API Response:', response.data);
@@ -60,11 +55,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
   const handleDeleteClinic = async (clinicId: string) => {
     setActionLoading(clinicId);
     try {
-      await axios.delete(`${API_URL}/api/clinics/${clinicId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      await axiosInstance.delete(`/clinics/${clinicId}`);
       await fetchClinics(); // Refresh the list after deleting
     } catch (err) {
       console.error('Error deleting clinic:', err);
@@ -102,7 +93,7 @@ export const Clinics: React.FC<ClinicsProps> = ({
     }
     // fetchClinics is in-component; adding it to deps loops. Effect re-runs
     // on token change and when the parent bumps refreshKey.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [token, refreshKey]);
 
   const getStatusBadge = (status: string) => {

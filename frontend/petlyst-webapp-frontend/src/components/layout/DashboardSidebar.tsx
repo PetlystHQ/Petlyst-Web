@@ -5,9 +5,7 @@ import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { logout, setProfileVisibility } from '../../store/slices/authSlice';
 import { DashboardView, VerificationStatus } from '../../types/dashboard';
 import { DASHBOARD_VIEWS, API_ENDPOINTS } from '../../constants/dashboard';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
-
+import axiosInstance from '../../utils/axiosConfig';
 interface DashboardSidebarProps {
   currentView: DashboardView;
   onViewChange: (view: DashboardView) => void;
@@ -40,12 +38,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       try {
         console.log('Fetching profile visibility status...');
         // Use API_ENDPOINTS instead of hardcoded URL
-        const response = await axios.get(API_ENDPOINTS.PROFILE_VISIBILITY, {
-          withCredentials: true,
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.PROFILE_VISIBILITY, { withCredentials: true });
         console.log('Profile visibility status:', response.data);
         const isPublic = response.data.is_profile_public;
         setIsProfilePublic(isPublic);
@@ -59,11 +52,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     // Check for pending clinic requests
     const checkPendingRequests = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/veterinarian/check-pending-requests`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(`/veterinarian/check-pending-requests`);
         
         if (response.data && response.data.success) {
           setHasPendingClinicRequest(response.data.hasPendingRequest);
@@ -106,14 +95,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       console.log('Trying to update profile visibility to:', newVisibility);
       
       // Hardcoded URL, kesin çalışacak şekilde
-      const response = await axios.put(`${API_URL}/api/veterinarian/profile-visibility`, {
+      const response = await axiosInstance.put(`/veterinarian/profile-visibility`, {
         is_profile_public: newVisibility
-      }, {
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      }, { withCredentials: true });
 
       console.log('Profile visibility update response:', response.data);
 

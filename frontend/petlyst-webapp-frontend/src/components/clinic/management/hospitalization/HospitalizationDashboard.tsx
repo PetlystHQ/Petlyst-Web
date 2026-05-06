@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
 import RoomManagement from './RoomManagement';
 import PatientHospitalization from './PatientHospitalization';
 import RoomHistory from './RoomHistory';
-import { API_URL } from '../../../../config/api';
 import { getApiErrorMessage } from '../../../../utils/errorMessage';
 
 interface HospitalizationStats {
@@ -47,16 +46,10 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
     
     try {
       // Fetch rooms for statistics
-      const roomsResponse = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/rooms`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const roomsResponse = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/rooms`);
       
       // Fetch current hospitalizations
-      const hospitalizationsResponse = await axios.get(
-        `${API_URL}/api/clinics/${clinicId}/hospitalization/current`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const hospitalizationsResponse = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/current`);
       
       if (roomsResponse.data.success && hospitalizationsResponse.data.success) {
         const rooms = roomsResponse.data.rooms;

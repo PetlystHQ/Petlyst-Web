@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 
 interface SearchFilterProps {
   updateFilters: (filters: Record<string, string | number>) => void;
@@ -69,7 +69,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     const fetchLocations = async () => {
       setLoadingLocations(true);
       try {
-        const response = await axios.get('/api/pet-owners/locations');
+        const response = await axiosInstance.get('/api/pet-owners/locations');
         if (response.data.success) {
           setLocations(response.data.locations);
         }
@@ -92,7 +92,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
       
       setLoadingLocations(true);
       try {
-        const response = await axios.get(`/api/pet-owners/locations?province=${currentFilters.province}`);
+        const response = await axiosInstance.get(`/pet-owners/locations?province=${currentFilters.province}`);
         if (response.data.success) {
           setLocations(prev => ({
             ...prev,
@@ -114,7 +114,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     const fetchAnimalTypes = async () => {
       setLoadingAnimalTypes(true);
       try {
-        const response = await axios.get('/api/pet-owners/popular-animal-types');
+        const response = await axiosInstance.get('/api/pet-owners/popular-animal-types');
         if (response.data.success) {
           setAnimalTypes(response.data.animalTypes);
         }
@@ -133,7 +133,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     const fetchServices = async () => {
       setLoadingServices(true);
       try {
-        const response = await axios.get('/api/pet-owners/popular-services');
+        const response = await axiosInstance.get('/api/pet-owners/popular-services');
         if (response.data.success) {
           setServices(response.data.services);
         }
@@ -152,7 +152,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({ updateFilters, currentFilte
     const fetchExpertiseAreas = async () => {
       setLoadingExpertise(true);
       try {
-        const response = await axios.get('/api/pet-owners/veterinarian-expertise-areas');
+        const response = await axiosInstance.get('/api/pet-owners/veterinarian-expertise-areas');
         if (response.data.success) {
           setExpertiseAreas(response.data.expertiseAreas);
         }

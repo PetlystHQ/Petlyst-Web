@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { getApiErrorStatus } from '../utils/errorMessage';
@@ -40,11 +40,7 @@ const SavedClinicsPage: React.FC = () => {
       setError(null);
       
       try {
-        const response = await axios.get('/api/pet-owners/saved-clinics', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get('/api/pet-owners/saved-clinics');
         
         if (response.data.success) {
           setSavedClinics(response.data.favorites);
@@ -68,11 +64,7 @@ const SavedClinicsPage: React.FC = () => {
   
   const handleRemoveFavorite = async (clinicId: number) => {
     try {
-      const response = await axios.delete(`/api/pet-owners/saved-clinics/${clinicId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.delete(`/pet-owners/saved-clinics/${clinicId}`);
       
       if (response.data.success) {
         // Remove the clinic from the list

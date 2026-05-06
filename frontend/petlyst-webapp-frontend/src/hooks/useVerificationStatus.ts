@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { useAppSelector } from './useAppSelector';
 import { VerificationStatus } from '../types/dashboard';
 import { API_ENDPOINTS } from '../constants/dashboard';
@@ -29,14 +29,7 @@ export const useVerificationStatus = () => {
     
     try {
       setIsLoading(true);
-      const response = await axios.get(
-        API_ENDPOINTS.VERIFICATION_STATUS,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.get(API_ENDPOINTS.VERIFICATION_STATUS);
       
       // API yanıtını kontrol et ve doğru key'i kullan
       // Bazı endpoint'ler 'verification_status', bazıları 'status' kullanabilir

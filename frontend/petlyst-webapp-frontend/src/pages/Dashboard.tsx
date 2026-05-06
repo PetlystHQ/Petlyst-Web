@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { useVerificationStatus } from '../hooks/useVerificationStatus';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import VerificationModal from '../components/modals/VerificationModal';
@@ -12,8 +12,6 @@ import { DashboardView, Clinic } from '../types/dashboard';
 import { DASHBOARD_VIEWS, VIEW_TITLES, API_ENDPOINTS } from '../constants/dashboard';
 import { RootState } from '../store';
 import { useAppSelector } from '../hooks/useAppSelector';
-import { API_URL } from '../config/api';
-
 const Dashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const location = useLocation();
@@ -53,11 +51,7 @@ const Dashboard: React.FC = () => {
       setCheckingApprovedClinic(true);
       try {
         // API endpoint we created to check for approved clinic
-        const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${user.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(`/veterinarian/approved-clinic/${user.id}`);
 
         // Set hasApprovedClinic to true if the API returns a clinic
         setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
@@ -83,11 +77,7 @@ const Dashboard: React.FC = () => {
       
       setCheckingClinics(true);
       try {
-        const response = await axios.get(`${API_URL}/api/clinics/my-clinics`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(`/clinics/my-clinics`);
         
         if (response.data && Array.isArray(response.data.clinics)) {
           setClinics(response.data.clinics);
@@ -124,11 +114,7 @@ const Dashboard: React.FC = () => {
         try {
           console.log('Ensuring veterinarian has a slug...');
           setCheckingClinics(true); // Use existing loading state to show spinner
-          const response = await axios.post(API_ENDPOINTS.ENSURE_SLUG, {}, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
+          const response = await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
           
           console.log('Slug ensure response:', response.data);
         } catch (error) {
@@ -167,11 +153,7 @@ const Dashboard: React.FC = () => {
         if (token && user && user.user_type === 'veterinarian') {
           setCheckingApprovedClinic(true);
           try {
-            const response = await axios.get(`${API_URL}/api/veterinarian/approved-clinic/${user.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
+            const response = await axiosInstance.get(`/veterinarian/approved-clinic/${user.id}`);
             
             // Durumu API'dan gelen yanıta göre güncelle
             setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);

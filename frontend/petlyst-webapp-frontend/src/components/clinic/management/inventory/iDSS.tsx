@@ -74,11 +74,13 @@ const IDSS: React.FC = () => {
     }
     
     try {
-      // Determine which API endpoint to call based on the selected analysis
+      // Determine which API endpoint to call based on the selected analysis.
+      // This service is on a different host (llama.petlyst.com:3001) than
+      // the main API, so we hit it via raw axios rather than axiosInstance.
       const endpoint = type === 'timeline'
         ? 'https://llama.petlyst.com:3001/api/stock-days'
         : 'https://llama.petlyst.com:3001/api/check-reorder';
-      
+
       // Make the API call
       const response = await axios.post(
         endpoint,

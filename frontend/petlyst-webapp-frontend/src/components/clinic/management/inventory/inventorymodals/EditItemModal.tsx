@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../../../store';
-import axios from 'axios';
-import { API_URL } from '../../../../../config/api';
+import axiosInstance from '../../../../../utils/axiosConfig';
 import { getApiErrorMessage } from '../../../../../utils/errorMessage';
 
 // Interface for inventory item
@@ -270,15 +269,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
 
       console.log('Submitting edited data:', dataToSubmit);
 
-      const response = await axios.put(
-        `${API_URL}/api/clinics/${clinicId}/inventory/items/${currentItem.id}`,
-        dataToSubmit,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axiosInstance.put(`/clinics/${clinicId}/inventory/items/${currentItem.id}`, dataToSubmit);
 
       if (response.data.success) {
         console.log('Item updated successfully:', response.data.item);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import { RootState } from '../store';
 import { API_URL } from '../config/api';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
@@ -101,11 +101,7 @@ const ClinicPreviewPage: React.FC = () => {
       setLoading(true);
       try {
         console.log('Making API request to:', `${API_URL}/api/clinics/${clinicId}`);
-        const response = await axios.get(`${API_URL}/api/clinics/${clinicId}`, {
-          headers: {
-            'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-          }
-        });
+        const response = await axiosInstance.get(`/clinics/${clinicId}`);
         
         console.log('===== API RESPONSE =====');
         console.log('Full API response:', response);
@@ -258,11 +254,7 @@ const ClinicPreviewPage: React.FC = () => {
         // Klinik fotoğraflarını al
         try {
           console.log('Fetching clinic photos from clinicalbum');
-          const photosResponse = await axios.get(`${API_URL}/api/clinics/${clinicId}/photos`, {
-            headers: {
-              'Authorization': `Bearer ${token || localStorage.getItem('token')}`
-            }
-          });
+          const photosResponse = await axiosInstance.get(`/clinics/${clinicId}/photos`);
           
           console.log('Photos API response:', photosResponse.data);
           

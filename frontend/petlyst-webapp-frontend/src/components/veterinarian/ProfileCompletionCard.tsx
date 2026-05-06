@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { API_ENDPOINTS, DASHBOARD_VIEWS } from '../../constants/dashboard';
 import { DashboardView } from '../../types/dashboard';
 
@@ -34,11 +34,7 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
       
       try {
         setLoading(true);
-        const response = await axios.get(API_ENDPOINTS.PROFILE_COMPLETION, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.PROFILE_COMPLETION);
         
         if (response.data.success) {
           setCompletionStatus(response.data.completion);

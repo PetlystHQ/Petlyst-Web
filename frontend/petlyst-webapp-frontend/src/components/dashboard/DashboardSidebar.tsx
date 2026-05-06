@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { useAppSelector } from '../../hooks/useAppSelector';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
-
+import axiosInstance from '../../utils/axiosConfig';
 const DashboardSidebar = () => {
   const token = useAppSelector(state => state.auth.token);
 
@@ -13,14 +11,7 @@ const DashboardSidebar = () => {
         return;
       }
 
-      await axios.get(
-        `${API_URL}/api/veterinarian/verification-status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      await axiosInstance.get(`/veterinarian/verification-status`);
 
     } catch (error) {
       console.error('Error checking verification status:', error);

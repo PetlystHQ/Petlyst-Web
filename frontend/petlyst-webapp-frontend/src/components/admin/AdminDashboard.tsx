@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
+import axiosInstance from '../../utils/axiosConfig';
 import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface VerificationRequest {
@@ -73,14 +72,7 @@ const AdminDashboard: React.FC = () => {
 
     const fetchPendingRequests = async () => {
         try {
-            const response = await axios.get(
-                `${API_URL}/api/admin/pending-review-status`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                }
-            );
+            const response = await axiosInstance.get(`/admin/pending-review-status`);
             setPendingRequests(response.data.pendingVerifications);
         } catch (err) {
             setError(getApiErrorMessage(err, 'Failed to fetch pending requests'));
@@ -92,14 +84,7 @@ const AdminDashboard: React.FC = () => {
 
     const fetchPendingClinics = async () => {
         try {
-            const response = await axios.get(
-                `${API_URL}/api/admin/pending-clinics`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                }
-            );
+            const response = await axiosInstance.get(`/admin/pending-clinics`);
             
             // Map the clinic data from new column names to the ones expected by the component
             const mappedClinics = response.data.pendingClinics.map((clinic: {
@@ -138,14 +123,7 @@ const AdminDashboard: React.FC = () => {
     const fetchPendingReviews = async () => {
         try {
             setReviewsLoading(true);
-            const response = await axios.get(
-                `${API_URL}/api/reviews/admin/pending`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                }
-            );
+            const response = await axiosInstance.get(`/reviews/admin/pending`);
             setPendingReviews(response.data.reviews || []);
         } catch (err) {
             setReviewError(getApiErrorMessage(err, 'Failed to fetch pending reviews'));
@@ -158,15 +136,7 @@ const AdminDashboard: React.FC = () => {
     const handleUpdateStatus = async (userId: string, action: 'approve') => {
         setActionLoading(userId);
         try {
-            await axios.put(
-                `${API_URL}/api/admin/update-verification-status/${userId}`,
-                { action },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                }
-            );
+            await axiosInstance.put(`/admin/update-verification-status/${userId}`, { action });
             
             // Refresh the list after successful update
             await fetchPendingRequests();
@@ -182,15 +152,7 @@ const AdminDashboard: React.FC = () => {
     const handleClinicStatus = async (clinicId: string, action: 'approve') => {
         setActionLoading(clinicId);
         try {
-            await axios.put(
-                `${API_URL}/api/admin/update-clinic-status/${clinicId}`,
-                { action },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                }
-            );
+            await axiosInstance.put(`/admin/update-clinic-status/${clinicId}`, { action });
             
             // Refresh the list after successful update
             await fetchPendingClinics();
@@ -211,27 +173,19 @@ const AdminDashboard: React.FC = () => {
             
             switch (action) {
                 case 'approve':
-                    endpoint = `${API_URL}/api/reviews/admin/${reviewId}/approve`;
+                    endpoint = `/reviews/admin/${reviewId}/approve`;
                     method = 'put';
                     break;
                 case 'delete':
-                    endpoint = `${API_URL}/api/reviews/admin/${reviewId}`;
+                    endpoint = `/reviews/admin/${reviewId}`;
                     method = 'delete';
                     break;
             }
-            
+
             if (method === 'put') {
-                await axios.put(endpoint, {}, {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                });
+                await axiosInstance.put(endpoint, {});
             } else if (method === 'delete') {
-                await axios.delete(endpoint, {
-                    headers: {
-                        'Authorization': `Bearer ${adminToken}`
-                    }
-                });
+                await axiosInstance.delete(endpoint);
             }
             
             // Refresh the list after successful update

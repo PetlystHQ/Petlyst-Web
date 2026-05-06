@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_URL } from '../../../config/api';
+import axiosInstance from '../../../utils/axiosConfig';
 import { getApiErrorMessage } from '../../../utils/errorMessage';
 
 // Define interface for calendar appointments
@@ -158,17 +157,11 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       console.log('Fetching appointments for clinic:', clinicId);
       
       // Get pending appointments
-      const pendingResponse = await axios.get(
-        `${API_URL}/api/appointments/clinic/${clinicId}/pending`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const pendingResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/pending`);
       console.log('Pending appointments received:', pendingResponse.data.appointments?.length || 0);
       
       // Get confirmed appointments
-      const confirmedResponse = await axios.get(
-        `${API_URL}/api/appointments/clinic/${clinicId}/confirmed`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const confirmedResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/confirmed`);
       console.log('Confirmed appointments received:', confirmedResponse.data.appointments?.length || 0);
       
       // Debug online meetings
@@ -187,17 +180,11 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       }
       
       // Get completed appointments
-      const completedResponse = await axios.get(
-        `${API_URL}/api/appointments/clinic/${clinicId}/completed`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const completedResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/completed`);
       console.log('Completed appointments received:', completedResponse.data.appointments?.length || 0);
       
       // Get canceled appointments
-      const canceledResponse = await axios.get(
-        `${API_URL}/api/appointments/clinic/${clinicId}/canceled`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const canceledResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/canceled`);
       console.log('Canceled appointments received:', canceledResponse.data.appointments?.length || 0);
       
       // Check that all responses are successful
@@ -435,18 +422,10 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       
       if (newStatus === 'completed') {
         // Use the complete endpoint for marking as completed
-        response = await axios.patch(
-          `${API_URL}/api/appointments/${appointmentId}/complete`,
-          {},
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        response = await axiosInstance.patch(`/appointments/${appointmentId}/complete`, {});
       } else {
         // Use the status update endpoint for other status changes
-        response = await axios.put(
-          `${API_URL}/api/appointments/${appointmentId}/status`,
-          { status: newStatus },
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        response = await axiosInstance.put(`/appointments/${appointmentId}/status`, { status: newStatus });
       }
       
       if (response.data.success || response.status === 200) {

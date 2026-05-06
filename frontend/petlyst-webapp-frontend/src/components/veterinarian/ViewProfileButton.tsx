@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { API_ENDPOINTS } from '../../constants/dashboard';
 import { setProfileVisibility } from '../../store/slices/authSlice';
 
@@ -34,11 +34,7 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       try {
         setIsLoading(true);
         // Using API_ENDPOINTS instead of hardcoded URL
-        const response = await axios.get(API_ENDPOINTS.PROFILE_VISIBILITY, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.PROFILE_VISIBILITY);
         
         const isPublic = response.data?.is_profile_public ?? false;
         setIsProfilePublic(isPublic);
@@ -102,11 +98,7 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
 
     try {
       // Önce kullanıcının profil bilgilerini çekelim
-      const response = await axios.get(API_ENDPOINTS.PROFILE, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get(API_ENDPOINTS.PROFILE);
 
       // Veterinerin slug'ı halihazırda veritabanında varsa onu kullanalım
       if (response.data && response.data.slug) {

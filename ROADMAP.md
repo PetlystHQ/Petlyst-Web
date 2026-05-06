@@ -591,6 +591,15 @@ here so they don't get lost.
 - **Duplicate `DashboardSidebar.tsx`.** Two files with the same name live
   under `components/dashboard/` and `components/layout/`. Reconcile to one
   during Effort 2.
+- **Bespoke axios instances in diagnosis services.**
+  `components/clinic/management/diagnosis/diagnosisService.ts` and
+  `DiagnosisSlice.ts` each instantiate their own `axios.create({
+  baseURL: API_URL })` with their own request interceptor. They
+  predate the canonical `utils/axiosConfig` and were left alone in
+  the Effort 3 sweep because their `baseURL` is `${API_URL}` (no
+  `/api` suffix), so migrating them needs every call path inside
+  those files to be re-rooted. Worth folding into the canonical
+  `axiosInstance` once the diagnoses module gets its next touch.
 - **Reconcile Marker / AdvancedMarkerElement migration in MapComponent.**
   `MapComponent.tsx` keeps `marker.current` typed as `any` (with an
   `eslint-disable-next-line` and a pointer to this entry) because the

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, KeyboardEvent } from 'react';
-import axios from 'axios';
-
+import axiosInstance from '../../utils/axiosConfig';
 interface SearchSuggestion {
   text: string;
   type: 'clinic' | 'animal_type' | 'medical_service' | 'additional_service' | 'city' | 'veterinarian';
@@ -36,9 +35,7 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery }) => {
 
       try {
         // Get API suggestions
-        const response = await axios.get(`/api/pet-owners/search-suggestions`, {
-          params: { query: searchQuery }
-        });
+        const response = await axiosInstance.get(`/pet-owners/search-suggestions`, { params: { query: searchQuery } });
 
         let allSuggestions: SearchSuggestion[] = [];
         

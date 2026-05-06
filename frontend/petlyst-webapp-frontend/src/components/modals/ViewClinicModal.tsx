@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Clinic } from '../../types/dashboard';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
-import { API_URL } from '../../config/api';
 import { getApiErrorMessage } from '../../utils/errorMessage';
 
 interface ViewClinicModalProps {
@@ -22,14 +21,7 @@ const ViewClinicModal: React.FC<ViewClinicModalProps> = ({ isOpen, onClose, clin
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
-        const response = await axios.get(
-          `${API_URL}/api/clinics/${clinic.clinic_id}/photos`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        );
+        const response = await axiosInstance.get(`/clinics/${clinic.clinic_id}/photos`);
         setPhotos(response.data.photos || []);
       } catch (err) {
         console.error('Error fetching photos:', err);
