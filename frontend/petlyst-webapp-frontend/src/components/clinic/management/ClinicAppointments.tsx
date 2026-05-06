@@ -41,6 +41,8 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
 
   useEffect(() => {
     fetchAppointments();
+    // fetchAppointments is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
   const fetchAppointments = async () => {

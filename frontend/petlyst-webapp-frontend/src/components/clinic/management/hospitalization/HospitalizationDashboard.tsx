@@ -35,6 +35,8 @@ const HospitalizationDashboard: React.FC<{ clinicId: string }> = ({ clinicId }) 
     if (activeTab === 'overview') {
       fetchHospitalizationStats();
     }
+    // fetchHospitalizationStats is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, clinicId, token]);
   
   const fetchHospitalizationStats = async () => {

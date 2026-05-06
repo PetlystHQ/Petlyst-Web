@@ -173,6 +173,8 @@ const VeterinarianDashboard: React.FC = () => {
       // Clear the state to prevent it from persisting on refresh
       window.history.replaceState({}, document.title);
     }
+    // fetchVerificationStatus is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, navigate, location]);
 
   useEffect(() => {
@@ -180,6 +182,9 @@ const VeterinarianDashboard: React.FC = () => {
       fetchClinics();
       fetchIncompleteClinics();
     }
+    // fetchClinics / fetchIncompleteClinics are in-component; adding them
+    // would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verificationStatus, token]);
 
   const fetchVerificationStatus = async () => {

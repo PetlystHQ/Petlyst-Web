@@ -105,6 +105,8 @@ const InventoryTransactions: React.FC = () => {
   useEffect(() => {
     fetchTransactions();
     fetchInventoryItems();
+    // Both fetch* are in-component and run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTransactions = async () => {

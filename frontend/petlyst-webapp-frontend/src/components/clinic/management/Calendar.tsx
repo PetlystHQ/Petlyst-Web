@@ -338,6 +338,8 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       // Fetch all appointments for the current month
       fetchAllAppointments();
     }
+    // fetchAllAppointments is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId, token, currentMonth]);
 
   // Function to determine if a date is today

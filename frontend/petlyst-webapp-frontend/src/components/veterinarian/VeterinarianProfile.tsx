@@ -207,11 +207,16 @@ const VeterinarianProfile: React.FC = () => {
       fetchVerificationStatus();
       checkPendingRequests();
     }
+    // The eight fetch*/check* functions are in-component; adding any of
+    // them would loop. Effect should re-run only on tab/token changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, token]);
-  
+
   // Fetch verification status immediately when component loads
   useEffect(() => {
     fetchVerificationStatus();
+    // fetchVerificationStatus is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // Check for selectedProfileTab in localStorage and switch to that tab if available
@@ -230,6 +235,9 @@ const VeterinarianProfile: React.FC = () => {
       fetchMyClinic();
       checkPendingRequests();
     }
+    // fetchMyClinic / checkPendingRequests are in-component; adding them
+    // would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const fetchEducation = async () => {

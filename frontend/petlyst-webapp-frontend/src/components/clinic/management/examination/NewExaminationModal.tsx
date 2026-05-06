@@ -134,6 +134,8 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
       // Pet değiştiğinde randevuları yeniden çek
       fetchPetAppointments(petId);
     }
+    // fetchPetAppointments is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petId, isEditMode]);
 
   // Fetch pet appointments
@@ -256,6 +258,9 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
     };
     
     fetchPets();
+    // fetchPetAppointments is in-component and called inside fetchPets via
+    // closure; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petId, isEditMode, examination]);
 
   // Reset form when modal closes or on success
@@ -264,6 +269,8 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
       onSuccess();
       handleSafeClose();
     }
+    // handleSafeClose is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [success, onSuccess, isClosing]);
 
   // Update search term when a pet is selected from the fetched list

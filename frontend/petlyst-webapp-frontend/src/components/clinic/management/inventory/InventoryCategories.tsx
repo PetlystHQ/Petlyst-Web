@@ -78,6 +78,8 @@ const InventoryCategories: React.FC = () => {
 
   useEffect(() => {
     fetchCategories();
+    // fetchCategories is in-component and runs once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCategories = async () => {

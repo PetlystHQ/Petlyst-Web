@@ -140,6 +140,9 @@ const UpcomingAppointments: React.FC = () => {
     };
     
     fetchUpcomingAppointments();
+    // processAppointmentsIntoTimeSlots is in-component and used inside the
+    // fetch function via closure; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
   
   // Process appointments into time slots

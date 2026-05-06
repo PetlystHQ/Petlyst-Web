@@ -170,6 +170,10 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
       setPreviousUnitType(formData.unit_type);
       // No need to reset numeric values when unit type changes
     }
+    // previousUnitType is read for comparison only — adding it as a dep
+    // would re-fire the effect after every setPreviousUnitType, which is
+    // exactly the no-op cycle we want to avoid.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.unit_type]);
 
   // Handle input changes for text fields

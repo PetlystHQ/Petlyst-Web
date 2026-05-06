@@ -64,6 +64,8 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       fetchAvailableRooms();
       fetchClinicPatients();
     }
+    // The three fetch* functions are in-component; adding them would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, clinicId, token]);
   
   // Fetch current hospitalizations

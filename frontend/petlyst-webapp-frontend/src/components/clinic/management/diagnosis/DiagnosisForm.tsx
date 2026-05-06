@@ -194,6 +194,10 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         fetchClinicExaminations(clinicId);
       }
     }
+    // fetchClinicExaminations / fetchExaminationsForPet are in-component;
+    // examinationId is read inside the branch via closure. Adding any of
+    // them would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petId, clinicId, isEdit, hasExaminations]);
   
   // Fetch all clinic examinations

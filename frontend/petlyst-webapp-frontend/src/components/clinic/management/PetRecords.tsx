@@ -164,6 +164,8 @@ const PetRecords: React.FC = () => {
   // Fetch pets when clinicId changes
   useEffect(() => {
     fetchPets();
+    // fetchPets is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
   // Set up automatic refresh interval (every 30 seconds)
@@ -174,6 +176,8 @@ const PetRecords: React.FC = () => {
     }, 30000); // 30 seconds
 
     return () => clearInterval(refreshInterval);
+    // fetchPets is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
   // Filter pets based on search term

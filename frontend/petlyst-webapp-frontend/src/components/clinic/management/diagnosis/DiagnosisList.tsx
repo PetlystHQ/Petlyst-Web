@@ -226,6 +226,9 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
       window.removeEventListener('openDiagnosisForm', handleOpenDiagnosisForm);
       window.removeEventListener('startDiagnosis', handleStartDiagnosis as EventListener);
     };
+    // formModalOpen is read by the inner handlers via closure; adding it as
+    // a dep would re-attach the window listeners on every modal toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propPetId]);
   
   // Handle form modal close

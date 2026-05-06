@@ -43,11 +43,15 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ clinicId, onDataChanged
   // Fetch rooms when component mounts
   useEffect(() => {
     fetchRooms();
+    // fetchRooms is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId, token]);
-  
+
   // Filter rooms when filtering options change
   useEffect(() => {
     filterRooms();
+    // filterRooms is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rooms, statusFilter, typeFilter]);
   
   // Fetch rooms from API

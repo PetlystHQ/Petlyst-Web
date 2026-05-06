@@ -308,6 +308,8 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
         clearInterval(refreshInterval);
       }
     };
+    // handleRetry is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localError, error]);
   
   // Update selected examination when currentExamination changes in redux store

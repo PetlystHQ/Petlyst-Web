@@ -216,6 +216,9 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
     };
     
     fetchReviewsAndStats();
+    // `stats` is set inside the effect's nested fetch; adding it as a dep
+    // would re-fire on every successful refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId, token, page, sortBy, filterRating]);
 
   // Generate advice based on category ratings

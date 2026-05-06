@@ -34,6 +34,8 @@ const RoomHistory: React.FC<RoomHistoryProps> = ({ clinicId }) => {
   
   useEffect(() => {
     fetchHospitalizationHistory();
+    // fetchHospitalizationHistory is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId, token, filter]);
   
   const fetchHospitalizationHistory = async () => {
