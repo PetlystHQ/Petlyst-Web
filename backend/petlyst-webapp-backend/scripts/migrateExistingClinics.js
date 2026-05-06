@@ -1,19 +1,20 @@
 const ClinicVeterinarian = require('../models/clinicVeterinarianModel');
+const logger = require('../config/logger');
 
 // Migration script to add clinic-veterinarian relationships for existing clinics
 async function migrateExistingClinics() {
   try {
-    console.log('Starting migration of existing clinics to add clinic creators...');
+    logger.info('Starting migration of existing clinics to add clinic creators...');
     
     // Mevcut klinik-veteriner ilişkilerini oluştur
     const result = await ClinicVeterinarian.migrateExistingClinics();
     
-    console.log('Migration completed successfully');
-    console.log(result.message);
+    logger.info('Migration completed successfully');
+    logger.info(result.message);
     
     process.exit(0);
   } catch (error) {
-    console.error('Migration error:', error);
+    logger.error('Migration error:', error);
     process.exit(1);
   }
 }

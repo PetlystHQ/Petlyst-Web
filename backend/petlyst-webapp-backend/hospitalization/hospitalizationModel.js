@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 /**
  * Room operations
@@ -13,7 +14,7 @@ async function createRoom(clinicId, roomName, roomType) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error creating hospitalization room:', error);
+        logger.error('Error creating hospitalization room:', error);
         throw error;
     }
 }
@@ -27,7 +28,7 @@ async function getRoomsByClinic(clinicId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting hospitalization rooms:', error);
+        logger.error('Error getting hospitalization rooms:', error);
         throw error;
     }
 }
@@ -41,7 +42,7 @@ async function getRoomById(roomId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error getting hospitalization room:', error);
+        logger.error('Error getting hospitalization room:', error);
         throw error;
     }
 }
@@ -55,7 +56,7 @@ async function updateRoom(roomId, roomName, roomType) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating hospitalization room:', error);
+        logger.error('Error updating hospitalization room:', error);
         throw error;
     }
 }
@@ -69,7 +70,7 @@ async function updateRoomStatus(roomId, status) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating room status:', error);
+        logger.error('Error updating room status:', error);
         throw error;
     }
 }
@@ -93,7 +94,7 @@ async function deleteRoom(roomId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error deleting hospitalization room:', error);
+        logger.error('Error deleting hospitalization room:', error);
         throw error;
     }
 }
@@ -155,7 +156,7 @@ async function admitPet(roomId, petId, admissionDate, expectedDischargeDate) {
     } catch (error) {
         // Rollback in case of error
         await pool.query('ROLLBACK');
-        console.error('Error admitting pet:', error);
+        logger.error('Error admitting pet:', error);
         throw error;
     }
 }
@@ -197,7 +198,7 @@ async function dischargePet(hospitalizationId, actualDischargeDate) {
     } catch (error) {
         // Rollback in case of error
         await pool.query('ROLLBACK');
-        console.error('Error discharging pet:', error);
+        logger.error('Error discharging pet:', error);
         throw error;
     }
 }
@@ -216,7 +217,7 @@ async function getCurrentHospitalization(petId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error getting current hospitalization:', error);
+        logger.error('Error getting current hospitalization:', error);
         throw error;
     }
 }
@@ -236,7 +237,7 @@ async function getPetHospitalizationHistory(petId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting pet hospitalization history:', error);
+        logger.error('Error getting pet hospitalization history:', error);
         throw error;
     }
 }
@@ -256,7 +257,7 @@ async function getCurrentHospitalizationsByClinic(clinicId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting current hospitalizations:', error);
+        logger.error('Error getting current hospitalizations:', error);
         throw error;
     }
 }
@@ -275,7 +276,7 @@ async function getHospitalizationById(hospitalizationId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error getting hospitalization details:', error);
+        logger.error('Error getting hospitalization details:', error);
         throw error;
     }
 }
@@ -289,7 +290,7 @@ async function updateExpectedDischargeDate(hospitalizationId, expectedDischargeD
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating expected discharge date:', error);
+        logger.error('Error updating expected discharge date:', error);
         throw error;
     }
 }
@@ -297,7 +298,7 @@ async function updateExpectedDischargeDate(hospitalizationId, expectedDischargeD
 // Automatically discharge a pet when it is deleted
 async function dischargeDeletedPet(petId) {
     try {
-        console.log(`Auto-discharging hospitalization for deleted pet ID: ${petId}`);
+        logger.info(`Auto-discharging hospitalization for deleted pet ID: ${petId}`);
         
         // Begin transaction
         await pool.query('BEGIN');
@@ -309,7 +310,7 @@ async function dischargeDeletedPet(petId) {
         );
         
         if (activeHospitalizations.rows.length === 0) {
-            console.log('No active hospitalizations found for this pet');
+            logger.info('No active hospitalizations found for this pet');
             await pool.query('COMMIT');
             return null;
         }
@@ -319,7 +320,7 @@ async function dischargeDeletedPet(petId) {
         
         // Process each active hospitalization
         for (const hospitalization of activeHospitalizations.rows) {
-            console.log(`Discharging hospitalization ID: ${hospitalization.id}, Room ID: ${hospitalization.room_id}`);
+            logger.info(`Discharging hospitalization ID: ${hospitalization.id}, Room ID: ${hospitalization.room_id}`);
             
             // Update hospitalization record with discharge date
             const dischargeResult = await pool.query(
@@ -338,13 +339,13 @@ async function dischargeDeletedPet(petId) {
         
         // Commit transaction
         await pool.query('COMMIT');
-        console.log(`Successfully discharged ${results.length} hospitalizations for deleted pet`);
+        logger.info(`Successfully discharged ${results.length} hospitalizations for deleted pet`);
         
         return results;
     } catch (error) {
         // Rollback in case of error
         await pool.query('ROLLBACK');
-        console.error('Error auto-discharging deleted pet:', error);
+        logger.error('Error auto-discharging deleted pet:', error);
         throw error;
     }
 }

@@ -1,4 +1,5 @@
 const pool = require('../../config/db');
+const logger = require('../../config/logger');
 
 /**
  * Examination operations
@@ -45,7 +46,7 @@ async function createExamination(examinationData) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error creating examination:', error);
+        logger.error('Error creating examination:', error);
         throw error;
     }
 }
@@ -67,7 +68,7 @@ async function getExamination(examinationId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error getting examination:', error);
+        logger.error('Error getting examination:', error);
         throw error;
     }
 }
@@ -75,14 +76,14 @@ async function getExamination(examinationId) {
 // List examinations with various filters
 async function listExaminations(filters, limit, offset) {
     try {
-        console.log('=== ExaminationModel.listExaminations STARTED ===');
-        console.log('Incoming filters:', JSON.stringify(filters, null, 2));
-        console.log('Limit:', limit, 'Offset:', offset);
+        logger.info('=== ExaminationModel.listExaminations STARTED ===');
+        logger.info('Incoming filters:', JSON.stringify(filters, null, 2));
+        logger.info('Limit:', limit, 'Offset:', offset);
         
         // Limit and offset default values if not provided
         limit = limit || 20;
         offset = offset || 0;
-        console.log('Final limit:', limit, 'Final offset:', offset);
+        logger.info('Final limit:', limit, 'Final offset:', offset);
         
         let query = `
             SELECT e.*, 
@@ -101,47 +102,47 @@ async function listExaminations(filters, limit, offset) {
         
         // Apply filters
         if (filters.pet_id) {
-            console.log('Adding pet_id filter:', filters.pet_id);
+            logger.info('Adding pet_id filter:', filters.pet_id);
             query += ` AND e.pet_id = $${paramIndex}`;
             queryParams.push(filters.pet_id);
             paramIndex++;
         }
         
         if (filters.vet_id) {
-            console.log('Adding vet_id filter:', filters.vet_id);
+            logger.info('Adding vet_id filter:', filters.vet_id);
             query += ` AND e.vet_id = $${paramIndex}`;
             queryParams.push(filters.vet_id);
             paramIndex++;
         }
         
         if (filters.status) {
-            console.log('Processing status filter:', filters.status);
+            logger.info('Processing status filter:', filters.status);
             // Check if it's a comma-separated list of statuses
             if (filters.status.includes(',')) {
                 const statuses = filters.status.split(',').map(s => s.trim());
-                console.log('Status list after splitting:', statuses);
+                logger.info('Status list after splitting:', statuses);
                 query += ` AND e.status IN (${statuses.map((_, i) => `$${paramIndex + i}`).join(', ')})`;
                 queryParams.push(...statuses);
-                console.log('Status parameters added to query:', statuses);
+                logger.info('Status parameters added to query:', statuses);
                 paramIndex += statuses.length;
             } else {
                 query += ` AND e.status = $${paramIndex}`;
                 queryParams.push(filters.status);
-                console.log('Single status parameter added:', filters.status);
+                logger.info('Single status parameter added:', filters.status);
                 paramIndex++;
             }
         }
         
         // Date filters
         if (filters.start_date) {
-            console.log('Adding start_date filter:', filters.start_date);
+            logger.info('Adding start_date filter:', filters.start_date);
             query += ` AND e.created_at >= $${paramIndex}`;
             queryParams.push(filters.start_date);
             paramIndex++;
         }
         
         if (filters.end_date) {
-            console.log('Adding end_date filter:', filters.end_date);
+            logger.info('Adding end_date filter:', filters.end_date);
             query += ` AND e.created_at <= $${paramIndex}`;
             queryParams.push(filters.end_date);
             paramIndex++;
@@ -149,43 +150,43 @@ async function listExaminations(filters, limit, offset) {
         
         // Get the total count before applying limit and offset for pagination
         const countQuery = `SELECT COUNT(*) FROM (${query}) as count_query`;
-        console.log('Count query:', countQuery);
-        console.log('Count query params:', queryParams);
+        logger.info('Count query:', countQuery);
+        logger.info('Count query params:', queryParams);
         
         const countResult = await pool.query(countQuery, queryParams);
         const totalCount = parseInt(countResult.rows[0].count);
-        console.log('Total count before pagination:', totalCount);
+        logger.info('Total count before pagination:', totalCount);
         
         // Add order by, limit and offset
         query += ` ORDER BY e.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex+1}`;
         queryParams.push(limit, offset);
         
-        console.log('Final SQL query:', {
+        logger.info('Final SQL query:', {
             text: query,
             params: queryParams
         });
         
-        console.log('Executing query...');
+        logger.info('Executing query...');
         const result = await pool.query(query, queryParams);
-        console.log(`Query executed. Examinations found: ${result.rows.length}`);
+        logger.info(`Query executed. Examinations found: ${result.rows.length}`);
         
         // Log examination IDs for debugging
         if (result.rows.length > 0) {
-            console.log('Found examination IDs:', result.rows.map(row => row.examination_id));
-            console.log('Statuses of found examinations:', result.rows.map(row => row.status));
+            logger.info('Found examination IDs:', result.rows.map(row => row.examination_id));
+            logger.info('Statuses of found examinations:', result.rows.map(row => row.status));
             // Log pet names to verify they're being returned
-            console.log('Pet names of found examinations:', result.rows.map(row => row.pet_name || 'NOT FOUND'));
+            logger.info('Pet names of found examinations:', result.rows.map(row => row.pet_name || 'NOT FOUND'));
             // Log the first complete row to check all fields
-            console.log('Sample examination data:', result.rows[0]);
+            logger.info('Sample examination data:', result.rows[0]);
         } else {
-            console.log('No examinations matched the query criteria');
+            logger.info('No examinations matched the query criteria');
         }
         
-        console.log('=== ExaminationModel.listExaminations COMPLETED ===');
+        logger.info('=== ExaminationModel.listExaminations COMPLETED ===');
         return result.rows;
     } catch (error) {
-        console.error('ERROR in ExaminationModel.listExaminations:', error);
-        console.error('Error stack:', error.stack);
+        logger.error('ERROR in ExaminationModel.listExaminations:', error);
+        logger.error('Error stack:', error.stack);
         // Return empty array instead of throwing to prevent frontend from crashing
         return [];
     }
@@ -264,7 +265,7 @@ async function updateExamination(examinationId, updateData) {
         const result = await pool.query(query, queryParams);
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating examination:', error);
+        logger.error('Error updating examination:', error);
         throw error;
     }
 }
@@ -281,7 +282,7 @@ async function updateExaminationStatus(examinationId, status) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating examination status:', error);
+        logger.error('Error updating examination status:', error);
         throw error;
     }
 }
@@ -304,7 +305,7 @@ async function getPetExaminationHistory(petId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting pet examination history:', error);
+        logger.error('Error getting pet examination history:', error);
         throw error;
     }
 }
@@ -328,7 +329,7 @@ async function deleteExamination(examinationId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error deleting examination:', error);
+        logger.error('Error deleting examination:', error);
         throw error;
     }
 }

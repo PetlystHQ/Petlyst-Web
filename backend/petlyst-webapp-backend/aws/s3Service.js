@@ -1,4 +1,5 @@
 const { s3, s3Config } = require('./s3Config');
+const logger = require('../config/logger');
 
 class S3Service {
   /**
@@ -18,7 +19,7 @@ class S3Service {
     // Eğer isim zaten ID ile başlıyorsa, olduğu gibi kullan
     let folderName;
     if (hasIdPrefix) {
-      console.log('Clinic name already contains ID prefix, using as is');
+      logger.info('Clinic name already contains ID prefix, using as is');
       // Gelen isim zaten ID içeriyor, sanitize et ve kullan
       folderName = clinicName
         .toLowerCase()
@@ -27,7 +28,7 @@ class S3Service {
         .replace(/^-|-$/g, '');
     } else {
       // Gelen isim ID içermiyor, ekle
-      console.log('Adding ID prefix to clinic name');
+      logger.info('Adding ID prefix to clinic name');
       const sanitizedClinicName = clinicName
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
@@ -39,14 +40,14 @@ class S3Service {
     
     // Klinik tipini ekle (sadece hiç yoksa)
     if (clinicType && !folderName.includes('veterinary-clinic') && !folderName.includes('animal-hospital')) {
-      console.log('Adding clinic type suffix to folder name');
+      logger.info('Adding clinic type suffix to folder name');
       const typeSuffix = clinicType.toLowerCase() === 'animal hospital' ? 'animal-hospital' : 'veterinary-clinic';
       folderName = `${folderName}-${typeSuffix}`;
     } else {
-      console.log('Folder name already contains clinic type or no type provided');
+      logger.info('Folder name already contains clinic type or no type provided');
     }
     
-    console.log('Final folder path:', `clinic-photos/${folderName}`);
+    logger.info('Final folder path:', `clinic-photos/${folderName}`);
     return `clinic-photos/${folderName}`;
   }
 
@@ -62,10 +63,10 @@ class S3Service {
    */
   async uploadClinicPhoto(fileBuffer, fileName, contentType, clinicId, clinicName, clinicType) {
     try {
-      console.log('=========== STARTING S3 UPLOAD PROCESS ===========');
-      console.log('Upload parameters:', { fileName, contentType, clinicId, clinicName, clinicType });
-      console.log('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
-      console.log('ENV Check:', {
+      logger.info('=========== STARTING S3 UPLOAD PROCESS ===========');
+      logger.info('Upload parameters:', { fileName, contentType, clinicId, clinicName, clinicType });
+      logger.info('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
+      logger.info('ENV Check:', {
         accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
         secretKeyExists: !!process.env.AWS_SECRET_ACCESS_KEY,
         bucket: process.env.AWS_S3_BUCKET,
@@ -88,21 +89,21 @@ class S3Service {
       const timestamp = new Date().getTime();
       const fileExtension = fileName.split('.').pop() || 'jpg';
       const uniqueFileName = `${timestamp}.${fileExtension}`;
-      console.log('Generated unique filename:', uniqueFileName);
+      logger.info('Generated unique filename:', uniqueFileName);
 
       // Generate the full path including the clinic-specific folder
       const folderPath = this.getClinicPhotoPath(clinicId, clinicName, clinicType);
       const fullPath = `${folderPath}/${uniqueFileName}`;
-      console.log('IMPORTANT - Full path for S3 object:', fullPath);
-      console.log('Clinic folder path:', folderPath);
-      console.log('Folder structure will be:', {
+      logger.info('IMPORTANT - Full path for S3 object:', fullPath);
+      logger.info('Clinic folder path:', folderPath);
+      logger.info('Folder structure will be:', {
         bucket: s3Config.bucket,
         mainFolder: 'clinic-photos',
         clinicFolder: this.getClinicPhotoPath(clinicId, clinicName, clinicType).split('clinic-photos/')[1],
         filename: uniqueFileName
       });
 
-      console.log('Preparing S3 upload with params:', {
+      logger.info('Preparing S3 upload with params:', {
         Bucket: s3Config.bucket,
         Key: fullPath,
         ContentType: contentType,
@@ -117,7 +118,7 @@ class S3Service {
       };
 
       // Additional logging for params
-      console.log('S3 Upload Params:', {
+      logger.info('S3 Upload Params:', {
         Bucket: params.Bucket,
         Key: params.Key,
         ContentType: params.ContentType,
@@ -125,9 +126,9 @@ class S3Service {
       });
 
       try {
-        console.log('Initiating S3 upload...');
+        logger.info('Initiating S3 upload...');
         const result = await s3.upload(params).promise();
-        console.log('S3 upload completed successfully:', {
+        logger.info('S3 upload completed successfully:', {
           ETag: result.ETag,
           Location: result.Location,
           Key: result.Key,
@@ -136,14 +137,14 @@ class S3Service {
         
         // Her durumda elle URL oluşturalım, Location'a güvenmeyelim
         const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
-        console.log('Manually constructed URL:', manualUrl);
-        console.log('S3 returned Location:', result.Location || 'No Location returned');
+        logger.info('Manually constructed URL:', manualUrl);
+        logger.info('S3 returned Location:', result.Location || 'No Location returned');
         
         // Farklılık varsa uyarı gösterelim
         if (result.Location && result.Location !== manualUrl) {
-          console.warn('Warning: S3 Location differs from manually constructed URL');
-          console.warn(`S3 Location: ${result.Location}`);
-          console.warn(`Manual URL: ${manualUrl}`);
+          logger.warn('Warning: S3 Location differs from manually constructed URL');
+          logger.warn(`S3 Location: ${result.Location}`);
+          logger.warn(`Manual URL: ${manualUrl}`);
         }
         
         return {
@@ -152,7 +153,7 @@ class S3Service {
           s3Location: result.Location // Debugging için ek bilgi
         };
       } catch (uploadError) {
-        console.error('Direct S3 upload error:', {
+        logger.error('Direct S3 upload error:', {
           message: uploadError.message,
           code: uploadError.code,
           region: s3Config.region,
@@ -161,7 +162,7 @@ class S3Service {
         throw uploadError;
       }
     } catch (error) {
-      console.error('Error uploading clinic photo to S3:', {
+      logger.error('Error uploading clinic photo to S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -189,7 +190,7 @@ class S3Service {
   
   //     return result; // Return the result for further processing if needed
   //   } catch (error) {
-  //     console.error('Error deleting file from S3:', error);
+  //     logger.error('Error deleting file from S3:', error);
   //     throw error; // Rethrow the error to be handled by the calling function
   //   }
   // };
@@ -212,7 +213,7 @@ class S3Service {
 
       await s3.deleteObject(params).promise();
     } catch (error) {
-      console.error('Error deleting clinic photo from S3:', error);
+      logger.error('Error deleting clinic photo from S3:', error);
       throw new Error('Failed to delete clinic photo from S3', { cause: error });
     }
   }
@@ -256,7 +257,7 @@ class S3Service {
 
       return photos;
     } catch (error) {
-      console.error('Error listing clinic photos from S3:', {
+      logger.error('Error listing clinic photos from S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -292,7 +293,7 @@ class S3Service {
 
       return await s3.getSignedUrlPromise('getObject', params);
     } catch (error) {
-      console.error('Error generating signed URL for clinic photo:', error);
+      logger.error('Error generating signed URL for clinic photo:', error);
       throw new Error('Failed to generate signed URL for clinic photo', { cause: error });
     }
   }
@@ -305,12 +306,12 @@ class S3Service {
    */
   async deleteClinicFolder(clinicId, clinicName) {
     try {
-      console.log(`=== S3 FOLDER DELETION STARTED ===`);
-      console.log(`Attempting to delete all photos for clinic: ${clinicId}, ${clinicName}`);
+      logger.info(`=== S3 FOLDER DELETION STARTED ===`);
+      logger.info(`Attempting to delete all photos for clinic: ${clinicId}, ${clinicName}`);
       
       // First, list all objects in the clinic's folder
       const folderPath = this.getClinicPhotoPath(clinicId, clinicName);
-      console.log('S3 folder path:', folderPath);
+      logger.info('S3 folder path:', folderPath);
       
       // Verify the sanitized clinic name matches what we expect
       const sanitizedClinicName = clinicName
@@ -318,7 +319,7 @@ class S3Service {
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
-      console.log('Sanitized clinic name check:', {
+      logger.info('Sanitized clinic name check:', {
         original: clinicName,
         sanitized: sanitizedClinicName,
         expected: `clinic-photos/${clinicId}-${sanitizedClinicName}`
@@ -329,39 +330,39 @@ class S3Service {
         Prefix: folderPath + '/'
       };
       
-      console.log('S3 ListObjectsV2 params:', {
+      logger.info('S3 ListObjectsV2 params:', {
         Bucket: listParams.Bucket,
         Prefix: listParams.Prefix
       });
       
       // Log the AWS configuration being used
-      console.log('S3 Configuration Check:', {
+      logger.info('S3 Configuration Check:', {
         region: s3Config.region,
         bucket: s3Config.bucket,
         accessKeyExists: !!s3Config.accessKeyId,
         secretKeyExists: !!s3Config.secretAccessKey
       });
       
-      console.log('Listing objects with prefix:', folderPath + '/');
+      logger.info('Listing objects with prefix:', folderPath + '/');
       
       const listedObjects = await s3.listObjectsV2(listParams).promise();
       
-      console.log('S3 ListObjectsV2 response:', {
+      logger.info('S3 ListObjectsV2 response:', {
         keyCount: listedObjects.KeyCount,
         contentsLength: listedObjects.Contents ? listedObjects.Contents.length : 0,
         isTruncated: listedObjects.IsTruncated
       });
       
       if (!listedObjects.Contents || listedObjects.Contents.length === 0) {
-        console.log(`No objects found in clinic folder: ${folderPath}`);
+        logger.info(`No objects found in clinic folder: ${folderPath}`);
         return { deleted: 0 };
       }
       
       // Log the first few objects for verification
       const previewObjects = listedObjects.Contents.slice(0, Math.min(5, listedObjects.Contents.length));
-      console.log('Preview of objects to delete:', previewObjects.map(obj => ({ Key: obj.Key, Size: obj.Size, LastModified: obj.LastModified })));
+      logger.info('Preview of objects to delete:', previewObjects.map(obj => ({ Key: obj.Key, Size: obj.Size, LastModified: obj.LastModified })));
       
-      console.log(`Found ${listedObjects.Contents.length} objects to delete in clinic folder`);
+      logger.info(`Found ${listedObjects.Contents.length} objects to delete in clinic folder`);
       
       // Create an array of objects to delete
       const deleteParams = {
@@ -372,37 +373,37 @@ class S3Service {
         }
       };
       
-      console.log(`Sending DeleteObjects request for ${deleteParams.Delete.Objects.length} objects`);
+      logger.info(`Sending DeleteObjects request for ${deleteParams.Delete.Objects.length} objects`);
       
       // Delete all the objects in a single batch
       const deleteResult = await s3.deleteObjects(deleteParams).promise();
       
-      console.log('S3 DeleteObjects response:', {
+      logger.info('S3 DeleteObjects response:', {
         deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0,
         errorsCount: deleteResult.Errors ? deleteResult.Errors.length : 0
       });
       
       // Log any errors
       if (deleteResult.Errors && deleteResult.Errors.length > 0) {
-        console.error('Errors occurred during batch deletion:', deleteResult.Errors);
+        logger.error('Errors occurred during batch deletion:', deleteResult.Errors);
       }
       
-      console.log(`Successfully deleted ${deleteResult.Deleted ? deleteResult.Deleted.length : 0} objects from S3`);
+      logger.info(`Successfully deleted ${deleteResult.Deleted ? deleteResult.Deleted.length : 0} objects from S3`);
       
       // Check if we need to continue due to S3 listing limit (1000 objects)
       if (listedObjects.IsTruncated) {
-        console.log('Object listing was truncated, continuing deletion');
+        logger.info('Object listing was truncated, continuing deletion');
         const nextBatchResult = await this.deleteClinicFolder(clinicId, clinicName);
         return { 
           deleted: (deleteResult.Deleted ? deleteResult.Deleted.length : 0) + nextBatchResult.deleted 
         };
       }
       
-      console.log(`=== S3 FOLDER DELETION COMPLETED ===`);
+      logger.info(`=== S3 FOLDER DELETION COMPLETED ===`);
       return { deleted: deleteResult.Deleted ? deleteResult.Deleted.length : 0 };
     } catch (error) {
-      console.error('=== S3 FOLDER DELETION ERROR ===');
-      console.error('Error deleting clinic folder from S3:', {
+      logger.error('=== S3 FOLDER DELETION ERROR ===');
+      logger.error('Error deleting clinic folder from S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -423,13 +424,13 @@ class S3Service {
    */
   async testS3Upload() {
     try {
-      console.log('=========== TESTING S3 UPLOAD FUNCTIONALITY ===========');
+      logger.info('=========== TESTING S3 UPLOAD FUNCTIONALITY ===========');
       
       // Create a simple test file content
       const testContent = Buffer.from('This is a test file to verify S3 upload functionality ' + new Date().toISOString());
       const testKey = `test-uploads/test-file-${Date.now()}.txt`;
       
-      console.log(`Attempting to upload test file with key: ${testKey}`);
+      logger.info(`Attempting to upload test file with key: ${testKey}`);
       
       const params = {
         Bucket: s3Config.bucket,
@@ -440,13 +441,13 @@ class S3Service {
       
       const result = await s3.upload(params).promise();
       
-      console.log('Test upload successful:', {
+      logger.info('Test upload successful:', {
         Location: result.Location,
         Key: result.Key,
         Bucket: result.Bucket
       });
       
-      console.log(`Test file should be accessible at: ${result.Location}`);
+      logger.info(`Test file should be accessible at: ${result.Location}`);
       
       return {
         success: true,
@@ -454,7 +455,7 @@ class S3Service {
         key: result.Key
       };
     } catch (error) {
-      console.error('S3 test upload failed:', {
+      logger.error('S3 test upload failed:', {
         message: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -485,7 +486,7 @@ class S3Service {
     
     const folderName = `${veterinarianId}-${sanitizedVeterinarianName}`;
     
-    console.log('Final veterinarian folder path:', `veterinarian-photos/${folderName}`);
+    logger.info('Final veterinarian folder path:', `veterinarian-photos/${folderName}`);
     return `veterinarian-photos/${folderName}`;
   }
 
@@ -500,10 +501,10 @@ class S3Service {
    */
   async uploadVeterinarianPhoto(fileBuffer, fileName, contentType, veterinarianId, veterinarianName) {
     try {
-      console.log('=========== STARTING VETERINARIAN PHOTO S3 UPLOAD PROCESS ===========');
-      console.log('Upload parameters:', { fileName, contentType, veterinarianId, veterinarianName });
-      console.log('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
-      console.log('ENV Check:', {
+      logger.info('=========== STARTING VETERINARIAN PHOTO S3 UPLOAD PROCESS ===========');
+      logger.info('Upload parameters:', { fileName, contentType, veterinarianId, veterinarianName });
+      logger.info('File buffer length:', fileBuffer ? fileBuffer.length : 'undefined');
+      logger.info('ENV Check:', {
         accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
         secretKeyExists: !!process.env.AWS_SECRET_ACCESS_KEY,
         bucket: process.env.AWS_S3_BUCKET,
@@ -526,21 +527,21 @@ class S3Service {
       const timestamp = new Date().getTime();
       const fileExtension = fileName.split('.').pop() || 'jpg';
       const uniqueFileName = `${timestamp}.${fileExtension}`;
-      console.log('Generated unique filename:', uniqueFileName);
+      logger.info('Generated unique filename:', uniqueFileName);
 
       // Generate the full path including the veterinarian-specific folder
       const folderPath = this.getVeterinarianPhotoPath(veterinarianId, veterinarianName);
       const fullPath = `${folderPath}/${uniqueFileName}`;
-      console.log('IMPORTANT - Full path for S3 object:', fullPath);
-      console.log('Veterinarian folder path:', folderPath);
-      console.log('Folder structure will be:', {
+      logger.info('IMPORTANT - Full path for S3 object:', fullPath);
+      logger.info('Veterinarian folder path:', folderPath);
+      logger.info('Folder structure will be:', {
         bucket: s3Config.bucket,
         mainFolder: 'veterinarian-photos',
         veterinarianFolder: this.getVeterinarianPhotoPath(veterinarianId, veterinarianName).split('veterinarian-photos/')[1],
         filename: uniqueFileName
       });
 
-      console.log('Preparing S3 upload with params:', {
+      logger.info('Preparing S3 upload with params:', {
         Bucket: s3Config.bucket,
         Key: fullPath,
         ContentType: contentType,
@@ -555,9 +556,9 @@ class S3Service {
       };
 
       try {
-        console.log('Initiating S3 upload...');
+        logger.info('Initiating S3 upload...');
         const result = await s3.upload(params).promise();
-        console.log('S3 upload completed successfully:', {
+        logger.info('S3 upload completed successfully:', {
           ETag: result.ETag,
           Location: result.Location,
           Key: result.Key,
@@ -566,14 +567,14 @@ class S3Service {
         
         // Her durumda elle URL oluşturalım, Location'a güvenmeyelim
         const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
-        console.log('Manually constructed URL:', manualUrl);
-        console.log('S3 returned Location:', result.Location || 'No Location returned');
+        logger.info('Manually constructed URL:', manualUrl);
+        logger.info('S3 returned Location:', result.Location || 'No Location returned');
         
         // Farklılık varsa uyarı gösterelim
         if (result.Location && result.Location !== manualUrl) {
-          console.warn('Warning: S3 Location differs from manually constructed URL');
-          console.warn(`S3 Location: ${result.Location}`);
-          console.warn(`Manual URL: ${manualUrl}`);
+          logger.warn('Warning: S3 Location differs from manually constructed URL');
+          logger.warn(`S3 Location: ${result.Location}`);
+          logger.warn(`Manual URL: ${manualUrl}`);
         }
         
         return {
@@ -582,7 +583,7 @@ class S3Service {
           s3Location: result.Location // Debugging için ek bilgi
         };
       } catch (uploadError) {
-        console.error('Direct S3 upload error:', {
+        logger.error('Direct S3 upload error:', {
           message: uploadError.message,
           code: uploadError.code,
           region: s3Config.region,
@@ -591,7 +592,7 @@ class S3Service {
         throw uploadError;
       }
     } catch (error) {
-      console.error('Error uploading veterinarian photo to S3:', {
+      logger.error('Error uploading veterinarian photo to S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -616,7 +617,7 @@ class S3Service {
 
       await s3.deleteObject(params).promise();
     } catch (error) {
-      console.error('Error deleting veterinarian photo from S3:', error);
+      logger.error('Error deleting veterinarian photo from S3:', error);
       throw new Error('Failed to delete veterinarian photo from S3', { cause: error });
     }
   }
@@ -629,7 +630,7 @@ class S3Service {
    */
   async deleteVeterinarianFolder(veterinarianId, veterinarianName) {
     try {
-      console.log(`Starting deletion of veterinarian folder for veterinarian ID: ${veterinarianId}`);
+      logger.info(`Starting deletion of veterinarian folder for veterinarian ID: ${veterinarianId}`);
       const folderPath = this.getVeterinarianPhotoPath(veterinarianId, veterinarianName);
       
       // First, list all objects in the folder
@@ -638,11 +639,11 @@ class S3Service {
         Prefix: folderPath + '/'
       };
 
-      console.log('Listing objects with params:', listParams);
+      logger.info('Listing objects with params:', listParams);
       const listedObjects = await s3.listObjectsV2(listParams).promise();
       
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        console.log(`Found ${listedObjects.Contents.length} objects to delete`);
+        logger.info(`Found ${listedObjects.Contents.length} objects to delete`);
         
         // Create an array of objects to delete in a single operation
         const deleteParams = {
@@ -653,17 +654,17 @@ class S3Service {
           }
         };
         
-        console.log(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
+        logger.info(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
         const deleteResult = await s3.deleteObjects(deleteParams).promise();
-        console.log('Delete operation completed:', deleteResult);
+        logger.info('Delete operation completed:', deleteResult);
         
         // Check if the deletion was successful
         if (deleteResult.Deleted) {
-          console.log(`Successfully deleted ${deleteResult.Deleted.length} objects`);
+          logger.info(`Successfully deleted ${deleteResult.Deleted.length} objects`);
         }
         
         if (deleteResult.Errors && deleteResult.Errors.length > 0) {
-          console.error('Error deleting some objects:', deleteResult.Errors);
+          logger.error('Error deleting some objects:', deleteResult.Errors);
           throw new Error(`Failed to delete some veterinarian photos: ${deleteResult.Errors.length} errors occurred`);
         }
         
@@ -673,7 +674,7 @@ class S3Service {
           errors: deleteResult.Errors || []
         };
       } else {
-        console.log(`No objects found in folder ${folderPath}`);
+        logger.info(`No objects found in folder ${folderPath}`);
         return {
           success: true,
           deletedCount: 0,
@@ -681,7 +682,7 @@ class S3Service {
         };
       }
     } catch (error) {
-      console.error('Error deleting veterinarian folder:', error);
+      logger.error('Error deleting veterinarian folder:', error);
       throw new Error(`Failed to delete veterinarian folder: ${error.message}`, { cause: error });
     }
   }
@@ -703,7 +704,7 @@ class S3Service {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
-    console.log('Final pet photo path:', `pet-photos/${ownerFolder}/${sanitizedPetName}`);
+    logger.info('Final pet photo path:', `pet-photos/${ownerFolder}/${sanitizedPetName}`);
     return `pet-photos/${ownerFolder}/${sanitizedPetName}`;
   }
 
@@ -716,14 +717,14 @@ class S3Service {
    */
   async uploadPetPhoto(file, petOwnerId, petName) {
     try {
-      console.log('=========== STARTING PET PHOTO S3 UPLOAD PROCESS ===========');
-      console.log('Upload parameters:', { 
+      logger.info('=========== STARTING PET PHOTO S3 UPLOAD PROCESS ===========');
+      logger.info('Upload parameters:', { 
         fileName: file.originalname, 
         contentType: file.mimetype, 
         petOwnerId, 
         petName 
       });
-      console.log('File buffer length:', file.buffer ? file.buffer.length : 'undefined');
+      logger.info('File buffer length:', file.buffer ? file.buffer.length : 'undefined');
       
       if (!file.buffer || file.buffer.length === 0) {
         throw new Error('Empty file buffer provided');
@@ -747,8 +748,8 @@ class S3Service {
       const uniqueFileName = `${petName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.${fileExtension}`;
       const fullPath = `${folderPath}.${fileExtension}`;
       
-      console.log('IMPORTANT - Full path for S3 object:', fullPath);
-      console.log('Folder structure:', {
+      logger.info('IMPORTANT - Full path for S3 object:', fullPath);
+      logger.info('Folder structure:', {
         bucket: s3Config.bucket,
         mainFolder: 'pet-photos',
         ownerFolder: `petowner-${petOwnerId}`,
@@ -763,9 +764,9 @@ class S3Service {
       };
 
       try {
-        console.log('Initiating S3 upload...');
+        logger.info('Initiating S3 upload...');
         const result = await s3.upload(params).promise();
-        console.log('S3 upload completed successfully:', {
+        logger.info('S3 upload completed successfully:', {
           ETag: result.ETag,
           Location: result.Location,
           Key: result.Key,
@@ -774,7 +775,7 @@ class S3Service {
         
         // Manually construct URL for consistency
         const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
-        console.log('Manually constructed URL:', manualUrl);
+        logger.info('Manually constructed URL:', manualUrl);
         
         return {
           url: manualUrl,
@@ -782,7 +783,7 @@ class S3Service {
           s3Location: result.Location // For debugging
         };
       } catch (uploadError) {
-        console.error('S3 upload error:', {
+        logger.error('S3 upload error:', {
           message: uploadError.message,
           code: uploadError.code,
           region: s3Config.region,
@@ -791,7 +792,7 @@ class S3Service {
         throw uploadError;
       }
     } catch (error) {
-      console.error('Error uploading pet photo to S3:', {
+      logger.error('Error uploading pet photo to S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -815,10 +816,10 @@ class S3Service {
       };
 
       await s3.deleteObject(params).promise();
-      console.log(`Successfully deleted pet photo with key: ${key}`);
+      logger.info(`Successfully deleted pet photo with key: ${key}`);
       return { success: true };
     } catch (error) {
-      console.error('Error deleting pet photo from S3:', error);
+      logger.error('Error deleting pet photo from S3:', error);
       throw new Error('Failed to delete pet photo from S3', { cause: error });
     }
   }
@@ -830,7 +831,7 @@ class S3Service {
    */
   async deletePetOwnerPhotos(petOwnerId) {
     try {
-      console.log(`Starting deletion of all photos for pet owner ID: ${petOwnerId}`);
+      logger.info(`Starting deletion of all photos for pet owner ID: ${petOwnerId}`);
       const folderPath = `pet-photos/petowner-${petOwnerId}`;
       
       // List all objects in the folder
@@ -839,11 +840,11 @@ class S3Service {
         Prefix: folderPath + '/'
       };
 
-      console.log('Listing objects with params:', listParams);
+      logger.info('Listing objects with params:', listParams);
       const listedObjects = await s3.listObjectsV2(listParams).promise();
       
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        console.log(`Found ${listedObjects.Contents.length} objects to delete`);
+        logger.info(`Found ${listedObjects.Contents.length} objects to delete`);
         
         // Delete all objects in a single operation
         const deleteParams = {
@@ -854,11 +855,11 @@ class S3Service {
           }
         };
         
-        console.log(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
+        logger.info(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
         const deleteResult = await s3.deleteObjects(deleteParams).promise();
         
         if (deleteResult.Errors && deleteResult.Errors.length > 0) {
-          console.error('Error deleting some objects:', deleteResult.Errors);
+          logger.error('Error deleting some objects:', deleteResult.Errors);
           throw new Error(`Failed to delete some pet photos: ${deleteResult.Errors.length} errors occurred`);
         }
         
@@ -867,7 +868,7 @@ class S3Service {
           deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0
         };
       } else {
-        console.log(`No objects found in folder ${folderPath}`);
+        logger.info(`No objects found in folder ${folderPath}`);
         return {
           success: true,
           deletedCount: 0,
@@ -875,7 +876,7 @@ class S3Service {
         };
       }
     } catch (error) {
-      console.error('Error deleting pet owner photos:', error);
+      logger.error('Error deleting pet owner photos:', error);
       throw new Error(`Failed to delete pet owner photos: ${error.message}`, { cause: error });
     }
   }
@@ -897,7 +898,7 @@ class S3Service {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
     
-    console.log('Final pet owner profile photo path:', `pet-owner-photos/${ownerFolder}/${sanitizedUserName}`);
+    logger.info('Final pet owner profile photo path:', `pet-owner-photos/${ownerFolder}/${sanitizedUserName}`);
     return `pet-owner-photos/${ownerFolder}/${sanitizedUserName}`;
   }
 
@@ -910,14 +911,14 @@ class S3Service {
    */
   async uploadPetOwnerProfilePhoto(file, petOwnerId, userName) {
     try {
-      console.log('=========== STARTING PET OWNER PROFILE PHOTO S3 UPLOAD PROCESS ===========');
-      console.log('Upload parameters:', { 
+      logger.info('=========== STARTING PET OWNER PROFILE PHOTO S3 UPLOAD PROCESS ===========');
+      logger.info('Upload parameters:', { 
         fileName: file.originalname, 
         contentType: file.mimetype, 
         petOwnerId, 
         userName 
       });
-      console.log('File buffer length:', file.buffer ? file.buffer.length : 'undefined');
+      logger.info('File buffer length:', file.buffer ? file.buffer.length : 'undefined');
       
       if (!file.buffer || file.buffer.length === 0) {
         throw new Error('Empty file buffer provided');
@@ -942,8 +943,8 @@ class S3Service {
       const uniqueFileName = `${userName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${timestamp}.${fileExtension}`;
       const fullPath = `${folderPath.split('/').slice(0, 2).join('/')}/${uniqueFileName}`;
       
-      console.log('IMPORTANT - Full path for S3 object:', fullPath);
-      console.log('Folder structure:', {
+      logger.info('IMPORTANT - Full path for S3 object:', fullPath);
+      logger.info('Folder structure:', {
         bucket: s3Config.bucket,
         mainFolder: 'pet-owner-photos',
         ownerFolder: `petowner-${petOwnerId}`,
@@ -958,9 +959,9 @@ class S3Service {
       };
 
       try {
-        console.log('Initiating S3 upload...');
+        logger.info('Initiating S3 upload...');
         const result = await s3.upload(params).promise();
-        console.log('S3 upload completed successfully:', {
+        logger.info('S3 upload completed successfully:', {
           ETag: result.ETag,
           Location: result.Location,
           Key: result.Key,
@@ -969,7 +970,7 @@ class S3Service {
         
         // Manually construct URL for consistency
         const manualUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fullPath}`;
-        console.log('Manually constructed URL:', manualUrl);
+        logger.info('Manually constructed URL:', manualUrl);
         
         return {
           url: manualUrl,
@@ -977,7 +978,7 @@ class S3Service {
           s3Location: result.Location // For debugging
         };
       } catch (uploadError) {
-        console.error('S3 upload error:', {
+        logger.error('S3 upload error:', {
           message: uploadError.message,
           code: uploadError.code,
           region: s3Config.region,
@@ -986,7 +987,7 @@ class S3Service {
         throw uploadError;
       }
     } catch (error) {
-      console.error('Error uploading pet owner profile photo to S3:', {
+      logger.error('Error uploading pet owner profile photo to S3:', {
         error: error.message,
         code: error.code,
         statusCode: error.statusCode,
@@ -1010,10 +1011,10 @@ class S3Service {
       };
 
       await s3.deleteObject(params).promise();
-      console.log(`Successfully deleted pet owner profile photo with key: ${key}`);
+      logger.info(`Successfully deleted pet owner profile photo with key: ${key}`);
       return { success: true };
     } catch (error) {
-      console.error('Error deleting pet owner profile photo from S3:', error);
+      logger.error('Error deleting pet owner profile photo from S3:', error);
       throw new Error('Failed to delete pet owner profile photo from S3', { cause: error });
     }
   }
@@ -1025,7 +1026,7 @@ class S3Service {
    */
   async deletePetOwnerProfileFolder(petOwnerId) {
     try {
-      console.log(`Starting deletion of all profile photos for pet owner ID: ${petOwnerId}`);
+      logger.info(`Starting deletion of all profile photos for pet owner ID: ${petOwnerId}`);
       const folderPath = `pet-owner-photos/petowner-${petOwnerId}`;
       
       // List all objects in the folder
@@ -1034,15 +1035,15 @@ class S3Service {
         Prefix: folderPath + '/'
       };
 
-      console.log('Listing objects with params:', listParams);
+      logger.info('Listing objects with params:', listParams);
       const listedObjects = await s3.listObjectsV2(listParams).promise();
       
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        console.log(`Found ${listedObjects.Contents.length} objects to delete in profile folder`);
+        logger.info(`Found ${listedObjects.Contents.length} objects to delete in profile folder`);
         
         // Log the objects found for debugging
         listedObjects.Contents.forEach(obj => {
-          console.log(`Found object in profile folder: ${obj.Key}`);
+          logger.info(`Found object in profile folder: ${obj.Key}`);
         });
         
         // Delete all objects in a single operation
@@ -1054,21 +1055,21 @@ class S3Service {
           }
         };
         
-        console.log(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
+        logger.info(`Deleting ${deleteParams.Delete.Objects.length} objects in folder ${folderPath}`);
         const deleteResult = await s3.deleteObjects(deleteParams).promise();
         
         if (deleteResult.Errors && deleteResult.Errors.length > 0) {
-          console.error('Error deleting some profile objects:', deleteResult.Errors);
+          logger.error('Error deleting some profile objects:', deleteResult.Errors);
           throw new Error(`Failed to delete some profile photos: ${deleteResult.Errors.length} errors occurred`);
         }
         
-        console.log(`Successfully deleted ${deleteResult.Deleted.length} profile photos from S3`);
+        logger.info(`Successfully deleted ${deleteResult.Deleted.length} profile photos from S3`);
         return {
           success: true,
           deletedCount: deleteResult.Deleted ? deleteResult.Deleted.length : 0
         };
       } else {
-        console.log(`No objects found in profile folder ${folderPath}`);
+        logger.info(`No objects found in profile folder ${folderPath}`);
         return {
           success: true,
           deletedCount: 0,
@@ -1076,7 +1077,7 @@ class S3Service {
         };
       }
     } catch (error) {
-      console.error('Error deleting pet owner profile folder:', error);
+      logger.error('Error deleting pet owner profile folder:', error);
       throw new Error(`Failed to delete pet owner profile folder: ${error.message}`, { cause: error });
     }
   }

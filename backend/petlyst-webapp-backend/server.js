@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const pinoHttp = require('pino-http');
 require('dotenv').config();
+const logger = require('./config/logger');
 // Use the existing pool from config/db.js instead of creating a new one
 const pool = require('./config/db');
 const { encrypt } = require('./utils/encryption');
@@ -17,6 +19,10 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+// HTTP request logging — emits one structured line per request with
+// method, URL, status, response time. Reuses the same pino instance so
+// dev gets pretty output and prod gets JSON.
+app.use(pinoHttp({ logger }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -89,7 +95,7 @@ app.use((req, res) => {
 // 4-arg arity, so the unused `_next` must stay in the signature
 // (the underscore prefix satisfies the lint rule).
 app.use((err, req, res, _next) => {
-    console.error(err.stack);
+    logger.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
@@ -100,17 +106,17 @@ pool.query(`
     WHERE table_name = 'veterinarians' 
     AND column_name = 'veterinarian_verification_status'
 `).then(result => {
-    console.log('Veterinarian verification status column schema:', result.rows);
+    logger.info('Veterinarian verification status column schema:', result.rows);
     
     // Force update the default value to 'not_verified' regardless of current value
-    console.log('Updating default value to not_verified');
+    logger.info('Updating default value to not_verified');
     return pool.query(`
         ALTER TABLE veterinarians 
         ALTER COLUMN veterinarian_verification_status 
         SET DEFAULT 'not_verified'
     `);
 }).then(() => {
-    console.log('Database schema check completed');
+    logger.info('Database schema check completed');
     
     // Update ALL existing veterinarians with 'pending' status who haven't submitted verification details
     return pool.query(`
@@ -121,7 +127,7 @@ pool.query(`
     `);
 }).then(result => {
     if (result && result.rowCount) {
-        console.log(`Updated ${result.rowCount} veterinarians from 'pending' to 'not_verified'`);
+        logger.info(`Updated ${result.rowCount} veterinarians from 'pending' to 'not_verified'`);
     }
     
     // Also ensure that all new veterinarians without verification details have not_verified status
@@ -132,7 +138,7 @@ pool.query(`
     `);
 }).then(result => {
     if (result && result.rowCount) {
-        console.log(`Ensured ${result.rowCount} veterinarians have 'not_verified' status`);
+        logger.info(`Ensured ${result.rowCount} veterinarians have 'not_verified' status`);
     }
     
     // Check for unencrypted TC numbers and encrypt them
@@ -142,7 +148,7 @@ pool.query(`
         WHERE veterinarian_tc_number IS NOT NULL
     `);
 }).then(result => {
-    console.log(`Found ${result.rows.length} veterinarians with TC numbers`);
+    logger.info(`Found ${result.rows.length} veterinarians with TC numbers`);
     
     let encryptedCount = 0;
     let alreadyEncryptedCount = 0;
@@ -173,7 +179,7 @@ pool.query(`
                 await pool.query(updateQuery, [encryptedTcNumber, vet.veterinarian_id]);
                 encryptedCount++;
             } catch (error) {
-                console.error(`Error encrypting TC number for veterinarian ID ${vet.veterinarian_id}:`, error);
+                logger.error(`Error encrypting TC number for veterinarian ID ${vet.veterinarian_id}:`, error);
             }
         } else {
             invalidFormatCount++;
@@ -181,30 +187,30 @@ pool.query(`
     });
     
     return Promise.all(promises).then(() => {
-        console.log('TC number encryption check completed:');
-        console.log(`- Encrypted: ${encryptedCount} TC numbers`);
-        console.log(`- Already encrypted: ${alreadyEncryptedCount} TC numbers`);
-        console.log(`- Invalid format: ${invalidFormatCount} TC numbers`);
+        logger.info('TC number encryption check completed:');
+        logger.info(`- Encrypted: ${encryptedCount} TC numbers`);
+        logger.info(`- Already encrypted: ${alreadyEncryptedCount} TC numbers`);
+        logger.info(`- Invalid format: ${invalidFormatCount} TC numbers`);
     });
 }).catch(err => {
-    console.error('Error checking database schema:', err);
+    logger.error('Error checking database schema:', err);
 });
 
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log('Available routes:');
-    console.log('- /api/users');
-    console.log('- /api/veterinarian');
-    console.log('- /api/clinics');
-    console.log('- /api/admin');
-    console.log('- /api/pets');
-    console.log('- /api/pet-owners');
-    console.log('- /api/appointments');
-    console.log('- /api/clinics/[clinicId]/inventory');
-    console.log('- /api/examinations');
-    console.log('- /api/diagnoses');
-    console.log('- /api/reviews');
-    console.log('- /api/emergency');
+    logger.info(`Server is running on port ${PORT}`);
+    logger.info('Available routes:');
+    logger.info('- /api/users');
+    logger.info('- /api/veterinarian');
+    logger.info('- /api/clinics');
+    logger.info('- /api/admin');
+    logger.info('- /api/pets');
+    logger.info('- /api/pet-owners');
+    logger.info('- /api/appointments');
+    logger.info('- /api/clinics/[clinicId]/inventory');
+    logger.info('- /api/examinations');
+    logger.info('- /api/diagnoses');
+    logger.info('- /api/reviews');
+    logger.info('- /api/emergency');
 });

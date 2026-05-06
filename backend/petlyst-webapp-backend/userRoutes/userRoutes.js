@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
@@ -34,16 +35,16 @@ const validatePassword = (password) => {
 // Register endpoint
 router.post('/register', async (req, res) => {
     try {
-        console.log('Received registration request with body:', req.body);
+        logger.info('Received registration request with body:', req.body);
         
         const { name, surname, email, password, user_type } = req.body;
 
         // Detailed validation logging
-        console.log('Extracted fields:', { name, surname, email, password: '***', user_type });
+        logger.info('Extracted fields:', { name, surname, email, password: '***', user_type });
 
         // Check required fields
         if (!name || !surname || !email || !password || !user_type) {
-            console.log('Missing fields:', {
+            logger.info('Missing fields:', {
                 name: !name,
                 surname: !surname,
                 email: !email,
@@ -107,10 +108,10 @@ router.post('/register', async (req, res) => {
                     values: [newUser.id]
                 };
                 await pool.query(updateQuery);
-                console.log('Veterinarian status set to not_verified');
+                logger.info('Veterinarian status set to not_verified');
             }
         } catch (profileError) {
-            console.error(`Error creating ${user_type} profile:`, profileError);
+            logger.error(`Error creating ${user_type} profile:`, profileError);
             // Continue despite profile creation error
         }
         
@@ -120,7 +121,7 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Registration error:', error);
+        logger.error('Registration error:', error);
         res.status(500).json({ 
             message: 'Encountered Error while Registering User',
             error: error.message 
@@ -132,7 +133,7 @@ router.post('/register', async (req, res) => {
 // Enhanced Login Endpoint with Admin Verification
 router.post('/login', async (req, res) => {
     try {
-        console.log('Login attempt for:', { email: req.body.email });
+        logger.info('Login attempt for:', { email: req.body.email });
         
         const { email, password } = req.body;
 
@@ -162,7 +163,7 @@ router.post('/login', async (req, res) => {
         // Check if user is admin (for admin login)
         const isAdminRoute = req.path.includes('/admin') || req.headers['x-admin-request'];
         if (isAdminRoute && user.user_type !== 'admin') {
-            console.log('Non-admin user attempted to access admin route:', email);
+            logger.info('Non-admin user attempted to access admin route:', email);
             return res.status(403).json({ 
                 message: 'Access denied. Admin privileges required.',
                 error: 'UNAUTHORIZED_ACCESS'
@@ -196,7 +197,7 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Login Error:', error);
+        logger.error('Login Error:', error);
         res.status(500).json({
             message: 'Error during Login Process',
             error: error.message
@@ -220,15 +221,15 @@ const transporter = nodemailer.createTransport({
 // Verify transporter connection
 transporter.verify(function(error, _success) {
   if (error) {
-    console.error('SMTP connection error:', error);
-    console.error('SMTP settings:', {
+    logger.error('SMTP connection error:', error);
+    logger.error('SMTP settings:', {
       host: transporter.options.host,
       port: transporter.options.port,
       secure: transporter.options.secure,
       user: process.env.EMAIL_USER
     });
   } else {
-    console.log('SMTP server is ready to send emails');
+    logger.info('SMTP server is ready to send emails');
   }
 });
 
@@ -316,14 +317,14 @@ router.post('/reset-password', async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log('Verification email sent successfully to:', email);
+      logger.info('Verification email sent successfully to:', email);
       
       res.json({
         success: true,
         message: 'Verification code has been sent to your email'
       });
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      logger.error('Email sending error:', emailError);
       res.status(500).json({
         success: false,
         message: 'Failed to send verification code email',
@@ -332,7 +333,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error('Password reset error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to process password reset request',
@@ -371,7 +372,7 @@ router.post('/verify-code', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Code verification error:', error);
+    logger.error('Code verification error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to verify code'
@@ -434,7 +435,7 @@ router.post('/verify-reset', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Password reset verification error:', error);
+    logger.error('Password reset verification error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to reset password'
@@ -451,9 +452,9 @@ async function cleanupExpiredTokens() {
       OR reset_token_is_used = TRUE
     `;
     await pool.query(query);
-    console.log('Expired or used password reset tokens cleaned up');
+    logger.info('Expired or used password reset tokens cleaned up');
   } catch (error) {
-    console.error('Error cleaning up expired tokens:', error);
+    logger.error('Error cleaning up expired tokens:', error);
   }
 }
 
@@ -477,7 +478,7 @@ router.post('/update-theme', authenticateToken, async (req, res) => {
   
       res.json({ theme: result.rows[0].theme_preference });
     } catch (error) {
-      console.error('Error updating theme preference:', error);
+      logger.error('Error updating theme preference:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -496,7 +497,7 @@ router.get('/theme-preference', authenticateToken, async (req, res) => {
       const result = await pool.query(query, [userId]);
       res.json({ theme: result.rows[0].theme_preference });
     } catch (error) {
-      console.error('Error fetching theme preference:', error);
+      logger.error('Error fetching theme preference:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -504,7 +505,7 @@ router.get('/theme-preference', authenticateToken, async (req, res) => {
 // Function to create user type specific profile
 async function createUserTypeProfile(userId, userType) {
     try {
-        console.log(`Creating ${userType} profile for user ID: ${userId}`);
+        logger.info(`Creating ${userType} profile for user ID: ${userId}`);
         
         let result = null;
         
@@ -517,11 +518,11 @@ async function createUserTypeProfile(userId, userType) {
                 values: [userId]
             };
             result = await pool.query(petOwnerQuery);
-            console.log('Pet owner profile created:', result.rows[0]);
+            logger.info('Pet owner profile created:', result.rows[0]);
             
         } else if (userType === 'veterinarian') {
             // Insert into veterinarians table with explicit not_verified status
-            console.log('Creating veterinarian profile with status: not_verified');
+            logger.info('Creating veterinarian profile with status: not_verified');
             const veterinarianQuery = {
                 text: `INSERT INTO "veterinarians" (veterinarian_id, veterinarian_verification_status) 
                       VALUES ($1, 'not_verified') 
@@ -529,11 +530,11 @@ async function createUserTypeProfile(userId, userType) {
                 values: [userId]
             };
             result = await pool.query(veterinarianQuery);
-            console.log('Veterinarian profile created with status:', result.rows[0]);
+            logger.info('Veterinarian profile created with status:', result.rows[0]);
             
             // Double-check the status and force update if needed
             if (result.rows[0]?.veterinarian_verification_status !== 'not_verified') {
-                console.log('Status not set correctly, forcing update to not_verified');
+                logger.info('Status not set correctly, forcing update to not_verified');
                 const updateQuery = {
                     text: `UPDATE "veterinarians" 
                            SET veterinarian_verification_status = 'not_verified' 
@@ -542,13 +543,13 @@ async function createUserTypeProfile(userId, userType) {
                     values: [userId]
                 };
                 result = await pool.query(updateQuery);
-                console.log('Updated veterinarian status:', result.rows[0]);
+                logger.info('Updated veterinarian status:', result.rows[0]);
             }
         }
         
         return result?.rows[0] || null;
     } catch (error) {
-        console.error(`Error creating ${userType} profile:`, error);
+        logger.error(`Error creating ${userType} profile:`, error);
         throw error;
     }
 }
@@ -617,7 +618,7 @@ router.post('/create-profile', authenticateToken, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Error creating user profile:', error);
+        logger.error('Error creating user profile:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create profile',
@@ -654,7 +655,7 @@ router.post('/update-veterinarian-status', authenticateToken, async (req, res) =
         });
         
     } catch (error) {
-        console.error('Error updating veterinarian status:', error);
+        logger.error('Error updating veterinarian status:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update veterinarian status',

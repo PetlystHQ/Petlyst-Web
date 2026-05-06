@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const pool = require('../config/db');
 
@@ -20,7 +21,7 @@ router.post('/upload-clinic-photo', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error saving photo URL:', error);
+    logger.error('Error saving photo URL:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to save photo URL'

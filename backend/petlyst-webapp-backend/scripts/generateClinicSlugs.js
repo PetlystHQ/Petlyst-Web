@@ -9,15 +9,16 @@
 
 const { Pool } = require('pg');
 const path = require('path');
+const logger = require('../config/logger');
 // .env dosyasını doğru yoldan yükle
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-console.log('Environment loaded. Database configuration:');
-console.log(`  DB_HOST: ${process.env.DB_HOST}`);
-console.log(`  DB_NAME: ${process.env.DB_NAME}`);
-console.log(`  DB_USER: ${process.env.DB_USER}`);
-console.log(`  DB_PORT: ${process.env.DB_PORT}`);
-console.log('-----------------------------------');
+logger.info('Environment loaded. Database configuration:');
+logger.info(`  DB_HOST: ${process.env.DB_HOST}`);
+logger.info(`  DB_NAME: ${process.env.DB_NAME}`);
+logger.info(`  DB_USER: ${process.env.DB_USER}`);
+logger.info(`  DB_PORT: ${process.env.DB_PORT}`);
+logger.info('-----------------------------------');
 
 // Database connection with SSL configuration for AWS RDS
 const pool = new Pool({
@@ -34,9 +35,9 @@ const pool = new Pool({
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('Database connection error:', err.message);
+    logger.error('Database connection error:', err.message);
   } else {
-    console.log('Database connected successfully at:', res.rows[0].now);
+    logger.info('Database connected successfully at:', res.rows[0].now);
   }
 });
 
@@ -96,7 +97,7 @@ async function migrateClinicSlugs() {
   try {
     // Başlangıç zamanı
     const startTime = new Date();
-    console.log(`Slug migration started at ${startTime.toLocaleString()}`);
+    logger.info(`Slug migration started at ${startTime.toLocaleString()}`);
     
     // Slug'ı olmayan klinikleri bul
     const findClinicsQuery = `
@@ -107,7 +108,7 @@ async function migrateClinicSlugs() {
     const clinicsResult = await client.query(findClinicsQuery);
     const clinics = clinicsResult.rows;
     
-    console.log(`Found ${clinics.length} clinics without slugs`);
+    logger.info(`Found ${clinics.length} clinics without slugs`);
     
     // Her klinik için slug oluştur ve güncelle
     let updatedCount = 0;
@@ -127,10 +128,10 @@ async function migrateClinicSlugs() {
         
         await client.query(updateQuery, [slug, clinic.clinic_id]);
         
-        console.log(`Updated clinic ${clinic.clinic_id} (${clinic.clinic_name}) with slug: ${slug}`);
+        logger.info(`Updated clinic ${clinic.clinic_id} (${clinic.clinic_name}) with slug: ${slug}`);
         updatedCount++;
       } catch (error) {
-        console.error(`Error updating clinic ${clinic.clinic_id} (${clinic.clinic_name}):`, error.message);
+        logger.error(`Error updating clinic ${clinic.clinic_id} (${clinic.clinic_name}):`, error.message);
         errorCount++;
       }
     }
@@ -142,7 +143,7 @@ async function migrateClinicSlugs() {
     const durationMs = endTime - startTime;
     const durationSec = durationMs / 1000;
     
-    console.log(`
+    logger.info(`
 Slug migration completed at ${endTime.toLocaleString()}
 Duration: ${durationSec.toFixed(2)} seconds
 Results:
@@ -152,12 +153,12 @@ Results:
     `);
     
     if (errorCount > 0) {
-      console.log('Please check the logs for error details');
+      logger.info('Please check the logs for error details');
     }
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Migration failed:', error);
+    logger.error('Migration failed:', error);
   } finally {
     client.release();
     pool.end();
@@ -166,6 +167,6 @@ Results:
 
 // Script'i çalıştır
 migrateClinicSlugs().catch(err => {
-  console.error('Fatal error:', err);
+  logger.error('Fatal error:', err);
   process.exit(1);
 }); 

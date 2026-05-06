@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const reviewModel = require('./reviewModel');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -39,7 +40,7 @@ router.post('/', authenticateToken, async (req, res) => {
             message: 'Review submitted successfully. It will be visible after admin approval.'
         });
     } catch (error) {
-        console.error('Error creating review:', error);
+        logger.error('Error creating review:', error);
         res.status(error.message.includes('Cannot create review') ? 400 : 500)
            .json({ message: error.message });
     }
@@ -66,7 +67,7 @@ router.get('/clinic/:clinicId', async (req, res) => {
         const reviews = await reviewModel.getClinicReviews(clinicId, options);
         res.json(reviews);
     } catch (error) {
-        console.error('Error fetching clinic reviews:', error);
+        logger.error('Error fetching clinic reviews:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -93,7 +94,7 @@ router.get('/clinics/:clinicId/all', authenticateToken, async (req, res) => {
         const reviews = await reviewModel.getClinicReviews(clinicId, options);
         res.json(reviews);
     } catch (error) {
-        console.error('Error fetching all clinic reviews:', error);
+        logger.error('Error fetching all clinic reviews:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -118,7 +119,7 @@ router.get('/admin/pending', authenticateToken, async (req, res) => {
         const pendingReviews = await reviewModel.getPendingReviews(options);
         res.json(pendingReviews);
     } catch (error) {
-        console.error('Error fetching pending reviews:', error);
+        logger.error('Error fetching pending reviews:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -143,7 +144,7 @@ router.put('/admin/:reviewId/approve', authenticateToken, async (req, res) => {
             message: 'Review approved successfully.'
         });
     } catch (error) {
-        console.error('Error approving review:', error);
+        logger.error('Error approving review:', error);
         if (error.message.includes('Review not found')) {
             return res.status(404).json({ message: error.message });
         }
@@ -171,7 +172,7 @@ router.delete('/admin/:reviewId', authenticateToken, async (req, res) => {
             message: 'Review deleted successfully by admin.'
         });
     } catch (error) {
-        console.error('Error deleting review by admin:', error);
+        logger.error('Error deleting review by admin:', error);
         if (error.message.includes('Review not found')) {
             return res.status(404).json({ message: error.message });
         }
@@ -190,7 +191,7 @@ router.get('/clinics/:clinicId/stats', async (req, res) => {
         const stats = await reviewModel.getClinicAverageRatings(clinicId);
         res.json(stats);
     } catch (error) {
-        console.error('Error fetching clinic review stats:', error);
+        logger.error('Error fetching clinic review stats:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -211,7 +212,7 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
         const reviews = await reviewModel.getPetOwnerReviews(petOwnerId);
         res.json(reviews);
     } catch (error) {
-        console.error('Error fetching pet owner reviews:', error);
+        logger.error('Error fetching pet owner reviews:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -239,7 +240,7 @@ router.get('/:reviewId', async (req, res) => {
         
         res.json(review);
     } catch (error) {
-        console.error('Error fetching review:', error);
+        logger.error('Error fetching review:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -272,7 +273,7 @@ router.put('/:reviewId', authenticateToken, async (req, res) => {
             message: 'Review updated successfully. It will be visible after admin approval.'
         });
     } catch (error) {
-        console.error('Error updating review:', error);
+        logger.error('Error updating review:', error);
         if (error.message.includes('not authorized')) {
             return res.status(403).json({ message: error.message });
         }
@@ -298,7 +299,7 @@ router.delete('/:reviewId', authenticateToken, async (req, res) => {
         const review = await reviewModel.deleteReview(reviewId, petOwnerId);
         res.json({ message: 'Review deleted successfully', review });
     } catch (error) {
-        console.error('Error deleting review:', error);
+        logger.error('Error deleting review:', error);
         if (error.message.includes('not authorized')) {
             return res.status(403).json({ message: error.message });
         }
@@ -328,7 +329,7 @@ router.get('/can-review/clinic/:clinicId', authenticateToken, async (req, res) =
             reviewableAppointments
         });
     } catch (error) {
-        console.error('Error checking review eligibility:', error);
+        logger.error('Error checking review eligibility:', error);
         res.status(500).json({ message: error.message });
     }
 });

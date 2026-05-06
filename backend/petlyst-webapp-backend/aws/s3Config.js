@@ -1,20 +1,21 @@
 const AWS = require('aws-sdk');
 require('dotenv').config();
+const logger = require('../config/logger');
 
 // Validate essential config
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION || !process.env.AWS_S3_BUCKET) {
-  console.error('CRITICAL: Missing required AWS configuration:');
-  console.error({
+  logger.error('CRITICAL: Missing required AWS configuration:');
+  logger.error({
     accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
     secretKeyExists: !!process.env.AWS_SECRET_ACCESS_KEY,
     regionExists: !!process.env.AWS_REGION,
     bucketExists: !!process.env.AWS_S3_BUCKET
   });
-  console.error('Please check your .env file for proper AWS configuration');
+  logger.error('Please check your .env file for proper AWS configuration');
 }
 
 // Log environment variables (redacted)
-console.log('S3 Config Environment Check:', {
+logger.info('S3 Config Environment Check:', {
   accessKeyExists: !!process.env.AWS_ACCESS_KEY_ID,
   secretKeyExists: !!process.env.AWS_SECRET_ACCESS_KEY,
   regionExists: !!process.env.AWS_REGION,
@@ -44,19 +45,19 @@ const s3 = new AWS.S3({
 });
 
 // More comprehensive S3 connection testing
-console.log('Testing S3 connection and permissions...');
+logger.info('Testing S3 connection and permissions...');
 
 // Test S3 connection on startup
 const testS3Connection = async () => {
   try {
     // Test listing buckets (tests basic connectivity and credentials)
     const listBucketsResult = await s3.listBuckets().promise();
-    console.log('S3 Connection Successful. Available buckets:', 
+    logger.info('S3 Connection Successful. Available buckets:', 
       listBucketsResult.Buckets.map(b => b.Name).join(', '));
     
     // Verify our target bucket exists
     if (listBucketsResult.Buckets.some(b => b.Name === s3Config.bucket)) {
-      console.log(`Target bucket '${s3Config.bucket}' found and accessible`);
+      logger.info(`Target bucket '${s3Config.bucket}' found and accessible`);
       
       // Test put object permission with a temporary file
       const testKey = `test-config/test-${Date.now()}.txt`;
@@ -68,7 +69,7 @@ const testS3Connection = async () => {
           ContentType: 'text/plain'
         }).promise();
         
-        console.log('Write permission test successful:', {
+        logger.info('Write permission test successful:', {
           ETag: putResult.ETag,
           testKey: testKey,
           bucket: s3Config.bucket
@@ -76,7 +77,7 @@ const testS3Connection = async () => {
         
         // Try to get the object to verify public-read access
         const url = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${testKey}`;
-        console.log(`Test object should be accessible at: ${url}`);
+        logger.info(`Test object should be accessible at: ${url}`);
         
         // Clean up test file
         await s3.deleteObject({
@@ -85,20 +86,20 @@ const testS3Connection = async () => {
         }).promise();
         
       } catch (putError) {
-        console.error('CRITICAL: Failed to write test object to bucket - check bucket permissions:', putError);
+        logger.error('CRITICAL: Failed to write test object to bucket - check bucket permissions:', putError);
       }
     } else {
-      console.error(`WARNING: Target bucket '${s3Config.bucket}' not found in available buckets. Check bucket name and permissions.`);
+      logger.error(`WARNING: Target bucket '${s3Config.bucket}' not found in available buckets. Check bucket name and permissions.`);
     }
   } catch (error) {
-    console.error('CRITICAL: S3 Connection Error:', error);
-    console.error('Please check your AWS credentials, region, and network connectivity');
+    logger.error('CRITICAL: S3 Connection Error:', error);
+    logger.error('Please check your AWS credentials, region, and network connectivity');
   }
 };
 
 // Run the test
 testS3Connection().catch(err => {
-  console.error('Unhandled error in S3 connection test:', err);
+  logger.error('Unhandled error in S3 connection test:', err);
 });
 
 module.exports = {

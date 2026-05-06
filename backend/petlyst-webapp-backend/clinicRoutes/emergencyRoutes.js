@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const pool = require('../config/db'); // Doğru veritabanı bağlantı yolu
 
@@ -96,7 +97,7 @@ router.get('/nearest-clinic', async (req, res) => {
       clinics: detailedClinics
     });
   } catch (error) {
-    console.error('En yakın klinik bulma hatası:', error);
+    logger.error('En yakın klinik bulma hatası:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası',

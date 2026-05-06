@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const Pet = require('../models/petModel');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -53,7 +54,7 @@ router.get('/my-pets', authenticateToken, async (req, res) => {
             pets: transformedPets
         });
     } catch (error) {
-        console.error('Error fetching pets:', error);
+        logger.error('Error fetching pets:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch pets',
@@ -112,7 +113,7 @@ router.get('/:petId', authenticateToken, async (req, res) => {
             pet: transformedPet
         });
     } catch (error) {
-        console.error('Error fetching pet:', error);
+        logger.error('Error fetching pet:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch pet details',
@@ -150,9 +151,9 @@ router.post('/add', authenticateToken, upload.single('photo'), async (req, res) 
             try {
                 const uploadResult = await uploadPetPhoto(req.file, ownerId, name);
                 photoUrl = uploadResult.url;
-                console.log('Pet photo uploaded successfully:', photoUrl);
+                logger.info('Pet photo uploaded successfully:', photoUrl);
             } catch (uploadError) {
-                console.error('Failed to upload pet photo:', uploadError);
+                logger.error('Failed to upload pet photo:', uploadError);
                 return res.status(500).json({
                     success: false,
                     message: 'Failed to upload pet photo. Please try again.',
@@ -193,7 +194,7 @@ router.post('/add', authenticateToken, upload.single('photo'), async (req, res) 
             pet: transformedPet
         });
     } catch (error) {
-        console.error('Error adding pet:', error);
+        logger.error('Error adding pet:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to add pet',
@@ -252,11 +253,11 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
                         // Extract key from URL
                         const key = pet.photo.split('.com/')[1];
                         await deletePetPhoto(key).catch(err => {
-                            console.warn('Failed to delete old pet photo:', err);
+                            logger.warn('Failed to delete old pet photo:', err);
                             // Continue even if delete fails
                         });
                     } catch (deleteError) {
-                        console.warn('Error processing photo URL:', deleteError);
+                        logger.warn('Error processing photo URL:', deleteError);
                     }
                 }
                 
@@ -264,9 +265,9 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
                 const petName = name || pet.name;
                 const uploadResult = await uploadPetPhoto(req.file, pet.pet_owner_id, petName);
                 updateData.photo = uploadResult.url;
-                console.log('Pet photo updated successfully:', updateData.photo);
+                logger.info('Pet photo updated successfully:', updateData.photo);
             } catch (uploadError) {
-                console.error('Failed to upload pet photo:', uploadError);
+                logger.error('Failed to upload pet photo:', uploadError);
                 return res.status(500).json({
                     success: false,
                     message: 'Failed to upload pet photo. Please try again.',
@@ -279,11 +280,11 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
                 // Extract key from URL
                 const key = pet.photo.split('.com/')[1];
                 await deletePetPhoto(key).catch(err => {
-                    console.warn('Failed to delete pet photo:', err);
+                    logger.warn('Failed to delete pet photo:', err);
                 });
                 updateData.photo = null;
             } catch (deleteError) {
-                console.warn('Error processing photo URL for deletion:', deleteError);
+                logger.warn('Error processing photo URL for deletion:', deleteError);
             }
         }
 
@@ -309,7 +310,7 @@ router.put('/:petId', authenticateToken, upload.single('photo'), async (req, res
             pet: transformedPet
         });
     } catch (error) {
-        console.error('Error updating pet:', error);
+        logger.error('Error updating pet:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update pet',
@@ -350,7 +351,7 @@ router.delete('/:petId', authenticateToken, async (req, res) => {
             message: 'Pet marked as deleted successfully'
         });
     } catch (error) {
-        console.error('Error marking pet as deleted:', error);
+        logger.error('Error marking pet as deleted:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to mark pet as deleted',
@@ -418,7 +419,7 @@ router.post('/:petId/chip', authenticateToken, async (req, res) => {
             chipNumber: chipNumber
         });
     } catch (error) {
-        console.error('Error adding chip number:', error);
+        logger.error('Error adding chip number:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to add chip number',
@@ -476,7 +477,7 @@ router.get('/:petId/chip', authenticateToken, async (req, res) => {
             chipNumber: result.rows[0].chip_number
         });
     } catch (error) {
-        console.error('Error getting chip number:', error);
+        logger.error('Error getting chip number:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to get chip number',
@@ -544,7 +545,7 @@ router.put('/:petId/chip', authenticateToken, async (req, res) => {
             chipNumber: chipNumber
         });
     } catch (error) {
-        console.error('Error updating chip number:', error);
+        logger.error('Error updating chip number:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update chip number',
@@ -602,7 +603,7 @@ router.delete('/:petId/chip', authenticateToken, async (req, res) => {
             message: 'Chip number removed successfully'
         });
     } catch (error) {
-        console.error('Error removing chip number:', error);
+        logger.error('Error removing chip number:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to remove chip number',
@@ -661,7 +662,7 @@ router.get('/:petId/examinations', authenticateToken, async (req, res) => {
             examinations: examinations.rows
         });
     } catch (error) {
-        console.error('Muayene kayıtları getirilirken hata oluştu:', error);
+        logger.error('Muayene kayıtları getirilirken hata oluştu:', error);
         res.status(500).json({
             success: false,
             message: 'Muayene kayıtları getirilemedi',
@@ -720,7 +721,7 @@ router.get('/:petId/diagnoses', authenticateToken, async (req, res) => {
             diagnoses: diagnoses.rows
         });
     } catch (error) {
-        console.error('Teşhis kayıtları getirilirken hata oluştu:', error);
+        logger.error('Teşhis kayıtları getirilirken hata oluştu:', error);
         res.status(500).json({
             success: false,
             message: 'Teşhis kayıtları getirilemedi',

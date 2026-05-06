@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
+const logger = require('../config/logger');
 
 // Use the database configuration from environment variables
 const pool = new Pool({
@@ -14,7 +15,7 @@ const pool = new Pool({
 
 async function runMigration() {
   try {
-    console.log('Running database migration...');
+    logger.info('Running database migration...');
     
     // Read the SQL file
     const sqlFilePath = path.join(__dirname, '../migrations/update_tc_number_column.sql');
@@ -23,9 +24,9 @@ async function runMigration() {
     // Execute the SQL
     await pool.query(sql);
     
-    console.log('Migration completed successfully!');
+    logger.info('Migration completed successfully!');
   } catch (error) {
-    console.error('Error running migration:', error);
+    logger.error('Error running migration:', error);
   } finally {
     await pool.end();
   }

@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const appointmentModel = require('../models/appointmentModel');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -26,12 +27,12 @@ function transformAppointmentUrls(appointments) {
 // Get all appointments for authenticated pet owner with detailed information
 router.get('/pet-owner', authenticateToken, async (req, res) => {
   try {
-    console.log('Pet owner appointments endpoint called');
-    console.log('User info:', { userId: req.user.userId, userType: req.user.userType });
+    logger.info('Pet owner appointments endpoint called');
+    logger.info('User info:', { userId: req.user.userId, userType: req.user.userType });
     
     // Only pet owners can access this route
     if (req.user.userType !== 'pet_owner') {
-      console.warn('Access denied: User is not a pet owner');
+      logger.warn('Access denied: User is not a pet owner');
       return res.status(403).json({ 
         success: false,
         error: 'Access denied. Pet owner access only.' 
@@ -90,13 +91,13 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
         a.appointment_start_hour
     `;
 
-    console.log('Executing query for user ID:', req.user.userId);
+    logger.info('Executing query for user ID:', req.user.userId);
     const result = await pool.query(query, [req.user.userId]);
-    console.log('Found appointments:', result.rows.length);
+    logger.info('Found appointments:', result.rows.length);
     
     // Debug output for first result if any
     if (result.rows.length > 0) {
-      console.log('First appointment sample:', {
+      logger.info('First appointment sample:', {
         id: result.rows[0].appointment_id,
         status: result.rows[0].appointment_status,
         clinic: result.rows[0].clinic_name,
@@ -112,7 +113,7 @@ router.get('/pet-owner', authenticateToken, async (req, res) => {
       appointments: transformedAppointments
     });
   } catch (error) {
-    console.error('Error fetching pet owner appointments:', error);
+    logger.error('Error fetching pet owner appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch appointments',
@@ -137,7 +138,7 @@ router.get('/clinic', authenticateToken, async (req, res) => {
     
     res.status(200).json(transformedAppointments);
   } catch (error) {
-    console.error('Error fetching clinic appointments:', error);
+    logger.error('Error fetching clinic appointments:', error);
     res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 });
@@ -165,7 +166,7 @@ router.get('/:appointmentId', authenticateToken, async (req, res) => {
 
     res.status(200).json(transformedAppointment);
   } catch (error) {
-    console.error('Error fetching appointment:', error);
+    logger.error('Error fetching appointment:', error);
     res.status(500).json({ error: 'Failed to fetch appointment details' });
   }
 });
@@ -188,7 +189,7 @@ router.post('/', authenticateToken, async (req, res) => {
       notes
     } = req.body;
 
-    console.log("Received appointment data:", { 
+    logger.info("Received appointment data:", { 
       petId, clinicId, appointmentDate, 
       appointmentStartHour, appointmentEndHour, 
       videoMeeting, notes 
@@ -231,7 +232,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const newAppointment = await appointmentModel.createAppointment(appointmentData);
     res.status(201).json(newAppointment);
   } catch (error) {
-    console.error('Error creating appointment:', error);
+    logger.error('Error creating appointment:', error);
     res.status(500).json({ error: 'Failed to create appointment' });
   }
 });
@@ -296,7 +297,7 @@ router.put('/:appointmentId', authenticateToken, async (req, res) => {
     const updatedAppointment = await appointmentModel.updateAppointment(appointmentId, req.body);
     res.status(200).json(updatedAppointment);
   } catch (error) {
-    console.error('Error updating appointment:', error);
+    logger.error('Error updating appointment:', error);
     res.status(500).json({ error: 'Failed to update appointment' });
   }
 });
@@ -326,7 +327,7 @@ router.patch('/:appointmentId/cancel', authenticateToken, async (req, res) => {
 
     res.status(200).json(updatedAppointment);
   } catch (error) {
-    console.error('Error canceling appointment:', error);
+    logger.error('Error canceling appointment:', error);
     res.status(500).json({ error: 'Failed to cancel appointment' });
   }
 });
@@ -351,7 +352,7 @@ router.get('/available-slots/:clinicId/:date', async (req, res) => {
       slots: availableSlots
     });
   } catch (error) {
-    console.error('Error fetching available slots:', error);
+    logger.error('Error fetching available slots:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch available appointment slots'
@@ -362,51 +363,51 @@ router.get('/available-slots/:clinicId/:date', async (req, res) => {
 // Mark appointment as completed
 router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => {
   try {
-    console.log('=== DEBUG: Mark Appointment as Completed ===');
+    logger.info('=== DEBUG: Mark Appointment as Completed ===');
     const appointmentId = req.params.appointmentId;
-    console.log(`Appointment ID: ${appointmentId}`);
-    console.log(`User type: ${req.user.userType}`);
-    console.log(`User ID: ${req.user.userId}`);
+    logger.info(`Appointment ID: ${appointmentId}`);
+    logger.info(`User type: ${req.user.userType}`);
+    logger.info(`User ID: ${req.user.userId}`);
 
     // Get appointment details
     const appointment = await appointmentModel.getAppointmentById(appointmentId);
-    console.log('Appointment details:', appointment);
+    logger.info('Appointment details:', appointment);
 
     if (!appointment) {
-      console.log('Appointment not found');
+      logger.info('Appointment not found');
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
     // Check if user is a veterinarian
     if (req.user.userType !== 'veterinarian') {
-      console.log('User is not a veterinarian');
+      logger.info('User is not a veterinarian');
       return res.status(403).json({ message: 'Only veterinarians can mark appointments as completed' });
     }
 
     // Get the clinic ID from the appointment
     const clinicId = appointment.clinic_id;
-    console.log(`Clinic ID from appointment: ${clinicId}`);
+    logger.info(`Clinic ID from appointment: ${clinicId}`);
 
     // Check if the veterinarian has access to this clinic
     const hasAccess = await appointmentModel.doesVeterinarianHaveClinicAccess(req.user.userId, clinicId);
-    console.log(`Clinic access check result: ${hasAccess}`);
+    logger.info(`Clinic access check result: ${hasAccess}`);
 
     if (!hasAccess) {
-      console.log('Veterinarian does not have access to this clinic');
+      logger.info('Veterinarian does not have access to this clinic');
       return res.status(403).json({ message: 'You do not have access to this clinic' });
     }
 
     // Mark the appointment as completed
-    console.log('Updating appointment status to completed');
+    logger.info('Updating appointment status to completed');
     const updatedAppointment = await appointmentModel.updateAppointment(appointmentId, {
       appointmentStatus: 'completed'
     });
-    console.log('Updated appointment:', updatedAppointment);
+    logger.info('Updated appointment:', updatedAppointment);
     
     // Add the pet to clinic_patients table if not already there
     try {
-      console.log(`[DEBUG-APIROUTE] Randevu tamamlandı. clinic_patients tablosu güncelleniyor...`);
-      console.log(`[DEBUG-APIROUTE] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+      logger.info(`[DEBUG-APIROUTE] Randevu tamamlandı. clinic_patients tablosu güncelleniyor...`);
+      logger.info(`[DEBUG-APIROUTE] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
       
       // Check if the pet is deleted
       const petStatusCheck = await pool.query(
@@ -415,7 +416,7 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
       );
       
       if (petStatusCheck.rows.length > 0 && petStatusCheck.rows[0].pet_status === 'deleted') {
-        console.log(`[DEBUG-APIROUTE] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+        logger.info(`[DEBUG-APIROUTE] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
         // Skip adding to clinic_patients if pet is deleted
       } else {
         // Check if the pet is already in the clinic_patients table
@@ -424,30 +425,30 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
           [appointment.clinic_id, appointment.pet_id]
         );
         
-        console.log(`[DEBUG-APIROUTE] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+        logger.info(`[DEBUG-APIROUTE] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
         
         // If the pet is not already in the clinic_patients table, add it
         if (checkResult.rowCount === 0) {
-          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+          logger.info(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
           await pool.query(
             `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
              VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [appointment.clinic_id, appointment.pet_id]
           );
-          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosuna eklendi (tamamlama endpointi).`);
+          logger.info(`[DEBUG-APIROUTE] Hayvan clinic_patients tablosuna eklendi (tamamlama endpointi).`);
         } else {
-          console.log(`[DEBUG-APIROUTE] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+          logger.info(`[DEBUG-APIROUTE] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
           await pool.query(
             `UPDATE clinic_patients 
              SET updated_at = CURRENT_TIMESTAMP 
              WHERE clinic_id = $1 AND pet_id = $2`,
             [appointment.clinic_id, appointment.pet_id]
           );
-          console.log(`[DEBUG-APIROUTE] Hayvan clinic_patients kaydı güncellendi (tamamlama endpointi).`);
+          logger.info(`[DEBUG-APIROUTE] Hayvan clinic_patients kaydı güncellendi (tamamlama endpointi).`);
         }
       }
     } catch (error) {
-      console.error('Error updating clinic_patients table:', error);
+      logger.error('Error updating clinic_patients table:', error);
       // Don't fail the request if this part fails
     }
     
@@ -456,7 +457,7 @@ router.patch('/:appointmentId/complete', authenticateToken, async (req, res) => 
       appointment: updatedAppointment 
     });
   } catch (error) {
-    console.error('Error marking appointment as completed:', error);
+    logger.error('Error marking appointment as completed:', error);
     res.status(500).json({ message: 'Error marking appointment as completed', error: error.message });
   }
 });
@@ -483,7 +484,7 @@ router.get('/available-dates/:clinicId', async (req, res) => {
       dates: availableDates
     });
   } catch (error) {
-    console.error('Error fetching available dates:', error);
+    logger.error('Error fetching available dates:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch available appointment dates'
@@ -519,7 +520,7 @@ router.get('/booked-slots/:clinicId/:date', async (req, res) => {
       bookedSlots: result.rows
     });
   } catch (error) {
-    console.error('Error fetching booked slots:', error);
+    logger.error('Error fetching booked slots:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch booked slots',
@@ -591,7 +592,7 @@ router.get('/clinic/:clinicId/pending', authenticateToken, async (req, res) => {
       appointments: result.rows
     });
   } catch (error) {
-    console.error('Error fetching pending appointments:', error);
+    logger.error('Error fetching pending appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch pending appointments',
@@ -662,8 +663,8 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
     // If status is confirmed, add the pet to clinic_patients table if not already there
     if (status === 'confirmed') {
       try {
-        console.log(`[DEBUG-APIROUTE-STATUS] Randevu onaylandı. clinic_patients tablosu güncelleniyor...`);
-        console.log(`[DEBUG-APIROUTE-STATUS] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+        logger.info(`[DEBUG-APIROUTE-STATUS] Randevu onaylandı. clinic_patients tablosu güncelleniyor...`);
+        logger.info(`[DEBUG-APIROUTE-STATUS] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
         
         // Check if the pet is deleted
         const petStatusCheck = await pool.query(
@@ -672,7 +673,7 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
         );
         
         if (petStatusCheck.rows.length > 0 && petStatusCheck.rows[0].pet_status === 'deleted') {
-          console.log(`[DEBUG-APIROUTE-STATUS] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+          logger.info(`[DEBUG-APIROUTE-STATUS] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
           // Skip adding to clinic_patients if pet is deleted
         } else {
           // Check if the pet is already in the clinic_patients table
@@ -681,34 +682,34 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
             [appointment.clinic_id, appointment.pet_id]
           );
           
-          console.log(`[DEBUG-APIROUTE-STATUS] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
+          logger.info(`[DEBUG-APIROUTE-STATUS] clinic_patients tablosunda arama sonucu: ${checkResult.rowCount} kayıt bulundu`);
           
           // If the pet is not already in the clinic_patients table, add it
           if (checkResult.rowCount === 0) {
-            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+            logger.info(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
             await pool.query(
               `INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at) 
                VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
               [appointment.clinic_id, appointment.pet_id]
             );
-            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosuna eklendi (onaylama endpointi).`);
+            logger.info(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients tablosuna eklendi (onaylama endpointi).`);
           } else {
-            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
+            logger.info(`[DEBUG-APIROUTE-STATUS] Hayvan zaten clinic_patients tablosunda mevcut. Kayıt güncelleniyor.`);
             await pool.query(
               `UPDATE clinic_patients 
                SET updated_at = CURRENT_TIMESTAMP 
                WHERE clinic_id = $1 AND pet_id = $2`,
               [appointment.clinic_id, appointment.pet_id]
             );
-            console.log(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients kaydı güncellendi (onaylama endpointi).`);
+            logger.info(`[DEBUG-APIROUTE-STATUS] Hayvan clinic_patients kaydı güncellendi (onaylama endpointi).`);
           }
         }
       } catch (error) {
-        console.error('Error updating clinic_patients table:', error);
+        logger.error('Error updating clinic_patients table:', error);
         // Don't fail the request if this part fails
       }
     } else {
-      console.log(`[DEBUG-APIROUTE-STATUS] Randevu durumu ${status} olduğu için clinic_patients tablosu güncellenmedi.`);
+      logger.info(`[DEBUG-APIROUTE-STATUS] Randevu durumu ${status} olduğu için clinic_patients tablosu güncellenmedi.`);
     }
     
     res.status(200).json({
@@ -716,7 +717,7 @@ router.put('/:appointmentId/status', authenticateToken, async (req, res) => {
       appointment: updatedAppointment
     });
   } catch (error) {
-    console.error('Error updating appointment status:', error);
+    logger.error('Error updating appointment status:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to update appointment status',
@@ -791,7 +792,7 @@ router.get('/clinic/:clinicId/confirmed', authenticateToken, async (req, res) =>
       appointments: transformedAppointments
     });
   } catch (error) {
-    console.error('Error fetching confirmed appointments:', error);
+    logger.error('Error fetching confirmed appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch confirmed appointments',
@@ -863,7 +864,7 @@ router.get('/clinic/:clinicId/canceled', authenticateToken, async (req, res) => 
       appointments: result.rows
     });
   } catch (error) {
-    console.error('Error fetching canceled appointments:', error);
+    logger.error('Error fetching canceled appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch canceled appointments',
@@ -935,7 +936,7 @@ router.get('/clinic/:clinicId/completed', authenticateToken, async (req, res) =>
       appointments: result.rows
     });
   } catch (error) {
-    console.error('Error fetching completed appointments:', error);
+    logger.error('Error fetching completed appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch completed appointments',
@@ -978,7 +979,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
     const nowISO = now.toISOString();
     const nextDayISO = nextDay.toISOString();
     
-    console.log('Timezone diagnostics:', {
+    logger.info('Timezone diagnostics:', {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       utcOffset: now.getTimezoneOffset(),
       currentTime: now.toISOString(),
@@ -1024,7 +1025,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
 
     const result = await pool.query(query, [clinicId, nowISO, nextDayISO]);
     
-    console.log('Found upcoming appointments:', result.rows.length);
+    logger.info('Found upcoming appointments:', result.rows.length);
     
     // Transform meeting URLs for video meetings
     const transformedAppointments = transformAppointmentUrls(result.rows);
@@ -1034,7 +1035,7 @@ router.get('/clinic/:clinicId/upcoming-24h', authenticateToken, async (req, res)
       appointments: transformedAppointments
     });
   } catch (error) {
-    console.error('Error fetching upcoming appointments:', error);
+    logger.error('Error fetching upcoming appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch upcoming appointments',
@@ -1070,7 +1071,7 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
     const now = new Date();
     const currentTime = now.toISOString();
     
-    console.log('Fetching past confirmed appointments:', {
+    logger.info('Fetching past confirmed appointments:', {
       clinicId,
       currentTime
     });
@@ -1119,7 +1120,7 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
       });
     }
     
-    console.log(`Found ${result.rows.length} past confirmed appointments that can be marked as completed`);
+    logger.info(`Found ${result.rows.length} past confirmed appointments that can be marked as completed`);
     
     res.status(200).json({
       success: true,
@@ -1127,7 +1128,7 @@ router.get('/clinic/:clinicId/past-confirmed', authenticateToken, async (req, re
       appointments: result.rows
     });
   } catch (error) {
-    console.error('Error fetching past confirmed appointments:', error);
+    logger.error('Error fetching past confirmed appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch past confirmed appointments',
@@ -1182,7 +1183,7 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
     const startDate = new Date(numYear, numMonth - 1, 1).toISOString().split('T')[0]; // First day of month
     const endDate = new Date(numYear, numMonth, 0).toISOString().split('T')[0]; // Last day of month
     
-    console.log(`Fetching appointments for clinic ${clinicId} from ${startDate} to ${endDate}`);
+    logger.info(`Fetching appointments for clinic ${clinicId} from ${startDate} to ${endDate}`);
     
     // Get all appointments for this clinic within the specified month
     const query = `
@@ -1241,7 +1242,7 @@ router.get('/clinic/:clinicId/monthly', authenticateToken, async (req, res) => {
       appointments: transformedAppointments
     });
   } catch (error) {
-    console.error('Error fetching monthly appointments:', error);
+    logger.error('Error fetching monthly appointments:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch monthly appointments',

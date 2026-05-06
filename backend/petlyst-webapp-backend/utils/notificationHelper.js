@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 // Validate Expo push token format
 function isValidExpoToken(token) {
   return typeof token === 'string' &&
@@ -15,14 +16,14 @@ function isValidExpoToken(token) {
  */
 async function sendPushNotifications(expoTokens, title, body, data = {}) {
   if (!Array.isArray(expoTokens) || expoTokens.length === 0) {
-    console.log('No tokens to send push notifications to');
+    logger.info('No tokens to send push notifications to');
     return;
   }
 
   // Filter out invalid tokens
   const validTokens = expoTokens.filter(isValidExpoToken);
   if (validTokens.length === 0) {
-    console.log('No valid Expo tokens after filtering');
+    logger.info('No valid Expo tokens after filtering');
     return;
   }
 
@@ -53,18 +54,18 @@ async function sendPushNotifications(expoTokens, title, body, data = {}) {
 
       if (!response.ok) {
         const errTxt = await response.text();
-        console.error('Expo push error:', response.status, errTxt);
+        logger.error('Expo push error:', response.status, errTxt);
         continue;
       }
 
       const respJson = await response.json();
       if (respJson.errors) {
-        console.error('Some Expo push errors:', respJson.errors);
+        logger.error('Some Expo push errors:', respJson.errors);
       } else {
-        console.log(`Sent ${respJson.data.length} push notifications`);
+        logger.info(`Sent ${respJson.data.length} push notifications`);
       }
     } catch (err) {
-      console.error('Error sending push chunk:', err);
+      logger.error('Error sending push chunk:', err);
     }
   }
 }
@@ -77,7 +78,7 @@ async function sendPushNotifications(expoTokens, title, body, data = {}) {
  */
 async function notifyUserAppointmentStatusChanged(userId, status, appointmentDetails = {}) {
   if (!userId) {
-    console.warn('Cannot send notification: Missing user ID');
+    logger.warn('Cannot send notification: Missing user ID');
     return { success: false, error: 'Missing user ID' };
   }
 
@@ -92,7 +93,7 @@ async function notifyUserAppointmentStatusChanged(userId, status, appointmentDet
     );
     const expoTokens = tokenRows.map(r => r.user_token_expo).filter(t => typeof t === 'string' && t);
     if (expoTokens.length === 0) {
-      console.log(`No push tokens for user ${userId}`);
+      logger.info(`No push tokens for user ${userId}`);
       return { success: false, error: 'No push tokens' };
     }
 
@@ -177,10 +178,10 @@ async function notifyUserAppointmentStatusChanged(userId, status, appointmentDet
       petId:         appointmentDetails.petId        || null
     });
 
-    console.log(`Status change notification (${status}) sent to user ${userId}`);
+    logger.info(`Status change notification (${status}) sent to user ${userId}`);
     return { success: true };
   } catch (err) {
-    console.error('Error sending status change notification:', err);
+    logger.error('Error sending status change notification:', err);
     return { success: false, error: err.message };
   } finally {
     if (client) client.release();
@@ -195,7 +196,7 @@ async function notifyUserAppointmentStatusChanged(userId, status, appointmentDet
  */
 async function notifyClinicVeterinarians(clinicId, type, appointmentDetails = {}) {
   if (!clinicId) {
-    console.warn('Cannot notify veterinarians: Missing clinicId');
+    logger.warn('Cannot notify veterinarians: Missing clinicId');
     return { success: false, error: 'Missing clinicId' };
   }
 
@@ -209,7 +210,7 @@ async function notifyClinicVeterinarians(clinicId, type, appointmentDetails = {}
       [clinicId]
     );
     if (!vets.length) {
-      console.log(`No veterinarians found for clinic ${clinicId}`);
+      logger.info(`No veterinarians found for clinic ${clinicId}`);
       return { success: true, count: 0 };
     }
 
@@ -270,10 +271,10 @@ async function notifyClinicVeterinarians(clinicId, type, appointmentDetails = {}
       }
     }
 
-    console.log(`Sent notifications to ${count} veterinarians for clinic ${clinicId}`);
+    logger.info(`Sent notifications to ${count} veterinarians for clinic ${clinicId}`);
     return { success: true, count };
   } catch (err) {
-    console.error('Error notifying veterinarians:', err);
+    logger.error('Error notifying veterinarians:', err);
     return { success: false, error: err.message };
   } finally {
     if (client) client.release();
@@ -293,7 +294,7 @@ async function sendTestNotification(userId) {
     );
     const expoTokens = tokenRows.map(r => r.user_token_expo).filter(t => typeof t === 'string' && t);
     if (!expoTokens.length) {
-      console.log(`No push tokens for test user ${userId}`);
+      logger.info(`No push tokens for test user ${userId}`);
       return { success: false, message: 'No tokens' };
     }
 
@@ -305,7 +306,7 @@ async function sendTestNotification(userId) {
     );
     return { success: true, message: 'Test notification sent' };
   } catch (err) {
-    console.error('Error in sendTestNotification:', err);
+    logger.error('Error in sendTestNotification:', err);
     return { success: false, message: err.message };
   } finally {
     if (client) client.release();

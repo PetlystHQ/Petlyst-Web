@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -141,8 +142,8 @@ router.get('/search-clinics', async (req, res) => {
     queryText += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     queryParams.push(parseInt(limit), parseInt(offset));
     
-    console.log('Executing SQL query:', queryText);
-    console.log('With parameters:', queryParams);
+    logger.info('Executing SQL query:', queryText);
+    logger.info('With parameters:', queryParams);
     
     // Execute the main query
     const result = await pool.query(queryText, queryParams);
@@ -181,7 +182,7 @@ router.get('/search-clinics', async (req, res) => {
       countQueryText += ` WHERE ${conditions.join(' AND ')}`;
     }
     
-    console.log('Executing count SQL query:', countQueryText);
+    logger.info('Executing count SQL query:', countQueryText);
     
     // Ensure we're including the query parameter(s) but excluding limit/offset
     let countParams = [];
@@ -189,7 +190,7 @@ router.get('/search-clinics', async (req, res) => {
       // Copy all parameters except the last two (limit and offset)
       countParams = queryParams.slice(0, queryParams.length - 2);
     }
-    console.log('With count parameters:', countParams);
+    logger.info('With count parameters:', countParams);
     
     // Only pass parameters if we actually have conditions that need them
     const countResult = await pool.query(countQueryText, countParams);
@@ -208,7 +209,7 @@ router.get('/search-clinics', async (req, res) => {
         const photosResult = await pool.query(photosQuery, [clinic.clinic_id]);
         clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
       } catch (error) {
-        console.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
+        logger.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
         clinic.photos = []; // Set empty photos array so the app doesn't crash
       }
       
@@ -235,7 +236,7 @@ router.get('/search-clinics', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error searching clinics:', error);
+    logger.error('Error searching clinics:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
@@ -265,7 +266,7 @@ router.get('/popular-animal-types', async (req, res) => {
       animalTypes: result.rows
     });
   } catch (error) {
-    console.error('Error fetching popular animal types:', error);
+    logger.error('Error fetching popular animal types:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -311,7 +312,7 @@ router.get('/popular-services', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching popular services:', error);
+    logger.error('Error fetching popular services:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -356,7 +357,7 @@ router.get('/locations', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    logger.error('Error fetching locations:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -409,7 +410,7 @@ router.get('/clinic/:clinicId', async (req, res) => {
       const photosResult = await pool.query(photosQuery, [clinicId]);
       clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
     } catch (error) {
-      console.warn(`Could not fetch photos for clinic ${clinicId}:`, error.message);
+      logger.warn(`Could not fetch photos for clinic ${clinicId}:`, error.message);
       clinic.photos = []; // Set empty photos array so the app doesn't crash
     }
     
@@ -493,7 +494,7 @@ router.get('/clinic/:clinicId', async (req, res) => {
       clinic: clinic
     });
   } catch (error) {
-    console.error('Error fetching clinic details:', error);
+    logger.error('Error fetching clinic details:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
@@ -595,7 +596,7 @@ router.get('/search-suggestions', async (req, res) => {
       suggestions: suggestions
     });
   } catch (error) {
-    console.error('Error fetching search suggestions:', error);
+    logger.error('Error fetching search suggestions:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -749,9 +750,9 @@ router.get('/search-veterinarians', async (req, res) => {
     queryParams.push(limitInt, offset);
     
     // Add useful debug logging
-    console.log('Executing SQL query for veterinarians:');
-    console.log('SQL:', sql);
-    console.log('Parameters:', queryParams);
+    logger.info('Executing SQL query for veterinarians:');
+    logger.info('SQL:', sql);
+    logger.info('Parameters:', queryParams);
     
     // Execute query
     const result = await pool.query(sql, queryParams);
@@ -806,7 +807,7 @@ router.get('/search-veterinarians', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error searching veterinarians:', error);
+    logger.error('Error searching veterinarians:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
@@ -904,7 +905,7 @@ router.get('/clinics/:clinicId/public-veterinarians', async (req, res) => {
       veterinarians: veterinarians
     });
   } catch (error) {
-    console.error('Error fetching clinic veterinarians:', error);
+    logger.error('Error fetching clinic veterinarians:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
@@ -935,7 +936,7 @@ router.get('/veterinarian-expertise-areas', async (req, res) => {
       expertiseAreas: result.rows
     });
   } catch (error) {
-    console.error('Error fetching veterinarian expertise areas:', error);
+    logger.error('Error fetching veterinarian expertise areas:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -951,7 +952,7 @@ router.post('/saved-clinics/:clinicId', authenticateToken, async (req, res) => {
     const { clinicId } = req.params;
     // Use userId from token, with fallback to id
     const userId = req.user.userId || req.user.id;
-    console.log('Token user data:', req.user); // Debug log to see what's in the token
+    logger.info('Token user data:', req.user); // Debug log to see what's in the token
 
     // Check if user is a pet_owner
     const userTypeQuery = `
@@ -1004,7 +1005,7 @@ router.post('/saved-clinics/:clinicId', authenticateToken, async (req, res) => {
       const createResult = await pool.query(createPetOwnerQuery, [userId]);
       petOwnerId = createResult.rows[0].pet_owner_id;
       
-      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+      logger.info(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
     } else {
       petOwnerId = petOwnerResult.rows[0].pet_owner_id;
     }
@@ -1039,7 +1040,7 @@ router.post('/saved-clinics/:clinicId', authenticateToken, async (req, res) => {
       isFavorite: true
     });
   } catch (error) {
-    console.error('Error adding clinic to favorites:', error);
+    logger.error('Error adding clinic to favorites:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while adding clinic to favorites'
@@ -1053,7 +1054,7 @@ router.delete('/saved-clinics/:clinicId', authenticateToken, async (req, res) =>
     const { clinicId } = req.params;
     // Use userId from token, with fallback to id
     const userId = req.user.userId || req.user.id;
-    console.log('Token user data:', req.user); // Debug log to see what's in the token
+    logger.info('Token user data:', req.user); // Debug log to see what's in the token
 
     // Check if user is a pet_owner
     const userTypeQuery = `
@@ -1114,7 +1115,7 @@ router.delete('/saved-clinics/:clinicId', authenticateToken, async (req, res) =>
       isFavorite: false
     });
   } catch (error) {
-    console.error('Error removing clinic from favorites:', error);
+    logger.error('Error removing clinic from favorites:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while removing clinic from favorites'
@@ -1127,7 +1128,7 @@ router.get('/saved-clinics', authenticateToken, async (req, res) => {
   try {
     // Use userId from token, with fallback to id
     const userId = req.user.userId || req.user.id;
-    console.log('Token user data:', req.user); // Debug log to see what's in the token
+    logger.info('Token user data:', req.user); // Debug log to see what's in the token
 
     // Check if user is a pet_owner
     const userTypeQuery = `
@@ -1167,7 +1168,7 @@ router.get('/saved-clinics', authenticateToken, async (req, res) => {
       const createResult = await pool.query(createPetOwnerQuery, [userId]);
       petOwnerId = createResult.rows[0].pet_owner_id;
       
-      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+      logger.info(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
       
       // New user, so no favorites yet
       return res.status(200).json({
@@ -1207,7 +1208,7 @@ router.get('/saved-clinics', authenticateToken, async (req, res) => {
         const photosResult = await pool.query(photosQuery, [clinic.clinic_id]);
         clinic.photos = photosResult.rows.map(row => row.clinic_album_photo_url);
       } catch (error) {
-        console.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
+        logger.warn(`Could not fetch photos for clinic ${clinic.clinic_id}:`, error.message);
         clinic.photos = []; // Set empty photos array
       }
       
@@ -1228,7 +1229,7 @@ router.get('/saved-clinics', authenticateToken, async (req, res) => {
       count: clinics.length
     });
   } catch (error) {
-    console.error('Error getting favorite clinics:', error);
+    logger.error('Error getting favorite clinics:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while retrieving favorite clinics'
@@ -1242,14 +1243,14 @@ router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res)
     const { clinicId } = req.params;
     
     // Token bilgilerini loglayalım
-    console.log('TOKEN DATA:', req.user);
+    logger.info('TOKEN DATA:', req.user);
     
     // userId kontrolünü güçlendirelim, token içinde kesin olarak userId olduğundan emin olalım
     const userId = req.user.userId || req.user.id;
     
     // Kullanıcı kimliği ile ilgili bir sorun varsa erken dönüş yapalım
     if (!userId) {
-      console.error('User ID not found in token!', req.user);
+      logger.error('User ID not found in token!', req.user);
       return res.status(401).json({
         success: false,
         message: 'Authentication failed - no user ID',
@@ -1264,7 +1265,7 @@ router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res)
     const userExists = parseInt(userExistsResult.rows[0].count) > 0;
     
     if (!userExists) {
-      console.error(`User with ID ${userId} does not exist in database`);
+      logger.error(`User with ID ${userId} does not exist in database`);
       // Hemen hata dönmek yerine geçici bir çözüm olarak favorilenmemiş kabul edelim
       return res.status(200).json({
         success: true,
@@ -1313,7 +1314,7 @@ router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res)
       const createResult = await pool.query(createPetOwnerQuery, [userId]);
       petOwnerId = createResult.rows[0].pet_owner_id;
       
-      console.log(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
+      logger.info(`Created new pet_owner record for user ${userId} with pet_owner_id ${petOwnerId}`);
     } else {
       petOwnerId = petOwnerResult.rows[0].pet_owner_id;
     }
@@ -1332,7 +1333,7 @@ router.get('/saved-clinics/:clinicId/check', authenticateToken, async (req, res)
       isFavorite: isFavorite
     });
   } catch (error) {
-    console.error('Error checking favorite status:', error);
+    logger.error('Error checking favorite status:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while checking favorite status',
@@ -1415,7 +1416,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching pet owner profile:', error);
+    logger.error('Error fetching pet owner profile:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch profile',
@@ -1430,11 +1431,11 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
     // Get user ID from the token
     const userId = req.user.userId || req.user.id;
     
-    console.log('Profile update requested for user:', userId);
-    console.log('Form data received:', req.body);
+    logger.info('Profile update requested for user:', userId);
+    logger.info('Form data received:', req.body);
     
     if (req.file) {
-      console.log('File received:', {
+      logger.info('File received:', {
         originalName: req.file.originalname,
         size: req.file.size,
         mimeType: req.file.mimetype
@@ -1472,7 +1473,7 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
     // Handle photo upload with S3
     if (req.file) {
       try {
-        console.log('Uploading profile photo to S3...');
+        logger.info('Uploading profile photo to S3...');
         
         // If there's an existing photo, delete it first
         const existingPhotoKey = userResult.rows[0].user_profile_photo 
@@ -1481,10 +1482,10 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
           
         if (existingPhotoKey && existingPhotoKey.includes('pet-owner-photos')) {
           try {
-            console.log('Deleting existing profile photo:', existingPhotoKey);
+            logger.info('Deleting existing profile photo:', existingPhotoKey);
             await s3Service.deletePetOwnerProfilePhoto(existingPhotoKey);
           } catch (deleteError) {
-            console.warn('Error deleting existing profile photo, continuing anyway:', deleteError.message);
+            logger.warn('Error deleting existing profile photo, continuing anyway:', deleteError.message);
           }
         }
         
@@ -1495,12 +1496,12 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
           userResult.rows[0].user_name
         );
         
-        console.log('Photo upload successful:', uploadResult);
+        logger.info('Photo upload successful:', uploadResult);
         
         // Set the uploaded photo URL
         userData.profilePhoto = uploadResult.url;
       } catch (uploadError) {
-        console.error('S3 upload error:', uploadError);
+        logger.error('S3 upload error:', uploadError);
         return res.status(500).json({
           success: false,
           message: 'Error uploading profile photo',
@@ -1514,7 +1515,7 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
       const fullPhotoUrl = req.body.full_photo_url || null;
       const userIdFromForm = req.body.user_id || userId;
       
-      console.log('Photo removal request received with data:', {
+      logger.info('Photo removal request received with data:', {
         photoKey,
         fullPhotoUrl,
         userIdFromForm
@@ -1524,35 +1525,35 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
       
       if (photoKey) {
         existingPhotoKey = photoKey;
-        console.log('Using provided photo key for deletion:', existingPhotoKey);
+        logger.info('Using provided photo key for deletion:', existingPhotoKey);
       } else if (userResult.rows[0].user_profile_photo) {
         existingPhotoKey = userResult.rows[0].user_profile_photo.split('amazonaws.com/')[1];
-        console.log('Extracted photo key from profile URL:', existingPhotoKey);
+        logger.info('Extracted photo key from profile URL:', existingPhotoKey);
       }
       
       // First, try to delete the specific file
       if (existingPhotoKey && existingPhotoKey.includes('pet-owner-photos')) {
         try {
-          console.log('Removing profile photo:', existingPhotoKey);
+          logger.info('Removing profile photo:', existingPhotoKey);
           await s3Service.deletePetOwnerProfilePhoto(existingPhotoKey);
-          console.log('Successfully deleted profile photo from S3');
+          logger.info('Successfully deleted profile photo from S3');
         } catch (deleteError) {
-          console.warn('Error deleting specific profile photo, continuing anyway:', deleteError.message);
+          logger.warn('Error deleting specific profile photo, continuing anyway:', deleteError.message);
         }
       }
       
       // Next, attempt to delete the entire folder to ensure complete cleanup
       try {
-        console.log(`Cleaning up all profile photos for user ID: ${userIdFromForm}`);
+        logger.info(`Cleaning up all profile photos for user ID: ${userIdFromForm}`);
         const folderDeleteResult = await s3Service.deletePetOwnerProfileFolder(userIdFromForm);
-        console.log('Folder deletion result:', folderDeleteResult);
+        logger.info('Folder deletion result:', folderDeleteResult);
       } catch (folderDeleteError) {
-        console.warn('Error deleting profile folder, continuing anyway:', folderDeleteError.message);
+        logger.warn('Error deleting profile folder, continuing anyway:', folderDeleteError.message);
       }
       
       // Set profilePhoto to null explicitly to ensure it gets removed in the database
       userData.profilePhoto = null;
-      console.log('Setting profilePhoto to null in database update');
+      logger.info('Setting profilePhoto to null in database update');
     } else if (req.body.user_profile_photo) {
       // Keep existing photo URL if provided
       userData.profilePhoto = req.body.user_profile_photo;
@@ -1575,7 +1576,7 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
         RETURNING pet_owner_id
       `;
       await pool.query(createPetOwnerQuery, [userId]);
-      console.log(`Created new pet_owner record for user ${userId}`);
+      logger.info(`Created new pet_owner record for user ${userId}`);
     }
     
     res.status(200).json({
@@ -1585,7 +1586,7 @@ router.put('/profile', authenticateToken, upload.single('profile_photo'), async 
     });
     
   } catch (error) {
-    console.error('Error updating pet owner profile:', error);
+    logger.error('Error updating pet owner profile:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',
@@ -1643,7 +1644,7 @@ router.get('/has-pending-appointment/:clinicId?', authenticateToken, async (req,
       hasPendingAppointment
     });
   } catch (error) {
-    console.error('Error checking pending appointments:', error);
+    logger.error('Error checking pending appointments:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to check pending appointments' 

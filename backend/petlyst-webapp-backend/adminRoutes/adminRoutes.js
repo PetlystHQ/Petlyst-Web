@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -39,7 +40,7 @@ router.get('/pending-clinics', authenticateToken, isAdmin, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error Fetching Pending Clinics:', error);
+        logger.error('Error Fetching Pending Clinics:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -116,7 +117,7 @@ router.put('/update-clinic-status/:clinicId', authenticateToken, isAdmin, async 
         });
 
     } catch (error) {
-        console.error('Error updating clinic verification status:', error);
+        logger.error('Error updating clinic verification status:', error);
         
         if (error.code === '23503') { // Foreign key violation
             return res.status(400).json({
@@ -163,7 +164,7 @@ router.get('/pending-review-status', authenticateToken, isAdmin, async (req, res
         });
 
     } catch (error) {
-        console.error('Error Fetching Pending Veterinarians:', error);
+        logger.error('Error Fetching Pending Veterinarians:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -248,7 +249,7 @@ router.put('/update-verification-status/:userId', authenticateToken, isAdmin, as
         });
 
     } catch (error) {
-        console.error('Error updating verification status:', error);
+        logger.error('Error updating verification status:', error);
         
         if (error.code === '23503') { // Foreign key violation
             return res.status(400).json({
@@ -298,7 +299,7 @@ router.get('/check-tc-encryption', authenticateToken, isAdmin, async (req, res) 
         });
         
     } catch (error) {
-        console.error('Error checking TC number encryption:', error);
+        logger.error('Error checking TC number encryption:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -346,7 +347,7 @@ router.post('/encrypt-tc-numbers', authenticateToken, isAdmin, async (req, res) 
                     skippedCount++;
                 }
             } catch (error) {
-                console.error(`Error encrypting TC number for veterinarian ID ${vet.veterinarian_id}:`, error);
+                logger.error(`Error encrypting TC number for veterinarian ID ${vet.veterinarian_id}:`, error);
                 errorCount++;
             }
         }
@@ -361,7 +362,7 @@ router.post('/encrypt-tc-numbers', authenticateToken, isAdmin, async (req, res) 
         });
         
     } catch (error) {
-        console.error('Error encrypting TC numbers:', error);
+        logger.error('Error encrypting TC numbers:', error);
         res.status(500).json({ 
             success: false,
             message: 'Internal server error',

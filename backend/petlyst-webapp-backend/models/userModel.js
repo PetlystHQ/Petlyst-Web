@@ -1,10 +1,11 @@
 const pool = require('../config/db');
 const bcrypt = require('bcrypt');
+const logger = require('../config/logger');
 
 class User {
     static async createUser(name, surname, email, password, user_type) {
         try {
-            console.log('Creating user with:', { name, surname, email, user_type });
+            logger.info('Creating user with:', { name, surname, email, user_type });
             
             const hashedPassword = await bcrypt.hash(password, 10);
             
@@ -33,7 +34,7 @@ class User {
             return user;
             
         } catch (error) {
-            console.error('Error in createUser:', error);
+            logger.error('Error in createUser:', error);
             throw error;
         }
     }

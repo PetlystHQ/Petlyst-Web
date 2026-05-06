@@ -1,5 +1,6 @@
 // diagnosesRoutes.js
 const express = require('express');
+const logger = require('../../config/logger');
 const router = express.Router();
 const diagnosesModel = require('./diagnosesModel');
 const authenticateToken = require('../../middleware/authenticateToken');
@@ -30,7 +31,7 @@ const veterinarianMiddleware = async (req, res, next) => {
     req.vet_id = userId;
     next();
   } catch (error) {
-    console.error('Error in veterinarian middleware:', error);
+    logger.error('Error in veterinarian middleware:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -99,7 +100,7 @@ const validateExaminationForDiagnosis = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Error validating examination for diagnosis:', error);
+    logger.error('Error validating examination for diagnosis:', error);
     res.status(500).json({ message: 'Server error during examination validation', error: error.message });
   }
 };
@@ -122,7 +123,7 @@ router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddlew
     const diagnosis = await diagnosesModel.createDiagnosis(diagnosisData);
     res.status(201).json(diagnosis);
   } catch (error) {
-    console.error('Error creating diagnosis:', error);
+    logger.error('Error creating diagnosis:', error);
     res.status(500).json({ message: 'Error creating diagnosis', error: error.message });
   }
 });
@@ -175,7 +176,7 @@ router.get('/:diagnosisId', authenticateToken, async (req, res) => {
     
     res.json(diagnosis);
   } catch (error) {
-    console.error('Error getting diagnosis:', error);
+    logger.error('Error getting diagnosis:', error);
     res.status(500).json({ message: 'Error getting diagnosis', error: error.message });
   }
 });
@@ -281,7 +282,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const diagnoses = await diagnosesModel.listDiagnoses(filters, parseInt(limit), parseInt(offset));
     res.json(diagnoses);
   } catch (error) {
-    console.error('Error listing diagnoses:', error);
+    logger.error('Error listing diagnoses:', error);
     res.status(500).json({ message: 'Error listing diagnoses', error: error.message });
   }
 });
@@ -332,7 +333,7 @@ router.put('/:diagnosisId', authenticateToken, checkVerificationStatus, veterina
     
     res.json(updatedDiagnosis);
   } catch (error) {
-    console.error('Error updating diagnosis:', error);
+    logger.error('Error updating diagnosis:', error);
     res.status(500).json({ message: 'Error updating diagnosis', error: error.message });
   }
 });
@@ -390,7 +391,7 @@ router.delete('/:diagnosisId', authenticateToken, checkVerificationStatus, veter
       throw error;
     }
   } catch (error) {
-    console.error('Error deleting diagnosis:', error);
+    logger.error('Error deleting diagnosis:', error);
     res.status(500).json({ message: 'Error deleting diagnosis', error: error.message });
   }
 });
@@ -440,7 +441,7 @@ router.get('/pet/:petId', authenticateToken, async (req, res) => {
     const diagnoses = await diagnosesModel.getPetDiagnoses(petId);
     res.json(diagnoses);
   } catch (error) {
-    console.error('Error getting pet diagnoses:', error);
+    logger.error('Error getting pet diagnoses:', error);
     res.status(500).json({ message: 'Error getting pet diagnoses', error: error.message });
   }
 });
@@ -497,7 +498,7 @@ router.get('/examination/:examinationId', authenticateToken, async (req, res) =>
     const diagnoses = await diagnosesModel.getExaminationDiagnoses(examinationId);
     res.json(diagnoses);
   } catch (error) {
-    console.error('Error getting examination diagnoses:', error);
+    logger.error('Error getting examination diagnoses:', error);
     res.status(500).json({ message: 'Error getting examination diagnoses', error: error.message });
   }
 });
@@ -536,7 +537,7 @@ router.get('/available-examinations/:petId', authenticateToken, checkVerificatio
     // Return the examinations
     res.json(result.rows);
   } catch (error) {
-    console.error('Error getting available examinations for diagnosis:', error);
+    logger.error('Error getting available examinations for diagnosis:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -550,7 +551,7 @@ router.get('/standard/list', authenticateToken, checkVerificationStatus, veterin
     const standardDiagnoses = await diagnosesModel.getStandardDiagnoses(species);
     res.json(standardDiagnoses);
   } catch (error) {
-    console.error('Error getting standard diagnoses:', error);
+    logger.error('Error getting standard diagnoses:', error);
     res.status(500).json({ message: 'Error getting standard diagnoses', error: error.message });
   }
 });

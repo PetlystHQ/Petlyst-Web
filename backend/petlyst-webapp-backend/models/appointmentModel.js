@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const generator = require('generate-password')
+const logger = require('../config/logger');
 const {
   notifyClinicVeterinarians
 } = require('../utils/notificationHelper');
@@ -19,7 +20,7 @@ const getAppointmentsByPetOwner = async (petOwnerId) => {
     );
     return result.rows;
   } catch (error) {
-    console.error('Error fetching pet owner appointments:', error);
+    logger.error('Error fetching pet owner appointments:', error);
     throw error;
   }
 };
@@ -39,7 +40,7 @@ const getAppointmentsByClinic = async (clinicId) => {
     );
     return result.rows;
   } catch (error) {
-    console.error('Error fetching clinic appointments:', error);
+    logger.error('Error fetching clinic appointments:', error);
     throw error;
   }
 };
@@ -64,7 +65,7 @@ const getAppointmentById = async (appointmentId) => {
     
     return result.rows[0];
   } catch (error) {
-    console.error('Error fetching appointment by ID:', error);
+    logger.error('Error fetching appointment by ID:', error);
     throw error;
   }
 };
@@ -91,7 +92,7 @@ const meeting_url = generator.generate({
     notes
   } = appointmentData;
 
-  console.log("Creating appointment with data:", {
+  logger.info("Creating appointment with data:", {
     petId, clinicId, petOwnerId, appointmentDate,
     appointmentStartHour, appointmentEndHour, videoMeeting, notes
   });
@@ -133,12 +134,12 @@ const meeting_url = generator.generate({
         appointmentId: result.rows[0].appointment_id
       });
     } catch (notificationError) {
-      console.error('Error sending notification to veterinarians:', notificationError);
+      logger.error('Error sending notification to veterinarians:', notificationError);
     }
     
     return result.rows[0];
   } catch (error) {
-    console.error('Error creating appointment:', error);
+    logger.error('Error creating appointment:', error);
     throw error;
   }
 };
@@ -243,7 +244,7 @@ const updateAppointment = async (appointmentId, updateData) => {
     
     return result.rows[0];
   } catch (error) {
-    console.error('Error updating appointment:', error);
+    logger.error('Error updating appointment:', error);
     throw error;
   }
 };
@@ -262,7 +263,7 @@ const deleteAppointment = async (appointmentId) => {
     
     return result.rows[0];
   } catch (error) {
-    console.error('Error deleting appointment:', error);
+    logger.error('Error deleting appointment:', error);
     throw error;
   }
 };
@@ -323,7 +324,7 @@ const getAvailableDates = async (clinicId, numberOfDays = 7, includeToday = fals
     
     return availableDates;
   } catch (error) {
-    console.error('Error getting available dates:', error);
+    logger.error('Error getting available dates:', error);
     throw error;
   }
 };
@@ -412,7 +413,7 @@ const getAvailableTimeSlots = async (clinicId, date) => {
     
     return slots;
   } catch (error) {
-    console.error('Error getting available time slots:', error);
+    logger.error('Error getting available time slots:', error);
     throw error;
   }
 };
@@ -436,7 +437,7 @@ const isAppointmentSlotAvailable = async (clinicId, date, startTime, endTime) =>
     
     return parseInt(result.rows[0].count) === 0;
   } catch (error) {
-    console.error('Error checking appointment slot availability:', error);
+    logger.error('Error checking appointment slot availability:', error);
     throw error;
   }
 };
@@ -444,13 +445,13 @@ const isAppointmentSlotAvailable = async (clinicId, date, startTime, endTime) =>
 // Check if a veterinarian has access to a specific clinic
 async function doesVeterinarianHaveClinicAccess(vetId, clinicId) {
   try {
-    console.log(`Checking clinic access for vet ID: ${vetId} and clinic ID: ${clinicId}`);
+    logger.info(`Checking clinic access for vet ID: ${vetId} and clinic ID: ${clinicId}`);
     
     // If the clinicIds are strings, convert both to numbers for comparison
     const numericVetId = typeof vetId === 'string' ? parseInt(vetId, 10) : vetId;
     const numericClinicId = typeof clinicId === 'string' ? parseInt(clinicId, 10) : clinicId;
     
-    console.log(`Using numeric IDs: vetId=${numericVetId}, clinicId=${numericClinicId}`);
+    logger.info(`Using numeric IDs: vetId=${numericVetId}, clinicId=${numericClinicId}`);
     
     const result = await pool.query(
       `SELECT * FROM clinic_veterinarians 
@@ -458,13 +459,13 @@ async function doesVeterinarianHaveClinicAccess(vetId, clinicId) {
       [numericVetId, numericClinicId]
     );
     
-    console.log('Query result:', result.rows);
+    logger.info('Query result:', result.rows);
     const hasAccess = result.rows.length > 0;
-    console.log(`Veterinarian has access: ${hasAccess}`);
+    logger.info(`Veterinarian has access: ${hasAccess}`);
     
     return hasAccess;
   } catch (error) {
-    console.error('Error checking veterinarian clinic access:', error);
+    logger.error('Error checking veterinarian clinic access:', error);
     throw error;
   }
 }

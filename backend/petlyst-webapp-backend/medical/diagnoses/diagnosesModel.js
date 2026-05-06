@@ -1,4 +1,5 @@
 const pool = require('../../config/db');
+const logger = require('../../config/logger');
 
 /**
  * Diagnoses operations
@@ -57,7 +58,7 @@ async function createDiagnosis(diagnosisData) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error creating diagnosis:', error);
+        logger.error('Error creating diagnosis:', error);
         throw error;
     }
 }
@@ -81,7 +82,7 @@ async function getDiagnosis(diagnosisId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error getting diagnosis:', error);
+        logger.error('Error getting diagnosis:', error);
         throw error;
     }
 }
@@ -169,7 +170,7 @@ async function listDiagnoses(filters, limit = 20, offset = 0) {
         const result = await pool.query(query, queryParams);
         return result.rows;
     } catch (error) {
-        console.error('Error listing diagnoses:', error);
+        logger.error('Error listing diagnoses:', error);
         throw error;
     }
 }
@@ -247,7 +248,7 @@ async function updateDiagnosis(diagnosisId, updateData) {
         const result = await pool.query(query, queryParams);
         return result.rows[0];
     } catch (error) {
-        console.error('Error updating diagnosis:', error);
+        logger.error('Error updating diagnosis:', error);
         throw error;
     }
 }
@@ -274,7 +275,7 @@ async function deleteDiagnosis(diagnosisId) {
         );
         return result.rows[0];
     } catch (error) {
-        console.error('Error deleting diagnosis:', error);
+        logger.error('Error deleting diagnosis:', error);
         throw error;
     }
 }
@@ -298,7 +299,7 @@ async function getPetDiagnoses(petId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting pet diagnoses:', error);
+        logger.error('Error getting pet diagnoses:', error);
         throw error;
     }
 }
@@ -315,7 +316,7 @@ async function getExaminationDiagnoses(examinationId) {
         );
         return result.rows;
     } catch (error) {
-        console.error('Error getting examination diagnoses:', error);
+        logger.error('Error getting examination diagnoses:', error);
         throw error;
     }
 }
@@ -341,7 +342,7 @@ async function getStandardDiagnoses(species = null) {
         const result = await pool.query(query, queryParams);
         return result.rows;
     } catch (error) {
-        console.error('Error getting standard diagnoses:', error);
+        logger.error('Error getting standard diagnoses:', error);
         throw error;
     }
 }

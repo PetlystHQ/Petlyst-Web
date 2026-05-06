@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const authenticateToken = require('../middleware/authenticateToken');
 const { checkVerificationStatus } = require('../middleware/verificationMiddleware');
@@ -14,7 +15,7 @@ const { deleteClinicPhoto } = s3Service;
 // Test route for S3 uploads - accessible without authentication for testing
 router.get('/test-s3-upload', async (req, res) => {
   try {
-    console.log('S3 test upload route called');
+    logger.info('S3 test upload route called');
     const result = await s3Service.testS3Upload();
     
     if (result.success) {
@@ -32,7 +33,7 @@ router.get('/test-s3-upload', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error testing S3 upload:', error);
+    logger.error('Error testing S3 upload:', error);
     return res.status(500).json({
       success: false,
       message: 'Error testing S3 upload',
@@ -44,7 +45,7 @@ router.get('/test-s3-upload', async (req, res) => {
 // Test route for specifically testing clinic photos folder structure
 router.get('/test-clinic-folder', async (req, res) => {
   try {
-    console.log('Testing clinic folder upload');
+    logger.info('Testing clinic folder upload');
     
     // Test data
     const testClinicId = '123';
@@ -56,7 +57,7 @@ router.get('/test-clinic-folder', async (req, res) => {
     const folderPath = s3ServiceInstance.getClinicPhotoPath(testClinicId, testClinicName);
     const fullPath = `${folderPath}/test-${Date.now()}.txt`;
     
-    console.log('Attempting to upload to path:', fullPath);
+    logger.info('Attempting to upload to path:', fullPath);
     
     const params = {
       Bucket: process.env.AWS_S3_BUCKET,
@@ -77,7 +78,7 @@ router.get('/test-clinic-folder', async (req, res) => {
       expectedLocation: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${fullPath}`
     });
   } catch (error) {
-    console.error('Error in test-clinic-folder:', error);
+    logger.error('Error in test-clinic-folder:', error);
     return res.status(500).json({
       success: false,
       message: 'Error testing clinic folder upload',
@@ -89,7 +90,7 @@ router.get('/test-clinic-folder', async (req, res) => {
 // Test route for listing S3 bucket contents
 router.get('/list-s3-contents', async (req, res) => {
   try {
-    console.log('Listing S3 bucket contents');
+    logger.info('Listing S3 bucket contents');
     
     // Import s3 directly to ensure we're using the correct instance
     const { s3, s3Config } = require('../aws/s3Config');
@@ -100,8 +101,8 @@ router.get('/list-s3-contents', async (req, res) => {
       Delimiter: '/'
     }).promise();
     
-    console.log('Root level prefixes:', rootResult.CommonPrefixes?.map(p => p.Prefix) || []);
-    console.log('Root level objects:', rootResult.Contents?.map(c => c.Key) || []);
+    logger.info('Root level prefixes:', rootResult.CommonPrefixes?.map(p => p.Prefix) || []);
+    logger.info('Root level objects:', rootResult.Contents?.map(c => c.Key) || []);
     
     // Then specifically check the clinic-photos directory
     const clinicPhotosResult = await s3.listObjectsV2({
@@ -110,8 +111,8 @@ router.get('/list-s3-contents', async (req, res) => {
       Delimiter: '/'
     }).promise();
     
-    console.log('Clinic photos prefixes:', clinicPhotosResult.CommonPrefixes?.map(p => p.Prefix) || []);
-    console.log('Clinic photos objects:', clinicPhotosResult.Contents?.map(c => c.Key) || []);
+    logger.info('Clinic photos prefixes:', clinicPhotosResult.CommonPrefixes?.map(p => p.Prefix) || []);
+    logger.info('Clinic photos objects:', clinicPhotosResult.Contents?.map(c => c.Key) || []);
     
     return res.status(200).json({
       success: true,
@@ -126,7 +127,7 @@ router.get('/list-s3-contents', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error listing S3 contents:', error);
+    logger.error('Error listing S3 contents:', error);
     return res.status(500).json({
       success: false,
       message: 'Error listing S3 contents',
@@ -187,7 +188,7 @@ router.put('/archive/:clinicId', authenticateToken, checkVerificationStatus, asy
     });
 
   } catch (error) {
-    console.error('Error archiving clinic:', error);
+    logger.error('Error archiving clinic:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -230,7 +231,7 @@ router.put('/restore/:clinicId', authenticateToken, checkVerificationStatus, asy
     });
 
   } catch (error) {
-    console.error('Error restoring clinic:', error);
+    logger.error('Error restoring clinic:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -250,7 +251,7 @@ router.get('/my-clinics', authenticateToken, checkVerificationStatus, async (req
       clinics: clinics
     });
   } catch (error) {
-    console.error('Error fetching clinics:', error);
+    logger.error('Error fetching clinics:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -645,9 +646,9 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
             longitude || null
           ]);
           
-          console.log(`Location info saved for clinic ${newClinic.clinic_id}`);
+          logger.info(`Location info saved for clinic ${newClinic.clinic_id}`);
         } catch (locationError) {
-          console.error('Error saving clinic location:', locationError);
+          logger.error('Error saving clinic location:', locationError);
           // Continue processing even if location saving fails
         }
       } else {
@@ -669,13 +670,13 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
               longitude || null
             ]);
             
-            console.log(`Location info saved for partial submission of clinic ${newClinic.clinic_id}`);
+            logger.info(`Location info saved for partial submission of clinic ${newClinic.clinic_id}`);
           } catch (locationError) {
-            console.error('Error saving clinic location for partial submission:', locationError);
+            logger.error('Error saving clinic location for partial submission:', locationError);
             // Continue processing even if location saving fails
           }
         } else {
-          console.log(`Skipping location info for partial submission of clinic ${newClinic.clinic_id} (no location data provided)`);
+          logger.info(`Skipping location info for partial submission of clinic ${newClinic.clinic_id} (no location data provided)`);
         }
       }
       
@@ -692,11 +693,11 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       try {
         // Klinik oluşturan veterineri otomatik olarak ekle
         await ClinicVeterinarian.addClinicCreator(clinicData.clinic_operator_id, newClinic.clinic_id);
-        console.log(`Added clinic creator for new clinic ${newClinic.clinic_id}`);
+        logger.info(`Added clinic creator for new clinic ${newClinic.clinic_id}`);
       } catch (creatorError) {
-        console.error('Error adding clinic creator:', creatorError);
+        logger.error('Error adding clinic creator:', creatorError);
         // Log additional details to help with troubleshooting
-        console.error('Error details:', {
+        logger.error('Error details:', {
           operatorId: clinicData.clinic_operator_id,
           clinicId: newClinic.clinic_id,
           errorMessage: creatorError.message,
@@ -729,7 +730,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
               clinicData.clinic_operator_id
             ]);
             
-            console.log(`Successfully updated existing clinic creator relation: ${updateResult.rows[0].id}`);
+            logger.info(`Successfully updated existing clinic creator relation: ${updateResult.rows[0].id}`);
           } else {
             // Insert new record
             const insertQuery = `
@@ -744,10 +745,10 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
               clinicData.clinic_operator_id
             ]);
             
-            console.log(`Successfully added clinic creator using fallback method: ${insertResult.rows[0].id}`);
+            logger.info(`Successfully added clinic creator using fallback method: ${insertResult.rows[0].id}`);
           }
         } catch (fallbackError) {
-          console.error('Fallback method also failed:', fallbackError.message);
+          logger.error('Fallback method also failed:', fallbackError.message);
           // Continue with clinic creation, but this clinic won't have a proper veterinarian association
         }
       }
@@ -767,7 +768,7 @@ router.post('/add', authenticateToken, checkVerificationStatus, async (req, res)
       client.release();
     }
   } catch (error) {
-    console.error('Error adding clinic:', error);
+    logger.error('Error adding clinic:', error);
     res.status(500).json({ 
       success: false,
       message: error.message || 'Internal server error',
@@ -864,7 +865,7 @@ router.get('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
       clinic_locations: locationResult.rows
     });
   } catch (error) {
-    console.error('Error fetching clinic:', error);
+    logger.error('Error fetching clinic:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -900,7 +901,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     }
     
     // Debug log: Randevu süresi değerini kontrol et
-    console.log('Clinic update received. Raw data from frontend:', {
+    logger.info('Clinic update received. Raw data from frontend:', {
       clinicId,
       clinic_time_slots: updateData.clinic_time_slots,
       is_open_24_7: updateData.is_open_24_7
@@ -916,7 +917,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
         updateData.clinic_time_slots = 60; // Varsayılan değer
       }
       
-      console.log('Processed clinic_time_slots value:', updateData.clinic_time_slots);
+      logger.info('Processed clinic_time_slots value:', updateData.clinic_time_slots);
     }
 
     // Check if the clinic name has changed. If it has, regenerate the slug
@@ -928,7 +929,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
         // Add the slug to the update data
         updateData.slug = newSlug;
       } catch (error) {
-        console.error('Error generating slug:', error);
+        logger.error('Error generating slug:', error);
         // Continue with the update even if slug generation fails
       } finally {
         client.release();
@@ -978,7 +979,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
           };
           
           await client.query(updateLocationQuery);
-          console.log(`Location info updated for clinic ${clinicId}`);
+          logger.info(`Location info updated for clinic ${clinicId}`);
         } else {
           // Insert new location record
           const insertLocationQuery = {
@@ -998,10 +999,10 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
           };
           
           await client.query(insertLocationQuery);
-          console.log(`Location info created for clinic ${clinicId}`);
+          logger.info(`Location info created for clinic ${clinicId}`);
         }
       } catch (locationError) {
-        console.error('Error updating clinic location:', locationError);
+        logger.error('Error updating clinic location:', locationError);
         // Continue processing even if location update fails
       } finally {
         client.release();
@@ -1015,7 +1016,7 @@ router.put('/:clinicId', authenticateToken, checkVerificationStatus, async (req,
     });
 
   } catch (error) {
-    console.error('Error updating clinic:', error);
+    logger.error('Error updating clinic:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1030,22 +1031,22 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
     
-    console.log('=== CLINIC DELETION REQUESTED ===');
-    console.log('Clinic ID:', clinicId);
-    console.log('Operator ID:', operator_id);
+    logger.info('=== CLINIC DELETION REQUESTED ===');
+    logger.info('Clinic ID:', clinicId);
+    logger.info('Operator ID:', operator_id);
     
     // Check if clinic exists and belongs to the operator
     const clinic = await Clinic.getClinicById(clinicId);
     
     if (!clinic) {
-      console.log('Clinic not found in database');
+      logger.info('Clinic not found in database');
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to delete this clinic'
       });
     }
     
-    console.log('Clinic found:', {
+    logger.info('Clinic found:', {
       id: clinic.clinic_id,
       name: clinic.clinic_name,
       operatorId: clinic.clinic_operator_id,
@@ -1053,8 +1054,8 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     });
     
     if (clinic.clinic_operator_id !== operator_id) {
-      console.log('Permission denied - user is not the clinic operator');
-      console.log(`Clinic operator: ${clinic.clinic_operator_id}, Request operator: ${operator_id}`);
+      logger.info('Permission denied - user is not the clinic operator');
+      logger.info(`Clinic operator: ${clinic.clinic_operator_id}, Request operator: ${operator_id}`);
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to delete this clinic'
@@ -1063,7 +1064,7 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     
     // Verify that clinic is in a pending state before deletion
     if (clinic.clinic_verification_status !== 'pending') {
-      console.log(`Invalid status for deletion: ${clinic.clinic_verification_status}`);
+      logger.info(`Invalid status for deletion: ${clinic.clinic_verification_status}`);
       return res.status(400).json({
         success: false,
         message: 'Only clinics with pending status can be deleted'
@@ -1072,21 +1073,21 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
     
     // Delete all photos from S3 bucket before deleting from database
     try {
-      console.log('=== STARTING S3 DELETION ===');
-      console.log('Deleting all clinic photos from S3 for clinic:', {
+      logger.info('=== STARTING S3 DELETION ===');
+      logger.info('Deleting all clinic photos from S3 for clinic:', {
         clinicId,
         clinicName: clinic.clinic_name
       });
       
       // Get the folder path for verification
       const folderPath = s3Service.getClinicPhotoPath(clinicId, clinic.clinic_name);
-      console.log('S3 folder path to delete:', folderPath);
+      logger.info('S3 folder path to delete:', folderPath);
       
       const deleteResult = await s3Service.deleteClinicFolder(clinicId, clinic.clinic_name);
-      console.log('S3 deletion result:', deleteResult);
+      logger.info('S3 deletion result:', deleteResult);
     } catch (s3Error) {
-      console.error('=== S3 DELETION ERROR ===');
-      console.error('Error details:', {
+      logger.error('=== S3 DELETION ERROR ===');
+      logger.error('Error details:', {
         message: s3Error.message,
         code: s3Error.code,
         stack: s3Error.stack
@@ -1095,18 +1096,18 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
       // This ensures the clinic gets deleted even if there's an issue with S3
     }
     
-    console.log('=== STARTING DATABASE DELETION ===');
+    logger.info('=== STARTING DATABASE DELETION ===');
     // Delete clinic and all related data from database
     await Clinic.deleteClinic(clinicId);
-    console.log('=== DATABASE DELETION COMPLETED ===');
+    logger.info('=== DATABASE DELETION COMPLETED ===');
     
     res.status(200).json({
       success: true,
       message: "Clinic and all associated data deleted successfully"
     });
   } catch (error) {
-    console.error('=== CLINIC DELETION ERROR ===');
-    console.error('Error details:', {
+    logger.error('=== CLINIC DELETION ERROR ===');
+    logger.error('Error details:', {
       message: error.message,
       stack: error.stack
     });
@@ -1120,20 +1121,20 @@ router.delete('/:clinicId', authenticateToken, checkVerificationStatus, async (r
 // Upload clinic photo
 router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
-    console.log('===== UPLOAD PHOTO REQUEST RECEIVED =====');
-    console.log('Request body:', {
+    logger.info('===== UPLOAD PHOTO REQUEST RECEIVED =====');
+    logger.info('Request body:', {
       clinicId: req.body.clinicId,
       clinicName: req.body.clinicName,
       clinicType: req.body.clinicType,
       operatorId: req.user?.userId
     });
-    console.log('File info:', req.file ? {
+    logger.info('File info:', req.file ? {
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
       buffer: req.file.buffer ? `Buffer (${req.file.buffer.length} bytes)` : 'No buffer'
     } : 'No file');
-    console.log('Headers:', {
+    logger.info('Headers:', {
       contentType: req.headers['content-type'],
       authorization: req.headers['authorization'] ? 'Bearer token exists' : 'No token'
     });
@@ -1144,7 +1145,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
     // Validate required fields
     if (!clinicId || !clinicName) {
-      console.error('Missing required fields:', { clinicId, clinicName });
+      logger.error('Missing required fields:', { clinicId, clinicName });
       return res.status(400).json({
         success: false,
         message: 'Clinic ID and name are required'
@@ -1154,7 +1155,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     // Ensure clinicId is a valid number
     const numericClinicId = parseInt(clinicId, 10);
     if (isNaN(numericClinicId)) {
-      console.error('Invalid clinic ID format:', { clinicId });
+      logger.error('Invalid clinic ID format:', { clinicId });
       return res.status(400).json({
         success: false,
         message: 'Invalid clinic ID format. Must be a numeric value.'
@@ -1162,7 +1163,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
     if (!photo) {
-      console.error('No photo provided in the request');
+      logger.error('No photo provided in the request');
       return res.status(400).json({
         success: false,
         message: 'No photo provided'
@@ -1173,7 +1174,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     const clinic = await Clinic.getClinicById(numericClinicId);
     
     if (!clinic || clinic.clinic_operator_id !== operator_id) {
-      console.error('Clinic not found or permission denied:', { 
+      logger.error('Clinic not found or permission denied:', { 
         clinicExists: !!clinic,
         clinicOperatorId: clinic?.clinic_operator_id,
         requestOperatorId: operator_id
@@ -1186,7 +1187,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
     // Upload to S3
     try {
-      console.log('Uploading photo:', {
+      logger.info('Uploading photo:', {
         fileName: photo.originalname,
         fileSize: photo.size,
         mimeType: photo.mimetype,
@@ -1216,10 +1217,10 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         formattedClinicType
       );
       
-      console.log('PREDICTED S3 PATH:', predictedFolderPath);
-      console.log('Clinic name provided:', clinicName);
-      console.log('Clinic type provided/fetched:', formattedClinicType);
-      console.log('Clinic name after sanitization:', clinicName
+      logger.info('PREDICTED S3 PATH:', predictedFolderPath);
+      logger.info('Clinic name provided:', clinicName);
+      logger.info('Clinic type provided/fetched:', formattedClinicType);
+      logger.info('Clinic name after sanitization:', clinicName
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
@@ -1234,13 +1235,13 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         formattedClinicType
       );
 
-      console.log('S3 upload successful:', result);
+      logger.info('S3 upload successful:', result);
       
       // Ensure we have a valid URL
       if (!result.url || !result.url.startsWith('http')) {
-        console.warn('S3 returned invalid URL, constructing fallback URL');
+        logger.warn('S3 returned invalid URL, constructing fallback URL');
         result.url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${result.key}`;
-        console.log('Using fallback URL:', result.url);
+        logger.info('Using fallback URL:', result.url);
       }
 
       // Insert photo URL into clinicalbum table instead of clinic_photos
@@ -1261,13 +1262,13 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         }
       }
       
-      console.log('Saving photo with clinic_type:', {
+      logger.info('Saving photo with clinic_type:', {
         original: dbClinicType,
         corrected: correctClinicType
       });
       
       const dbResult = await pool.query(insertPhotoQuery, [numericClinicId, result.url, correctClinicType]);
-      console.log('Database insert successful:', dbResult.rows[0]);
+      logger.info('Database insert successful:', dbResult.rows[0]);
 
       res.status(200).json({
         success: true,
@@ -1278,7 +1279,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         }
       });
     } catch (s3Error) {
-      console.error('S3 upload error:', s3Error);
+      logger.error('S3 upload error:', s3Error);
       return res.status(500).json({
         success: false,
         message: `Failed to upload photo to storage: ${s3Error.message}`
@@ -1286,7 +1287,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
   } catch (error) {
-    console.error('Error uploading clinic photo:', error);
+    logger.error('Error uploading clinic photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1332,12 +1333,12 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
       
       photosResult = await pool.query(getPhotosQuery, [clinicId]);
     } catch (photoError) {
-      console.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
+      logger.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
       // Continue with empty photos array
     }
     
     // Log information about the clinic and photos
-    console.log('Fetching photos for clinic:', {
+    logger.info('Fetching photos for clinic:', {
       clinicId: clinic.clinic_id,
       clinicName: clinic.clinic_name,
       clinicType: clinic.clinic_type,
@@ -1352,7 +1353,7 @@ router.get('/:clinicId/photos', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching clinic photos:', error);
+    logger.error('Error fetching clinic photos:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1407,7 +1408,7 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
     // Parse the S3 URL to get the key
     const s3Key = clinic_album_photo_url.split('.amazonaws.com/')[1];
     
-    console.log('Deleting photo:', {
+    logger.info('Deleting photo:', {
       photoId,
       clinicId,
       clinicName: clinic.clinic_name,
@@ -1442,14 +1443,14 @@ router.delete('/:clinicId/photos/:photoId', authenticateToken, checkVerification
         message: 'Photo deleted successfully',
       });
     } catch (s3Error) {
-      console.error('S3 delete error:', s3Error);
+      logger.error('S3 delete error:', s3Error);
       return res.status(500).json({
         success: false,
         message: `Failed to delete photo from storage: ${s3Error.message}`,
       });
     }
   } catch (error) {
-    console.error('Error deleting clinic photo:', error);
+    logger.error('Error deleting clinic photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1479,7 +1480,7 @@ router.get('/incomplete', authenticateToken, checkVerificationStatus, async (req
       clinics: result.rows
     });
   } catch (error) {
-    console.error('Error fetching incomplete clinics:', error);
+    logger.error('Error fetching incomplete clinics:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error' 
@@ -1567,7 +1568,7 @@ router.get('/:clinicId/services', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching clinic services:', error);
+    logger.error('Error fetching clinic services:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1655,7 +1656,7 @@ router.put('/:clinicId/services', authenticateToken, checkVerificationStatus, as
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error updating clinic services:', error);
+    logger.error('Error updating clinic services:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1690,7 +1691,7 @@ router.get('/:clinicId/veterinarians', authenticateToken, checkVerificationStatu
       veterinarians
     });
   } catch (error) {
-    console.error('Error getting clinic veterinarians:', error);
+    logger.error('Error getting clinic veterinarians:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1730,7 +1731,7 @@ router.put('/:clinicId/veterinarian/:id/status', authenticateToken, checkVerific
       veterinarianRequest: result
     });
   } catch (error) {
-    console.error('Error updating veterinarian request:', error);
+    logger.error('Error updating veterinarian request:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1781,7 +1782,7 @@ router.delete('/:clinicId/veterinarian/:id', authenticateToken, checkVerificatio
       message: 'Veteriner klinikten başarıyla çıkarıldı'
     });
   } catch (error) {
-    console.error('Error removing veterinarian from clinic:', error);
+    logger.error('Error removing veterinarian from clinic:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1913,7 +1914,7 @@ router.get('/by-slug/:slug', authenticateToken, async (req, res) => {
       clinic: completeClinicData
     });
   } catch (error) {
-    console.error('Error fetching clinic by slug:', error);
+    logger.error('Error fetching clinic by slug:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
@@ -2070,7 +2071,7 @@ router.get('/public/by-slug/:slug', async (req, res) => {
       clinic: publicClinicData
     });
   } catch (error) {
-    console.error('Error fetching public clinic by slug:', error);
+    logger.error('Error fetching public clinic by slug:', error);
     res.status(500).json({ 
       success: false,
       message: 'Internal server error'
@@ -2112,12 +2113,12 @@ router.get('/public/:clinicId/photos', async (req, res) => {
       
       photosResult = await pool.query(getPhotosQuery, [clinicId]);
     } catch (photoError) {
-      console.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
+      logger.warn(`Could not fetch photos for clinic ${clinicId}:`, photoError.message);
       // Continue with empty photos array
     }
     
     // Log information about the clinic and photos
-    console.log('Fetching public photos for clinic:', {
+    logger.info('Fetching public photos for clinic:', {
       clinicId: clinic.clinic_id,
       clinicName: clinic.clinic_name,
       clinicType: clinic.clinic_type,
@@ -2131,7 +2132,7 @@ router.get('/public/:clinicId/photos', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching public clinic photos:', error);
+    logger.error('Error fetching public clinic photos:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -2186,7 +2187,7 @@ router.get('/:clinicId/service-duration', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Error calculating service duration:', error);
+        logger.error('Error calculating service duration:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Error calculating service duration' 
@@ -2243,7 +2244,7 @@ router.put('/:clinicId/phone-numbers', authenticateToken, checkVerificationStatu
       client.release();
     }
   } catch (error) {
-    console.error('Error updating phone numbers:', error);
+    logger.error('Error updating phone numbers:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
@@ -2300,7 +2301,7 @@ router.put('/:clinicId/social-media', authenticateToken, checkVerificationStatus
       client.release();
     }
   } catch (error) {
-    console.error('Error updating social media links:', error);
+    logger.error('Error updating social media links:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
@@ -2320,7 +2321,7 @@ router.get('/:clinicId/pets/from-appointments', authenticateToken, checkVerifica
       redirectTo: `/clinics/${clinicId}/patients`
     });
   } catch (error) {
-    console.error('Error in deprecated endpoint:', error);
+    logger.error('Error in deprecated endpoint:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -2335,7 +2336,7 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
     const { clinicId } = req.params;
     const operator_id = req.user.userId;
     
-    console.log(`[DEBUG-PATIENTS] Klinik ID ${clinicId} için hasta kayıtları isteniyor. Operatör ID: ${operator_id}`);
+    logger.info(`[DEBUG-PATIENTS] Klinik ID ${clinicId} için hasta kayıtları isteniyor. Operatör ID: ${operator_id}`);
 
     // Check if clinic exists and belongs to the operator
     const checkQuery = `
@@ -2345,14 +2346,14 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
     const checkResult = await pool.query(checkQuery, [clinicId, operator_id]);
 
     if (checkResult.rows.length === 0) {
-      console.log(`[DEBUG-PATIENTS] Klinik bulunamadı veya kullanıcının erişim izni yok. Klinik ID: ${clinicId}, Operatör ID: ${operator_id}`);
+      logger.info(`[DEBUG-PATIENTS] Klinik bulunamadı veya kullanıcının erişim izni yok. Klinik ID: ${clinicId}, Operatör ID: ${operator_id}`);
       return res.status(404).json({
         success: false,
         message: 'Clinic not found or you do not have permission to view patient records'
       });
     }
 
-    console.log(`[DEBUG-PATIENTS] Klinik erişimi doğrulandı. clinic_patients tablosundan veri çekiliyor.`);
+    logger.info(`[DEBUG-PATIENTS] Klinik erişimi doğrulandı. clinic_patients tablosundan veri çekiliyor.`);
 
     // Get patients from clinic_patients table with pet and owner information
     const patientsQuery = `
@@ -2383,20 +2384,20 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
       ORDER BY cp.updated_at DESC
     `;
     
-    console.log(`[DEBUG-PATIENTS] Çalıştırılacak sorgu: ${patientsQuery}`);
-    console.log(`[DEBUG-PATIENTS] Sorgu parametreleri: clinicId = ${clinicId}`);
+    logger.info(`[DEBUG-PATIENTS] Çalıştırılacak sorgu: ${patientsQuery}`);
+    logger.info(`[DEBUG-PATIENTS] Sorgu parametreleri: clinicId = ${clinicId}`);
 
     const patientsResult = await pool.query(patientsQuery, [clinicId]);
-    console.log(`[DEBUG-PATIENTS] clinic_patients tablosundan ${patientsResult.rows.length} kayıt bulundu.`);
+    logger.info(`[DEBUG-PATIENTS] clinic_patients tablosundan ${patientsResult.rows.length} kayıt bulundu.`);
     
     if (patientsResult.rows.length === 0) {
-      console.log(`[DEBUG-PATIENTS] Klinik için clinic_patients tablosunda kayıt bulunamadı. SQL sorgusu tekrar kontrol edilmeli.`);
+      logger.info(`[DEBUG-PATIENTS] Klinik için clinic_patients tablosunda kayıt bulunamadı. SQL sorgusu tekrar kontrol edilmeli.`);
     } else {
-      console.log(`[DEBUG-PATIENTS] İlk hasta kaydı örneği:`, patientsResult.rows[0]);
+      logger.info(`[DEBUG-PATIENTS] İlk hasta kaydı örneği:`, patientsResult.rows[0]);
     }
 
     // For each patient, get additional info like last visit date and total appointments
-    console.log(`[DEBUG-PATIENTS] Her hasta için randevu istatistikleri alınıyor...`);
+    logger.info(`[DEBUG-PATIENTS] Her hasta için randevu istatistikleri alınıyor...`);
     const patientsWithStats = await Promise.all(patientsResult.rows.map(async (patient) => {
       // Get appointment statistics for each patient
       const statsQuery = `
@@ -2418,12 +2419,12 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
         total_appointments: parseInt(stats.total_appointments) || 0
       };
       
-      console.log(`[DEBUG-PATIENTS] Hayvan ID: ${patient.pet_id}, İsim: ${patient.pet_name}, Toplam Randevular: ${patientWithStats.total_appointments}, Son Ziyaret: ${patientWithStats.last_visit_date || 'N/A'}`);
+      logger.info(`[DEBUG-PATIENTS] Hayvan ID: ${patient.pet_id}, İsim: ${patient.pet_name}, Toplam Randevular: ${patientWithStats.total_appointments}, Son Ziyaret: ${patientWithStats.last_visit_date || 'N/A'}`);
       
       return patientWithStats;
     }));
 
-    console.log(`[DEBUG-PATIENTS] Tüm veriler hazırlandı. ${patientsWithStats.length} hasta kaydı gönderiliyor.`);
+    logger.info(`[DEBUG-PATIENTS] Tüm veriler hazırlandı. ${patientsWithStats.length} hasta kaydı gönderiliyor.`);
     
     res.status(200).json({
       success: true,
@@ -2432,7 +2433,7 @@ router.get('/:clinicId/patients', authenticateToken, checkVerificationStatus, as
     });
 
   } catch (error) {
-    console.error('[DEBUG-PATIENTS] Hasta kayıtları alınırken hata:', error);
+    logger.error('[DEBUG-PATIENTS] Hasta kayıtları alınırken hata:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -2495,17 +2496,17 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
       }
       
       // Update appointment status
-      console.log(`[DEBUG-CLINIC] Randevu durumu güncelleniyor: Randevu ID: ${appointmentId}, Yeni durum: ${status}`);
+      logger.info(`[DEBUG-CLINIC] Randevu durumu güncelleniyor: Randevu ID: ${appointmentId}, Yeni durum: ${status}`);
       await client.query(
         'UPDATE appointments SET appointment_status = $1, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = $2',
         [status, appointmentId]
       );
-      console.log(`[DEBUG-CLINIC] Randevu durumu güncellendi: ${status}`);
+      logger.info(`[DEBUG-CLINIC] Randevu durumu güncellendi: ${status}`);
       
       // If status is 'confirmed' or 'completed', ensure the pet is in clinic_patients table
       if (status === 'confirmed' || status === 'completed') {
-        console.log(`[DEBUG-CLINIC] Randevu '${status}' durumunda. Hayvanın clinic_patients tablosunda olup olmadığı kontrol ediliyor.`);
-        console.log(`[DEBUG-CLINIC] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
+        logger.info(`[DEBUG-CLINIC] Randevu '${status}' durumunda. Hayvanın clinic_patients tablosunda olup olmadığı kontrol ediliyor.`);
+        logger.info(`[DEBUG-CLINIC] Klinik ID: ${appointment.clinic_id}, Hayvan ID: ${appointment.pet_id}`);
         
         // Check if the pet is deleted
         const petStatusResult = await client.query(
@@ -2514,7 +2515,7 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
         );
         
         if (petStatusResult.rows.length > 0 && petStatusResult.rows[0].pet_status === 'deleted') {
-          console.log(`[DEBUG-CLINIC] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
+          logger.info(`[DEBUG-CLINIC] Hayvan silinmiş durumda (pet_status = 'deleted'). clinic_patients tablosu güncellenmeyecek.`);
           // Skip adding to clinic_patients if pet is deleted
         } else {
           // Check if the pet is already a patient of this clinic
@@ -2527,29 +2528,29 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
             appointment.pet_id
           ]);
           
-          console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda mı? Sonuç sayısı: ${checkPatientResult.rows.length}`);
+          logger.info(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda mı? Sonuç sayısı: ${checkPatientResult.rows.length}`);
           
           if (checkPatientResult.rows.length === 0) {
             // Insert new record in clinic_patients
-            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
+            logger.info(`[DEBUG-CLINIC] Hayvan clinic_patients tablosunda bulunamadı. Yeni kayıt ekleniyor.`);
             await client.query(`
               INSERT INTO clinic_patients (clinic_id, pet_id, created_at, updated_at)
               VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             `, [appointment.clinic_id, appointment.pet_id]);
-            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients tablosuna eklendi.`);
+            logger.info(`[DEBUG-CLINIC] Hayvan clinic_patients tablosuna eklendi.`);
           } else {
             // Update the existing record timestamp
-            console.log(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda. Timestamp güncelleniyor.`);
+            logger.info(`[DEBUG-CLINIC] Hayvan zaten clinic_patients tablosunda. Timestamp güncelleniyor.`);
             await client.query(`
               UPDATE clinic_patients 
               SET updated_at = CURRENT_TIMESTAMP 
               WHERE clinic_id = $1 AND pet_id = $2
             `, [appointment.clinic_id, appointment.pet_id]);
-            console.log(`[DEBUG-CLINIC] Hayvan clinic_patients kaydı güncellendi.`);
+            logger.info(`[DEBUG-CLINIC] Hayvan clinic_patients kaydı güncellendi.`);
           }
         }
       } else {
-        console.log(`[DEBUG-CLINIC] Randevu durumu '${status}' olduğu için clinic_patients tablosu güncellenmedi.`);
+        logger.info(`[DEBUG-CLINIC] Randevu durumu '${status}' olduğu için clinic_patients tablosu güncellenmedi.`);
       }
       
       await client.query('COMMIT');
@@ -2569,7 +2570,7 @@ router.put('/appointments/:appointmentId/status', authenticateToken, async (req,
     }
     
   } catch (error) {
-    console.error('Error updating appointment status:', error);
+    logger.error('Error updating appointment status:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -2644,7 +2645,7 @@ router.post('/:clinicId/sync-patients', authenticateToken, checkVerificationStat
     }
     
   } catch (error) {
-    console.error('Error syncing patient records:', error);
+    logger.error('Error syncing patient records:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',

@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 class Pet {
     // Create a new pet
@@ -53,7 +54,7 @@ class Pet {
             };
             
         } catch (error) {
-            console.error('Error in createPet:', error);
+            logger.error('Error in createPet:', error);
             throw error;
         }
     }
@@ -91,7 +92,7 @@ class Pet {
             }
             return null;
         } catch (error) {
-            console.error('Error in getPetById:', error);
+            logger.error('Error in getPetById:', error);
             throw error;
         }
     }
@@ -126,7 +127,7 @@ class Pet {
                 };
             });
         } catch (error) {
-            console.error('Error in getPetsByOwnerId:', error);
+            logger.error('Error in getPetsByOwnerId:', error);
             throw error;
         }
     }
@@ -227,7 +228,7 @@ class Pet {
             };
             
         } catch (error) {
-            console.error('Error in updatePet:', error);
+            logger.error('Error in updatePet:', error);
             throw error;
         }
     }
@@ -248,7 +249,7 @@ class Pet {
             
             return { id: result.rows[0].pet_id };
         } catch (error) {
-            console.error('Error in deletePet:', error);
+            logger.error('Error in deletePet:', error);
             throw error;
         }
     }
@@ -269,7 +270,7 @@ class Pet {
             
             return { id: result.rows[0].pet_id, status };
         } catch (error) {
-            console.error('Error in updatePetStatus:', error);
+            logger.error('Error in updatePetStatus:', error);
             throw error;
         }
     }

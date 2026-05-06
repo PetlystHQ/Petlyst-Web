@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 // Returns 404 if user not found
 // Returns 403 if user is not a veterinarian
@@ -55,7 +56,7 @@ const checkVerificationStatus = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.error('Error checking verification status:', error);
+        logger.error('Error checking verification status:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const authenticateToken = require('../middleware/authenticateToken');
 const pool = require('../config/db');
@@ -15,7 +16,7 @@ router.get('/:clinicId/inventory', authenticateToken, async (req, res) => {
     }
 
     const { clinicId } = req.params;
-    console.log('Fetching inventory info for clinic ID:', clinicId);
+    logger.info('Fetching inventory info for clinic ID:', clinicId);
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -41,7 +42,7 @@ router.get('/:clinicId/inventory', authenticateToken, async (req, res) => {
     const categoriesResult = await pool.query(categoriesQuery, [parsedClinicId]);
     const lowStockResult = await pool.query(lowStockQuery, [parsedClinicId]);
     
-    console.log('Inventory stats retrieved:', {
+    logger.info('Inventory stats retrieved:', {
       totalItems: parseInt(itemsResult.rows[0].total_items),
       totalCategories: parseInt(categoriesResult.rows[0].total_categories),
       lowStockCount: parseInt(lowStockResult.rows[0].low_stock_count)
@@ -56,7 +57,7 @@ router.get('/:clinicId/inventory', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching inventory info:', error);
+    logger.error('Error fetching inventory info:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch inventory information',
@@ -77,7 +78,7 @@ router.get('/:clinicId/inventory/categories', authenticateToken, async (req, res
     }
 
     const { clinicId } = req.params;
-    console.log('Fetching inventory categories for clinic ID:', clinicId);
+    logger.info('Fetching inventory categories for clinic ID:', clinicId);
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -108,14 +109,14 @@ router.get('/:clinicId/inventory/categories', authenticateToken, async (req, res
     const parsedClinicId = parseInt(clinicId);
     const result = await pool.query(query, [parsedClinicId]);
     
-    console.log(`Retrieved ${result.rows.length} categories for clinic ID:`, clinicId);
+    logger.info(`Retrieved ${result.rows.length} categories for clinic ID:`, clinicId);
     
     res.status(200).json({
       success: true,
       categories: result.rows
     });
   } catch (error) {
-    console.error('Error fetching inventory categories:', error);
+    logger.error('Error fetching inventory categories:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch inventory categories',
@@ -159,9 +160,9 @@ router.post('/:clinicId/inventory/categories', authenticateToken, async (req, re
       // Generate a unique ID for the category
       const categoryId = 'cat-' + Date.now().toString();
       
-      console.log('Creating new category with ID:', categoryId);
-      console.log('Clinic ID:', clinicId, 'Type:', typeof clinicId);
-      console.log('User ID:', req.user.userId, 'Type:', typeof req.user.userId);
+      logger.info('Creating new category with ID:', categoryId);
+      logger.info('Clinic ID:', clinicId, 'Type:', typeof clinicId);
+      logger.info('User ID:', req.user.userId, 'Type:', typeof req.user.userId);
   
       // Create the new category
       const query = `
@@ -190,14 +191,14 @@ router.post('/:clinicId/inventory/categories', authenticateToken, async (req, re
         parseInt(req.user.userId)
       ]);
       
-      console.log('Category created successfully:', result.rows[0]);
+      logger.info('Category created successfully:', result.rows[0]);
       
       res.status(201).json({
         success: true,
         category: result.rows[0]
       });
     } catch (error) {
-      console.error('Error creating inventory category:', error);
+      logger.error('Error creating inventory category:', error);
       res.status(500).json({ 
         success: false,
         error: 'Failed to create inventory category',
@@ -220,8 +221,8 @@ router.put('/:clinicId/inventory/categories/:categoryId', authenticateToken, asy
     const { clinicId, categoryId } = req.params;
     const { name, description, parent_id, is_active } = req.body;
     
-    console.log('Updating category ID:', categoryId, 'for clinic ID:', clinicId);
-    console.log('Update data:', { name, description, parent_id, is_active });
+    logger.info('Updating category ID:', categoryId, 'for clinic ID:', clinicId);
+    logger.info('Update data:', { name, description, parent_id, is_active });
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -296,14 +297,14 @@ router.put('/:clinicId/inventory/categories/:categoryId', authenticateToken, asy
       parsedClinicId
     ]);
     
-    console.log('Category updated successfully:', updateResult.rows[0]);
+    logger.info('Category updated successfully:', updateResult.rows[0]);
     
     res.status(200).json({
       success: true,
       category: updateResult.rows[0]
     });
   } catch (error) {
-    console.error('Error updating inventory category:', error);
+    logger.error('Error updating inventory category:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to update inventory category',
@@ -324,7 +325,7 @@ router.delete('/:clinicId/inventory/categories/:categoryId', authenticateToken, 
     }
 
     const { clinicId, categoryId } = req.params;
-    console.log('Deleting category ID:', categoryId, 'from clinic ID:', clinicId);
+    logger.info('Deleting category ID:', categoryId, 'from clinic ID:', clinicId);
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -383,14 +384,14 @@ router.delete('/:clinicId/inventory/categories/:categoryId', authenticateToken, 
       });
     }
     
-    console.log('Category deleted successfully:', categoryId);
+    logger.info('Category deleted successfully:', categoryId);
     
     res.status(200).json({
       success: true,
       message: 'Category deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting inventory category:', error);
+    logger.error('Error deleting inventory category:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to delete inventory category',
@@ -485,7 +486,7 @@ router.get('/:clinicId/inventory/items', authenticateToken, async (req, res) => 
       items: items
     });
   } catch (error) {
-    console.error('Error fetching inventory items:', error);
+    logger.error('Error fetching inventory items:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch inventory items',
@@ -521,7 +522,7 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
         min_quantity
       } = req.body;
 
-      console.log('Received request to create item:', {
+      logger.info('Received request to create item:', {
         name, category_id, current_quantity, min_quantity
       });
 
@@ -562,7 +563,7 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
       // Generate a unique ID for the item
       const itemId = 'item-' + Date.now().toString();
       
-      console.log('Creating new inventory item with ID:', itemId);
+      logger.info('Creating new inventory item with ID:', itemId);
       
       // Convert numeric values to integers
       const parsedCurrentQuantity = current_quantity ? parseInt(current_quantity) : 0;
@@ -614,12 +615,12 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
         parseInt(req.user.userId)
       ]);
       
-      console.log('Inventory item created successfully:', result.rows[0]);
+      logger.info('Inventory item created successfully:', result.rows[0]);
       
       // If item was created with initial stock, create a transaction record
       if (parsedCurrentQuantity > 0) {
         const transactionId = 'trans-' + Date.now().toString();
-        console.log('Creating initial stock transaction with ID:', transactionId);
+        logger.info('Creating initial stock transaction with ID:', transactionId);
         
         const transactionQuery = `
           INSERT INTO inventory_transactions (
@@ -645,7 +646,7 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
           clinicId.toString() // String olarak gönderiyoruz
         ]);
         
-        console.log('Initial stock transaction created for item:', itemId);
+        logger.info('Initial stock transaction created for item:', itemId);
       }
       
       res.status(201).json({
@@ -653,7 +654,7 @@ router.post('/:clinicId/inventory/items', authenticateToken, async (req, res) =>
         item: result.rows[0]
       });
     } catch (error) {
-      console.error('Error creating inventory item:', error);
+      logger.error('Error creating inventory item:', error);
       res.status(500).json({ 
         success: false,
         error: 'Failed to create inventory item',
@@ -690,8 +691,8 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       is_active 
     } = req.body;
     
-    console.log('Updating item ID:', itemId, 'for clinic ID:', clinicId);
-    console.log('Update data:', { 
+    logger.info('Updating item ID:', itemId, 'for clinic ID:', clinicId);
+    logger.info('Update data:', { 
       name, 
       description, 
       sku, 
@@ -736,14 +737,14 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       const categoryResult = await pool.query(categoryCheckQuery, [category_id, parsedClinicId]);
       
       if (categoryResult.rows.length === 0) {
-        console.error(`Category not found: ${category_id} for clinic: ${parsedClinicId}`);
+        logger.error(`Category not found: ${category_id} for clinic: ${parsedClinicId}`);
         return res.status(400).json({
           success: false,
           error: 'Selected category does not exist or does not belong to this clinic'
         });
       }
       
-      console.log(`Category validation passed for: ${category_id}`);
+      logger.info(`Category validation passed for: ${category_id}`);
     }
     
     const oldQuantity = parseInt(checkResult.rows[0].current_quantity);
@@ -798,7 +799,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       RETURNING *
     `;
 
-    console.log('Executing update with parameters:', {
+    logger.info('Executing update with parameters:', {
       name: updateFields.name, 
       description: updateFields.description,
       // Log other fields for debugging
@@ -825,7 +826,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       parsedClinicId
     ]);
     
-    console.log('Item updated successfully. Old quantity:', oldQuantity, 'New quantity:', updateFields.current_quantity);
+    logger.info('Item updated successfully. Old quantity:', oldQuantity, 'New quantity:', updateFields.current_quantity);
     
     // If quantity was changed, create a transaction record
     if (parsedCurrentQuantity !== undefined && parsedCurrentQuantity !== oldQuantity) {
@@ -833,7 +834,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       const quantityDiff = parsedCurrentQuantity - oldQuantity;
       const transactionType = quantityDiff > 0 ? 'adjustment' : 'adjustment';
       
-      console.log('Creating adjustment transaction with ID:', transactionId, 'Quantity change:', quantityDiff);
+      logger.info('Creating adjustment transaction with ID:', transactionId, 'Quantity change:', quantityDiff);
       
       const transactionQuery = `
         INSERT INTO inventory_transactions (
@@ -860,7 +861,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
         clinicId.toString() // String olarak gönder
       ]);
       
-      console.log('Adjustment transaction created for quantity change');
+      logger.info('Adjustment transaction created for quantity change');
     }
     
     res.status(200).json({
@@ -868,7 +869,7 @@ router.put('/:clinicId/inventory/items/:itemId', authenticateToken, async (req, 
       item: updateResult.rows[0]
     });
   } catch (error) {
-    console.error('Error updating inventory item:', error);
+    logger.error('Error updating inventory item:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to update inventory item',
@@ -889,7 +890,7 @@ router.delete('/:clinicId/inventory/items/:itemId', authenticateToken, async (re
     }
 
     const { clinicId, itemId } = req.params;
-    console.log('Deactivating item ID:', itemId, 'from clinic ID:', clinicId);
+    logger.info('Deactivating item ID:', itemId, 'from clinic ID:', clinicId);
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -920,14 +921,14 @@ router.delete('/:clinicId/inventory/items/:itemId', authenticateToken, async (re
       });
     }
     
-    console.log('Item deactivated successfully:', itemId);
+    logger.info('Item deactivated successfully:', itemId);
     
     res.status(200).json({
       success: true,
       message: 'Item deactivated successfully'
     });
   } catch (error) {
-    console.error('Error deactivating inventory item:', error);
+    logger.error('Error deactivating inventory item:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to deactivate inventory item',
@@ -1031,7 +1032,7 @@ router.get('/:clinicId/inventory/transactions', authenticateToken, async (req, r
       transactions: transactions
     });
   } catch (error) {
-    console.error('Error fetching inventory transactions:', error);
+    logger.error('Error fetching inventory transactions:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch inventory transactions',
@@ -1052,7 +1053,7 @@ router.get('/:clinicId/inventory/low-stock', authenticateToken, async (req, res)
     }
 
     const { clinicId } = req.params;
-    console.log('Fetching low stock items for clinic ID:', clinicId);
+    logger.info('Fetching low stock items for clinic ID:', clinicId);
 
     // Verify veterinarian has access to this clinic
     const hasAccess = await checkVeterinarianClinicAccess(req.user.userId, clinicId);
@@ -1093,7 +1094,7 @@ router.get('/:clinicId/inventory/low-stock', authenticateToken, async (req, res)
     const parsedClinicId = parseInt(clinicId);
     const result = await pool.query(query, [parsedClinicId]);
     
-    console.log(`Retrieved ${result.rows.length} low stock items for clinic ID:`, clinicId);
+    logger.info(`Retrieved ${result.rows.length} low stock items for clinic ID:`, clinicId);
     
     // Convert numeric values to integers
     const items = result.rows.map(item => ({
@@ -1108,7 +1109,7 @@ router.get('/:clinicId/inventory/low-stock', authenticateToken, async (req, res)
       items: items
     });
   } catch (error) {
-    console.error('Error fetching low stock items:', error);
+    logger.error('Error fetching low stock items:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to fetch low stock items',
@@ -1140,7 +1141,7 @@ router.post('/:clinicId/inventory/transactions', authenticateToken, async (req, 
       expiry_date
     } = req.body;
 
-    console.log('Received transaction request:', { 
+    logger.info('Received transaction request:', { 
       item_id, transaction_type, quantity, transaction_date 
     });
 
@@ -1210,11 +1211,11 @@ router.post('/:clinicId/inventory/transactions', authenticateToken, async (req, 
     // Generate a unique ID for the transaction
     const transactionId = 'trans-' + Date.now().toString();
     
-    console.log('Creating new inventory transaction with ID:', transactionId);
-    console.log('Item ID:', item_id);
-    console.log('Transaction type:', transaction_type);
-    console.log('Quantity:', parsedQuantity);
-    console.log('New quantity will be:', newQuantity);
+    logger.info('Creating new inventory transaction with ID:', transactionId);
+    logger.info('Item ID:', item_id);
+    logger.info('Transaction type:', transaction_type);
+    logger.info('Quantity:', parsedQuantity);
+    logger.info('New quantity will be:', newQuantity);
 
     // Begin a transaction
     const client = await pool.connect();
@@ -1259,7 +1260,7 @@ router.post('/:clinicId/inventory/transactions', authenticateToken, async (req, 
         clinicId.toString()  // String olarak gönder
       ];
       
-      console.log('Transaction query values:', transactionValues);
+      logger.info('Transaction query values:', transactionValues);
       
       const transactionResult = await client.query(transactionQuery, transactionValues);
       
@@ -1275,7 +1276,7 @@ router.post('/:clinicId/inventory/transactions', authenticateToken, async (req, 
       
       await client.query('COMMIT');
       
-      console.log('Transaction completed successfully, item quantity updated to:', newQuantity);
+      logger.info('Transaction completed successfully, item quantity updated to:', newQuantity);
       
       res.status(201).json({
         success: true,
@@ -1284,13 +1285,13 @@ router.post('/:clinicId/inventory/transactions', authenticateToken, async (req, 
       });
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Transaction error, rolling back:', error);
+      logger.error('Transaction error, rolling back:', error);
       throw error;
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error('Error creating inventory transaction:', error);
+    logger.error('Error creating inventory transaction:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to create inventory transaction',
@@ -1310,7 +1311,7 @@ async function checkVeterinarianClinicAccess(veterinarianId, clinicId) {
     const result = await pool.query(query, [parseInt(veterinarianId), parseInt(clinicId)]);
     return result.rows.length > 0;
   } catch (error) {
-    console.error('Error checking clinic access:', error);
+    logger.error('Error checking clinic access:', error);
     return false;
   }
 }

@@ -1,5 +1,6 @@
 // examinationRoutes.js
 const express = require('express');
+const logger = require('../../config/logger');
 const router = express.Router();
 const examinationModel = require('./examinationModel');
 const authenticateToken = require('../../middleware/authenticateToken');
@@ -41,7 +42,7 @@ const veterinarianMiddleware = async (req, res, next) => {
     req.veterinarian = vetResult.rows[0];
     next();
   } catch (error) {
-    console.error('Error in veterinarian middleware:', error);
+    logger.error('Error in veterinarian middleware:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -59,7 +60,7 @@ const vetAuthMiddleware = [authenticateToken, veterinarianMiddleware];
 // Tüm muayeneleri listele (filtreli)
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    console.log('Examination list requested with params:', req.query);
+    logger.info('Examination list requested with params:', req.query);
     
     const { 
       pet_id, 
@@ -86,7 +87,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const limitNum = parseInt(limit);
     const offsetNum = parseInt(offset);
     
-    console.log('Final examination filters:', filters);
+    logger.info('Final examination filters:', filters);
     
     const examinations = await examinationModel.listExaminations(
       filters, 
@@ -94,7 +95,7 @@ router.get('/', authMiddleware, async (req, res) => {
       offsetNum
     );
     
-    console.log(`Found ${examinations.length} examinations`);
+    logger.info(`Found ${examinations.length} examinations`);
     
     res.json({
       success: true,
@@ -102,7 +103,7 @@ router.get('/', authMiddleware, async (req, res) => {
       count: examinations.length
     });
   } catch (error) {
-    console.error('Error listing examinations:', error);
+    logger.error('Error listing examinations:', error);
     res.status(500).json({
       success: false,
       message: 'Error listing examinations',
@@ -129,7 +130,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
       examination
     });
   } catch (error) {
-    console.error('Error fetching examination:', error);
+    logger.error('Error fetching examination:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching examination',
@@ -202,7 +203,7 @@ router.post('/', vetAuthMiddleware, async (req, res) => {
       examination: newExamination
     });
   } catch (error) {
-    console.error('Error creating examination:', error);
+    logger.error('Error creating examination:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating examination',
@@ -259,7 +260,7 @@ router.put('/:id', vetAuthMiddleware, async (req, res) => {
       examination: updatedExamination
     });
   } catch (error) {
-    console.error('Error updating examination:', error);
+    logger.error('Error updating examination:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating examination',
@@ -308,7 +309,7 @@ router.put('/:id/status', vetAuthMiddleware, async (req, res) => {
       examination: updatedExamination
     });
   } catch (error) {
-    console.error('Error updating examination status:', error);
+    logger.error('Error updating examination status:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating examination status',
@@ -320,19 +321,19 @@ router.put('/:id/status', vetAuthMiddleware, async (req, res) => {
 // Bir hayvanın muayene geçmişini getir - Supports fetching for diagnosis creation
 router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
   try {
-    console.log('=== /pet-history/:petId route handler STARTED ===');
-    console.log('Request params:', req.params);
-    console.log('Request query:', req.query);
-    console.log('User info:', {
+    logger.info('=== /pet-history/:petId route handler STARTED ===');
+    logger.info('Request params:', req.params);
+    logger.info('Request query:', req.query);
+    logger.info('User info:', {
       userId: req.user?.userId,
       userType: req.user?.userType
     });
     
     const petId = parseInt(req.params.petId);
-    console.log('Parsed petId:', petId);
+    logger.info('Parsed petId:', petId);
     
     if (!petId) {
-      console.log('ERROR: Invalid petId (falsy after parsing)');
+      logger.info('ERROR: Invalid petId (falsy after parsing)');
       return res.status(400).json({
         success: false,
         message: 'Pet ID is required'
@@ -340,12 +341,12 @@ router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
     }
     
     // Check if the pet exists
-    console.log('Checking if pet exists with ID:', petId);
+    logger.info('Checking if pet exists with ID:', petId);
     const petCheck = await pool.query('SELECT pet_id FROM pets WHERE pet_id = $1', [petId]);
-    console.log('Pet check result:', petCheck.rows);
+    logger.info('Pet check result:', petCheck.rows);
     
     if (petCheck.rows.length === 0) {
-      console.log('ERROR: Pet not found with ID:', petId);
+      logger.info('ERROR: Pet not found with ID:', petId);
       return res.status(404).json({
         success: false,
         message: 'Pet not found'
@@ -354,7 +355,7 @@ router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
     
     // Check if a status filter is provided in query params
     const { status } = req.query;
-    console.log('Status filter from query:', status);
+    logger.info('Status filter from query:', status);
     
     // Create filters for the pet_id
     const filters = {
@@ -363,19 +364,19 @@ router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
     
     // For diagnosis creation, we need completed or in-progress examinations
     if (status === 'for_diagnosis') {
-      console.log('Setting status filter for diagnosis creation');
+      logger.info('Setting status filter for diagnosis creation');
       filters.status = 'in_progress,completed';
     }
     
-    console.log('Final filters for listExaminations:', filters);
+    logger.info('Final filters for listExaminations:', filters);
     
-    console.log('Calling examinationModel.listExaminations...');
+    logger.info('Calling examinationModel.listExaminations...');
     const examinations = await examinationModel.listExaminations(filters, 100, 0);
-    console.log(`Found ${examinations.length} examinations for pet:`, petId);
+    logger.info(`Found ${examinations.length} examinations for pet:`, petId);
     
     // Log the first examination for debugging if available
     if (examinations.length > 0) {
-      console.log('First examination sample:', {
+      logger.info('First examination sample:', {
         examination_id: examinations[0].examination_id,
         status: examinations[0].status,
         pet_id: examinations[0].pet_id
@@ -387,13 +388,13 @@ router.get('/pet-history/:petId', authMiddleware, async (req, res) => {
       examinations,
       count: examinations.length
     };
-    console.log('Sending response with examination count:', examinations.length);
+    logger.info('Sending response with examination count:', examinations.length);
     
     res.json(response);
-    console.log('=== /pet-history/:petId route handler COMPLETED ===');
+    logger.info('=== /pet-history/:petId route handler COMPLETED ===');
   } catch (error) {
-    console.error('ERROR in /pet-history/:petId route:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('ERROR in /pet-history/:petId route:', error);
+    logger.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching pet examination history',
@@ -432,7 +433,7 @@ router.delete('/:id', vetAuthMiddleware, async (req, res) => {
       message: 'Examination deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting examination:', error);
+    logger.error('Error deleting examination:', error);
     
     // Eğer teşhisler bağlı olduğu için silinemeyen durum
     if (error.message === 'Cannot delete examination with associated diagnoses') {
@@ -481,7 +482,7 @@ router.get('/pet-appointments/:petId', authMiddleware, async (req, res) => {
       appointments: result.rows
     });
   } catch (error) {
-    console.error('Error fetching pet appointments:', error);
+    logger.error('Error fetching pet appointments:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching pet appointments',

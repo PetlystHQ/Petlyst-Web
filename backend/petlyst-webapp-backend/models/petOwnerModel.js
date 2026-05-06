@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 class PetOwner {
     static async createPetOwner(userId) {
@@ -21,7 +22,7 @@ class PetOwner {
             };
             
         } catch (error) {
-            console.error('Error in createPetOwner:', error);
+            logger.error('Error in createPetOwner:', error);
             throw error;
         }
     }
@@ -41,22 +42,22 @@ class PetOwner {
             }
             return null;
         } catch (error) {
-            console.error('Error in findByUserId:', error);
+            logger.error('Error in findByUserId:', error);
             throw error;
         }
     }
 
     static async updateProfile(userId, userData) {
         try {
-            console.log('Updating profile for user:', userId);
-            console.log('With data:', userData);
+            logger.info('Updating profile for user:', userId);
+            logger.info('With data:', userData);
             
             const { phone, address, profilePhoto } = userData;
             
             let query;
             
             if (profilePhoto === null) {
-                console.log('Explicitly setting profile photo to NULL in database');
+                logger.info('Explicitly setting profile photo to NULL in database');
                 query = {
                     text: `UPDATE users
                            SET user_phone = COALESCE($1, user_phone),
@@ -69,7 +70,7 @@ class PetOwner {
                     values: [phone, address, userId]
                 };
             } else {
-                console.log('Using COALESCE for profile photo update');
+                logger.info('Using COALESCE for profile photo update');
                 query = {
                     text: `UPDATE users
                            SET user_phone = COALESCE($1, user_phone),
@@ -83,14 +84,14 @@ class PetOwner {
                 };
             }
             
-            console.log('Executing SQL query:', query.text);
+            logger.info('Executing SQL query:', query.text);
             const result = await pool.query(query);
             
             if (!result.rows[0]) {
                 throw new Error('Profile update failed - no rows returned');
             }
             
-            console.log('Profile updated successfully:', result.rows[0]);
+            logger.info('Profile updated successfully:', result.rows[0]);
             
             return {
                 id: result.rows[0].user_id,
@@ -103,7 +104,7 @@ class PetOwner {
                 user_type: result.rows[0].user_type
             };
         } catch (error) {
-            console.error('Error in updateProfile:', error);
+            logger.error('Error in updateProfile:', error);
             throw error;
         }
     }

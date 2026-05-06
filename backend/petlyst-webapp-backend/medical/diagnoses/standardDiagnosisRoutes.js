@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../../config/logger');
 const router = express.Router();
 const standardDiagnosisModel = require('./standardDiagnosisModel');
 const authenticateToken = require('../../middleware/authenticateToken');
@@ -29,7 +30,7 @@ const veterinarianMiddleware = async (req, res, next) => {
     req.vet_id = userId;
     next();
   } catch (error) {
-    console.error('Error in veterinarian middleware:', error);
+    logger.error('Error in veterinarian middleware:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -57,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const standardDiagnoses = await standardDiagnosisModel.listStandardDiagnoses(filters);
     res.json(standardDiagnoses);
   } catch (error) {
-    console.error('Error fetching standard diagnoses:', error);
+    logger.error('Error fetching standard diagnoses:', error);
     res.status(500).json({ message: 'Failed to fetch standard diagnoses' });
   }
 });
@@ -86,7 +87,7 @@ router.get('/id/:id', authenticateToken, async (req, res) => {
     
     res.json(standardDiagnosis);
   } catch (error) {
-    console.error('Error fetching standard diagnosis:', error);
+    logger.error('Error fetching standard diagnosis:', error);
     res.status(500).json({ message: 'Failed to fetch standard diagnosis' });
   }
 });
@@ -115,7 +116,7 @@ router.get('/code/:code', authenticateToken, async (req, res) => {
     
     res.json(standardDiagnosis);
   } catch (error) {
-    console.error('Error fetching standard diagnosis:', error);
+    logger.error('Error fetching standard diagnosis:', error);
     res.status(500).json({ message: 'Failed to fetch standard diagnosis' });
   }
 });
@@ -155,7 +156,7 @@ router.post('/', authenticateToken, checkVerificationStatus, veterinarianMiddlew
     
     res.status(201).json(newDiagnosis);
   } catch (error) {
-    console.error('Error creating standard diagnosis:', error);
+    logger.error('Error creating standard diagnosis:', error);
     
     // Handle validation errors
     if (error.constraint) {
@@ -205,7 +206,7 @@ router.put('/id/:id', authenticateToken, checkVerificationStatus, veterinarianMi
     
     res.json(updatedDiagnosis);
   } catch (error) {
-    console.error('Error updating standard diagnosis:', error);
+    logger.error('Error updating standard diagnosis:', error);
     
     // Handle validation errors
     if (error.constraint) {
@@ -254,7 +255,7 @@ router.put('/code/:code', authenticateToken, checkVerificationStatus, veterinari
     
     res.json(updatedDiagnosis);
   } catch (error) {
-    console.error('Error updating standard diagnosis:', error);
+    logger.error('Error updating standard diagnosis:', error);
     
     // Handle validation errors
     if (error.constraint) {
@@ -296,7 +297,7 @@ router.delete('/id/:id', authenticateToken, checkVerificationStatus, veterinaria
     
     res.json({ message: 'Standard diagnosis deleted successfully' });
   } catch (error) {
-    console.error('Error deleting standard diagnosis:', error);
+    logger.error('Error deleting standard diagnosis:', error);
     res.status(500).json({ message: 'Failed to delete standard diagnosis' });
   }
 });
@@ -329,7 +330,7 @@ router.delete('/code/:code', authenticateToken, checkVerificationStatus, veterin
     
     res.json({ message: 'Standard diagnosis deleted successfully' });
   } catch (error) {
-    console.error('Error deleting standard diagnosis:', error);
+    logger.error('Error deleting standard diagnosis:', error);
     res.status(500).json({ message: 'Failed to delete standard diagnosis' });
   }
 });
@@ -354,7 +355,7 @@ router.get('/search', authenticateToken, async (req, res) => {
     
     res.json(standardDiagnoses);
   } catch (error) {
-    console.error('Error searching standard diagnoses:', error);
+    logger.error('Error searching standard diagnoses:', error);
     res.status(500).json({ message: 'Failed to search standard diagnoses' });
   }
 });
@@ -369,7 +370,7 @@ router.get('/veterinarian', authenticateToken, checkVerificationStatus, veterina
     const diagnoses = await standardDiagnosisModel.getVeterinarianDiagnoses(req.vet_id);
     res.json(diagnoses);
   } catch (error) {
-    console.error('Error fetching veterinarian diagnoses:', error);
+    logger.error('Error fetching veterinarian diagnoses:', error);
     res.status(500).json({ message: 'Failed to fetch veterinarian diagnoses' });
   }
 });

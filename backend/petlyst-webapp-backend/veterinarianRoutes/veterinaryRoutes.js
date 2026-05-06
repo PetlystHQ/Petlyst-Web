@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -73,7 +74,7 @@ async function generateUniqueSlug(name, surname) {
 // ELLE ÇAĞIRILACAK olan initializeSlugColumn fonksiyonu
 async function initializeSlugColumn() {
   try {
-    console.log("[SLUG MIGRATION] Başlangıç: Veterinarians tablosuna slug sütunu ekleniyor...");
+    logger.info("[SLUG MIGRATION] Başlangıç: Veterinarians tablosuna slug sütunu ekleniyor...");
     
     // Önce ALTER TABLE komutuyla sütun ekle (eğer yoksa)
     try {
@@ -82,15 +83,15 @@ async function initializeSlugColumn() {
         ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;
       `;
       await pool.query(addColumnQuery);
-      console.log("[SLUG MIGRATION] Slug sütunu eklendi.");
+      logger.info("[SLUG MIGRATION] Slug sütunu eklendi.");
     } catch (err) {
-      console.error("[SLUG MIGRATION] Slug sütunu eklenirken hata:", err);
+      logger.error("[SLUG MIGRATION] Slug sütunu eklenirken hata:", err);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error("[SLUG MIGRATION] Slug sütunu oluşturma hatası:", error);
+    logger.error("[SLUG MIGRATION] Slug sütunu oluşturma hatası:", error);
     return false;
   }
 }
@@ -124,7 +125,7 @@ router.post('/admin/generate-slugs', authenticateToken, async (req, res) => {
     `;
     
     const vetsToUpdate = await pool.query(findVetsQuery);
-    console.log(`[SLUG MIGRATION] ${vetsToUpdate.rows.length} veteriner için slug oluşturulacak.`);
+    logger.info(`[SLUG MIGRATION] ${vetsToUpdate.rows.length} veteriner için slug oluşturulacak.`);
     
     const updates = [];
     
@@ -148,10 +149,10 @@ router.post('/admin/generate-slugs', authenticateToken, async (req, res) => {
             name: `${vet.user_name} ${vet.user_surname}`,
             slug: result.rows[0].slug
           });
-          console.log(`[SLUG MIGRATION] Veteriner ID ${vet.veterinarian_id} için slug oluşturuldu: ${slug}`);
+          logger.info(`[SLUG MIGRATION] Veteriner ID ${vet.veterinarian_id} için slug oluşturuldu: ${slug}`);
         }
       } catch (err) {
-        console.error(`[SLUG MIGRATION] ID ${vet.veterinarian_id} için slug güncellenirken hata:`, err);
+        logger.error(`[SLUG MIGRATION] ID ${vet.veterinarian_id} için slug güncellenirken hata:`, err);
       }
     }
     
@@ -161,7 +162,7 @@ router.post('/admin/generate-slugs', authenticateToken, async (req, res) => {
       updates
     });
   } catch (error) {
-    console.error('Slug oluşturma hatası:', error);
+    logger.error('Slug oluşturma hatası:', error);
     return res.status(500).json({ 
       success: false, 
       message: 'Server error',
@@ -197,7 +198,7 @@ router.get('/verification-status', authenticateToken, async (req, res) => {
             verification_status: result.rows[0].veterinarian_verification_status,
         });
     } catch (error) {
-        console.error('Error checking verification status:', error);
+        logger.error('Error checking verification status:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -282,7 +283,7 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error submitting verification details:', error);
+        logger.error('Error submitting verification details:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -290,10 +291,10 @@ router.post('/submit-verification', authenticateToken, async (req, res) => {
 // Add a new endpoint to ensure all veterinarians have slugs
 router.post('/ensure-slug', authenticateToken, async (req, res) => {
     try {
-        console.log('Starting ensure-slug process for user:', req.user.userId);
+        logger.info('Starting ensure-slug process for user:', req.user.userId);
         // Only allow veterinarians
         if (req.user.userType !== 'veterinarian') {
-            console.log('User is not a veterinarian:', req.user.userType);
+            logger.info('User is not a veterinarian:', req.user.userType);
             return res.status(403).json({ 
                 success: false,
                 message: 'Access denied. User is not a veterinarian.' 
@@ -301,7 +302,7 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
         }
 
         const userId = req.user.userId;
-        console.log('Checking slug for veterinarian ID:', userId);
+        logger.info('Checking slug for veterinarian ID:', userId);
         
         // Check if veterinarian already has a slug
         const checkQuery = `
@@ -311,13 +312,13 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
             WHERE v.veterinarian_id = $1
         `;
         
-        console.log('Executing slug check query');
+        logger.info('Executing slug check query');
         const checkResult = await pool.query(checkQuery, [userId]);
-        console.log('Slug check result rows:', checkResult.rows.length);
+        logger.info('Slug check result rows:', checkResult.rows.length);
         
         // If no veterinarian record yet, create one with a slug
         if (checkResult.rows.length === 0) {
-            console.log('No veterinarian record found, creating new record with slug');
+            logger.info('No veterinarian record found, creating new record with slug');
             // Get user info first
             const userQuery = `
                 SELECT user_name, user_surname
@@ -328,7 +329,7 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
             const userResult = await pool.query(userQuery, [userId]);
             
             if (userResult.rows.length === 0) {
-                console.log('User not found in database');
+                logger.info('User not found in database');
                 return res.status(404).json({ 
                     success: false,
                     message: 'User not found'
@@ -336,9 +337,9 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
             }
             
             const { user_name, user_surname } = userResult.rows[0];
-            console.log('Generating slug for:', user_name, user_surname);
+            logger.info('Generating slug for:', user_name, user_surname);
             const slug = await generateUniqueSlug(user_name, user_surname);
-            console.log('Generated unique slug:', slug);
+            logger.info('Generated unique slug:', slug);
             
             // Create a veterinarian profile with the slug
             const insertQuery = `
@@ -348,9 +349,9 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
                 RETURNING slug
             `;
             
-            console.log('Creating new veterinarian record');
+            logger.info('Creating new veterinarian record');
             const result = await pool.query(insertQuery, [userId, slug]);
-            console.log('New veterinarian record created with slug:', result.rows[0].slug);
+            logger.info('New veterinarian record created with slug:', result.rows[0].slug);
             
             return res.status(200).json({
                 success: true,
@@ -361,11 +362,11 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
         
         // If veterinarian exists but has no slug, generate and update one
         if (checkResult.rows[0].slug === null) {
-            console.log('Veterinarian record exists but has no slug');
+            logger.info('Veterinarian record exists but has no slug');
             const { user_name, user_surname } = checkResult.rows[0];
-            console.log('Generating slug for existing veterinarian:', user_name, user_surname);
+            logger.info('Generating slug for existing veterinarian:', user_name, user_surname);
             const slug = await generateUniqueSlug(user_name, user_surname);
-            console.log('Generated slug for existing veterinarian:', slug);
+            logger.info('Generated slug for existing veterinarian:', slug);
             
             const updateQuery = `
                 UPDATE veterinarians
@@ -374,9 +375,9 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
                 RETURNING slug
             `;
             
-            console.log('Updating veterinarian record with new slug');
+            logger.info('Updating veterinarian record with new slug');
             const result = await pool.query(updateQuery, [slug, userId]);
-            console.log('Updated veterinarian record with slug:', result.rows[0].slug);
+            logger.info('Updated veterinarian record with slug:', result.rows[0].slug);
             
             return res.status(200).json({
                 success: true,
@@ -386,7 +387,7 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
         }
         
         // Veterinarian already has a slug
-        console.log('Veterinarian already has a slug:', checkResult.rows[0].slug);
+        logger.info('Veterinarian already has a slug:', checkResult.rows[0].slug);
         return res.status(200).json({
             success: true,
             message: 'Veterinarian already has a slug',
@@ -394,7 +395,7 @@ router.post('/ensure-slug', authenticateToken, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Error ensuring slug:', error);
+        logger.error('Error ensuring slug:', error);
         res.status(500).json({
             success: false,
             message: 'Error ensuring slug',
@@ -423,7 +424,7 @@ router.get('/education', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error('Error fetching education records:', error);
+        logger.error('Error fetching education records:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -470,7 +471,7 @@ router.post('/education', authenticateToken, async (req, res) => {
         
         res.status(201).json(result.rows[0]);
     } catch (error) {
-        console.error('Error adding education record:', error);
+        logger.error('Error adding education record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -535,7 +536,7 @@ router.put('/education/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error updating education record:', error);
+        logger.error('Error updating education record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -573,7 +574,7 @@ router.delete('/education/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json({ message: 'Education record deleted successfully', deletedRecord: result.rows[0] });
     } catch (error) {
-        console.error('Error deleting education record:', error);
+        logger.error('Error deleting education record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -598,7 +599,7 @@ router.get('/certifications', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error('Error fetching certification records:', error);
+        logger.error('Error fetching certification records:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -631,7 +632,7 @@ router.post('/certifications', authenticateToken, async (req, res) => {
         
         res.status(201).json(result.rows[0]);
     } catch (error) {
-        console.error('Error adding certification record:', error);
+        logger.error('Error adding certification record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -681,7 +682,7 @@ router.put('/certifications/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error updating certification record:', error);
+        logger.error('Error updating certification record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -719,7 +720,7 @@ router.delete('/certifications/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json({ message: 'Certification record deleted successfully', deletedRecord: result.rows[0] });
     } catch (error) {
-        console.error('Error deleting certification record:', error);
+        logger.error('Error deleting certification record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -744,7 +745,7 @@ router.get('/expertise', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error('Error fetching expertise records:', error);
+        logger.error('Error fetching expertise records:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -783,7 +784,7 @@ router.post('/expertise', authenticateToken, async (req, res) => {
         
         res.status(201).json(result.rows[0]);
     } catch (error) {
-        console.error('Error adding expertise record:', error);
+        logger.error('Error adding expertise record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -835,7 +836,7 @@ router.put('/expertise/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error updating expertise record:', error);
+        logger.error('Error updating expertise record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -873,7 +874,7 @@ router.delete('/expertise/:id', authenticateToken, async (req, res) => {
         
         res.status(200).json({ message: 'Expertise record deleted successfully', deletedRecord: result.rows[0] });
     } catch (error) {
-        console.error('Error deleting expertise record:', error);
+        logger.error('Error deleting expertise record:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -904,7 +905,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         
         res.status(200).json(result.rows[0]);
     } catch (error) {
-        console.error('Error fetching veterinarian profile:', error);
+        logger.error('Error fetching veterinarian profile:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -961,7 +962,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
             profile: result.rows[0]
         });
     } catch (error) {
-        console.error('Error updating veterinarian profile:', error);
+        logger.error('Error updating veterinarian profile:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -969,12 +970,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
 // Upload veterinarian photo
 router.post('/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
-    console.log('===== UPLOAD VETERINARIAN PHOTO REQUEST RECEIVED =====');
-    console.log('Request body:', {
+    logger.info('===== UPLOAD VETERINARIAN PHOTO REQUEST RECEIVED =====');
+    logger.info('Request body:', {
       veterinarianName: req.body.veterinarianName,
       userId: req.user?.userId
     });
-    console.log('File info:', req.file ? {
+    logger.info('File info:', req.file ? {
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
@@ -983,7 +984,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     
     // Check if user is a veterinarian
     if (req.user.userType !== 'veterinarian') {
-      console.error('Access denied - user is not a veterinarian');
+      logger.error('Access denied - user is not a veterinarian');
       return res.status(403).json({ 
         success: false,
         message: 'Access denied. User is not a veterinarian.'
@@ -996,7 +997,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
     // Validate required fields
     if (!veterinarianName) {
-      console.error('Missing required field: veterinarianName');
+      logger.error('Missing required field: veterinarianName');
       return res.status(400).json({
         success: false,
         message: 'Veterinarian name is required'
@@ -1004,7 +1005,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
     }
 
     if (!photo) {
-      console.error('No photo provided in the request');
+      logger.error('No photo provided in the request');
       return res.status(400).json({
         success: false,
         message: 'No photo provided'
@@ -1013,7 +1014,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
 
     // Upload to S3
     try {
-      console.log('Uploading veterinarian photo:', {
+      logger.info('Uploading veterinarian photo:', {
         fileName: photo.originalname,
         fileSize: photo.size,
         mimeType: photo.mimetype,
@@ -1029,13 +1030,13 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         veterinarianName
       );
 
-      console.log('S3 upload successful:', result);
+      logger.info('S3 upload successful:', result);
       
       // Ensure we have a valid URL
       if (!result.url || !result.url.startsWith('http')) {
-        console.warn('S3 returned invalid URL, constructing fallback URL');
+        logger.warn('S3 returned invalid URL, constructing fallback URL');
         result.url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${result.key}`;
-        console.log('Using fallback URL:', result.url);
+        logger.info('Using fallback URL:', result.url);
       }
 
       // Insert photo URL into veterinarian_albums table
@@ -1046,7 +1047,7 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
       `;
       
       const dbResult = await pool.query(insertPhotoQuery, [veterinarianId, result.url]);
-      console.log('Database insert successful:', dbResult.rows[0]);
+      logger.info('Database insert successful:', dbResult.rows[0]);
 
       res.status(200).json({
         success: true,
@@ -1057,14 +1058,14 @@ router.post('/upload-photo', authenticateToken, upload.single('photo'), async (r
         }
       });
     } catch (s3Error) {
-      console.error('S3 upload error:', s3Error);
+      logger.error('S3 upload error:', s3Error);
       return res.status(500).json({
         success: false,
         message: `Failed to upload photo to storage: ${s3Error.message}`
       });
     }
   } catch (error) {
-    console.error('Error uploading veterinarian photo:', error);
+    logger.error('Error uploading veterinarian photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1109,12 +1110,12 @@ router.get('/photos', authenticateToken, async (req, res) => {
       
       photosResult = await pool.query(getPhotosQuery, [veterinarianId]);
     } catch (photoError) {
-      console.warn(`Could not fetch photos for veterinarian ${veterinarianId}:`, photoError.message);
+      logger.warn(`Could not fetch photos for veterinarian ${veterinarianId}:`, photoError.message);
       // Continue with empty photos array
     }
     
     // Log information about the veterinarian and photos
-    console.log('Fetching photos for veterinarian:', {
+    logger.info('Fetching photos for veterinarian:', {
       veterinarianId,
       veterinarianName,
       photoCount: photosResult.rows.length
@@ -1126,7 +1127,7 @@ router.get('/photos', authenticateToken, async (req, res) => {
       photos: photosResult.rows
     });
   } catch (error) {
-    console.error('Error fetching veterinarian photos:', error);
+    logger.error('Error fetching veterinarian photos:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1181,7 +1182,7 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
     // Parse the S3 URL to get the key
     const s3Key = veterinarian_album_photo_url.split('.amazonaws.com/')[1];
     
-    console.log('Deleting photo:', {
+    logger.info('Deleting photo:', {
       photoId,
       veterinarianId,
       veterinarianName,
@@ -1204,14 +1205,14 @@ router.delete('/photos/:photoId', authenticateToken, async (req, res) => {
         message: 'Photo deleted successfully',
       });
     } catch (s3Error) {
-      console.error('S3 delete error:', s3Error);
+      logger.error('S3 delete error:', s3Error);
       return res.status(500).json({
         success: false,
         message: `Failed to delete photo from storage: ${s3Error.message}`,
       });
     }
   } catch (error) {
-    console.error('Error deleting veterinarian photo:', error);
+    logger.error('Error deleting veterinarian photo:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error',
@@ -1253,7 +1254,7 @@ router.get('/profile-visibility', authenticateToken, async (req, res) => {
       is_profile_public: result.rows[0].is_profile_public || false
     });
   } catch (error) {
-    console.error('Error fetching profile visibility status:', error);
+    logger.error('Error fetching profile visibility status:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
@@ -1305,7 +1306,7 @@ router.put('/profile-visibility', authenticateToken, async (req, res) => {
       is_profile_public: result.rows[0].is_profile_public
     });
   } catch (error) {
-    console.error('Error updating profile visibility status:', error);
+    logger.error('Error updating profile visibility status:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
@@ -1329,10 +1330,10 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
         
         // Doğru şekilde ID'yi çıkarıyoruz - JWT token yapısındaki farklı fieldlar destekleniyor
         userId = decoded.id || decoded.userId || decoded.user_id;
-        console.log("Authenticated user ID:", userId);
+        logger.info("Authenticated user ID:", userId);
       } catch (error) {
         // Invalid token, continue as unauthenticated
-        console.error('Error verifying token:', error);
+        logger.error('Error verifying token:', error);
       }
     }
     
@@ -1354,7 +1355,7 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     
     // ID formatları farklı olabileceği için string formatına çevirip karşılaştırıyoruz
     isProfileOwner = userId && (String(userId) === String(veterinarian.veterinarian_id));
-    console.log("Profile owner check:", { 
+    logger.info("Profile owner check:", { 
       userId: userId, 
       vet_id: veterinarian.veterinarian_id, 
       isOwner: isProfileOwner 
@@ -1443,7 +1444,7 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching veterinarian profile by slug:', error);
+    logger.error('Error fetching veterinarian profile by slug:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -1538,7 +1539,7 @@ router.get('/profile-completion', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error checking profile completion status:', error);
+    logger.error('Error checking profile completion status:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Internal server error'
@@ -1605,7 +1606,7 @@ router.post('/request-join-clinic/:clinicId', authenticateToken, checkVerificati
       request: result
     });
   } catch (error) {
-    console.error('Error requesting to join clinic:', error);
+    logger.error('Error requesting to join clinic:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Sunucu hatası'
@@ -1633,7 +1634,7 @@ router.get('/clinic-requests', authenticateToken, checkVerificationStatus, async
       requests
     });
   } catch (error) {
-    console.error('Error getting veterinarian requests:', error);
+    logger.error('Error getting veterinarian requests:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1691,7 +1692,7 @@ router.delete('/leave-clinic/:id', authenticateToken, checkVerificationStatus, a
       message: 'Klinikten başarıyla ayrıldınız'
     });
   } catch (error) {
-    console.error('Error leaving clinic:', error);
+    logger.error('Error leaving clinic:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1726,7 +1727,7 @@ router.get('/my-clinic', authenticateToken, checkVerificationStatus, async (req,
       clinic: clinicInfo
     });
   } catch (error) {
-    console.error('Error getting veterinarian clinic:', error);
+    logger.error('Error getting veterinarian clinic:', error);
     res.status(500).json({
       success: false,
       message: 'Sunucu hatası'
@@ -1770,7 +1771,7 @@ router.get('/clinic-operator/:clinicId', async (req, res) => {
       operator: result.rows[0]
     });
   } catch (error) {
-    console.error('Error fetching clinic operator:', error);
+    logger.error('Error fetching clinic operator:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -1817,7 +1818,7 @@ router.post('/clinic-operators', async (req, res) => {
       operators: operatorMap
     });
   } catch (error) {
-    console.error('Error fetching clinic operators:', error);
+    logger.error('Error fetching clinic operators:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -1868,7 +1869,7 @@ router.get('/check-pending-requests', authenticateToken, async (req, res) => {
           pendingRequest.clinic_name = clinicResult.rows[0].clinic_name;
         }
       } catch (error) {
-        console.error('Error fetching clinic details:', error);
+        logger.error('Error fetching clinic details:', error);
       }
     }
     
@@ -1878,7 +1879,7 @@ router.get('/check-pending-requests', authenticateToken, async (req, res) => {
       pendingRequest
     });
   } catch (error) {
-    console.error('Error checking pending requests:', error);
+    logger.error('Error checking pending requests:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -1921,7 +1922,7 @@ router.get('/approved-clinic/:veterinarianId', async (req, res) => {
     
     res.json({ success: true, clinic: result.rows[0] });
   } catch (error) {
-    console.error('Error fetching approved clinic:', error);
+    logger.error('Error fetching approved clinic:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

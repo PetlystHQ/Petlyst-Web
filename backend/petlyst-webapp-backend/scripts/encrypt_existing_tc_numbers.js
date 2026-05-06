@@ -1,10 +1,11 @@
 const pool = require('../config/db');
 const { encrypt } = require('../utils/encryption');
 require('dotenv').config();
+const logger = require('../config/logger');
 
 async function encryptExistingTcNumbers() {
   try {
-    console.log('Starting encryption of existing TC numbers...');
+    logger.info('Starting encryption of existing TC numbers...');
     
     // First, get all veterinarians with non-encrypted TC numbers
     const selectQuery = `
@@ -14,7 +15,7 @@ async function encryptExistingTcNumbers() {
     `;
     
     const result = await pool.query(selectQuery);
-    console.log(`Found ${result.rows.length} veterinarians with TC numbers to process`);
+    logger.info(`Found ${result.rows.length} veterinarians with TC numbers to process`);
     
     let encryptedCount = 0;
     let skippedCount = 0;
@@ -25,7 +26,7 @@ async function encryptExistingTcNumbers() {
       
       // Skip if already encrypted (contains a colon which separates IV and encrypted data)
       if (tcNumber.includes(':')) {
-        console.log(`Skipping already encrypted TC number for veterinarian ID: ${vet.veterinarian_id}`);
+        logger.info(`Skipping already encrypted TC number for veterinarian ID: ${vet.veterinarian_id}`);
         skippedCount++;
         continue;
       }
@@ -42,20 +43,20 @@ async function encryptExistingTcNumbers() {
         `;
         
         await pool.query(updateQuery, [encryptedTcNumber, vet.veterinarian_id]);
-        console.log(`Encrypted TC number for veterinarian ID: ${vet.veterinarian_id}`);
+        logger.info(`Encrypted TC number for veterinarian ID: ${vet.veterinarian_id}`);
         encryptedCount++;
       } else {
-        console.log(`Skipping invalid TC number format for veterinarian ID: ${vet.veterinarian_id}`);
+        logger.info(`Skipping invalid TC number format for veterinarian ID: ${vet.veterinarian_id}`);
         skippedCount++;
       }
     }
     
-    console.log('Encryption process completed!');
-    console.log(`Encrypted: ${encryptedCount} TC numbers`);
-    console.log(`Skipped: ${skippedCount} TC numbers (already encrypted or invalid format)`);
+    logger.info('Encryption process completed!');
+    logger.info(`Encrypted: ${encryptedCount} TC numbers`);
+    logger.info(`Skipped: ${skippedCount} TC numbers (already encrypted or invalid format)`);
     
   } catch (error) {
-    console.error('Error encrypting TC numbers:', error);
+    logger.error('Error encrypting TC numbers:', error);
   } finally {
     // Close the pool
     await pool.end();

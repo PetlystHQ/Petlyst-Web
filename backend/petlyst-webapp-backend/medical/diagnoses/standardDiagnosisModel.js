@@ -1,4 +1,5 @@
 const pool = require('../../config/db');
+const logger = require('../../config/logger');
 
 /**
  * Generate a unique diagnosis code based on species, category and timestamp
@@ -47,7 +48,7 @@ async function generateUniqueCode(species, category = '') {
     
     return uniqueCode;
   } catch (error) {
-    console.error('Error generating unique diagnosis code:', error);
+    logger.error('Error generating unique diagnosis code:', error);
     // Fallback to timestamp-based code if there's an error
     const timestamp = Date.now().toString().slice(-6);
     return `${species ? species.substring(0, 3).toUpperCase() : 'GEN'}-${timestamp}`;
@@ -92,7 +93,7 @@ async function createStandardDiagnosis(diagnosisData) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error creating standard diagnosis:', error);
+    logger.error('Error creating standard diagnosis:', error);
     throw error;
   }
 }
@@ -106,7 +107,7 @@ async function getStandardDiagnosisById(diagnosisId) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error getting standard diagnosis by ID:', error);
+    logger.error('Error getting standard diagnosis by ID:', error);
     throw error;
   }
 }
@@ -120,7 +121,7 @@ async function getStandardDiagnosis(code) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error getting standard diagnosis by code:', error);
+    logger.error('Error getting standard diagnosis by code:', error);
     throw error;
   }
 }
@@ -163,7 +164,7 @@ async function listStandardDiagnoses(filters = {}) {
     const result = await pool.query(query, queryParams);
     return result.rows;
   } catch (error) {
-    console.error('Error listing standard diagnoses:', error);
+    logger.error('Error listing standard diagnoses:', error);
     throw error;
   }
 }
@@ -238,7 +239,7 @@ async function updateStandardDiagnosisById(diagnosisId, updateData) {
     const result = await pool.query(query, queryParams);
     return result.rows[0];
   } catch (error) {
-    console.error('Error updating standard diagnosis by ID:', error);
+    logger.error('Error updating standard diagnosis by ID:', error);
     throw error;
   }
 }
@@ -306,7 +307,7 @@ async function updateStandardDiagnosis(code, updateData) {
     const result = await pool.query(query, queryParams);
     return result.rows[0];
   } catch (error) {
-    console.error('Error updating standard diagnosis by code:', error);
+    logger.error('Error updating standard diagnosis by code:', error);
     throw error;
   }
 }
@@ -320,7 +321,7 @@ async function deleteStandardDiagnosisById(diagnosisId) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error deleting standard diagnosis by ID:', error);
+    logger.error('Error deleting standard diagnosis by ID:', error);
     throw error;
   }
 }
@@ -334,7 +335,7 @@ async function deleteStandardDiagnosis(code) {
     );
     return result.rows[0];
   } catch (error) {
-    console.error('Error deleting standard diagnosis by code:', error);
+    logger.error('Error deleting standard diagnosis by code:', error);
     throw error;
   }
 }
@@ -367,7 +368,7 @@ async function searchStandardDiagnoses(term, species = null, veterinarianId = nu
     const result = await pool.query(query, queryParams);
     return result.rows;
   } catch (error) {
-    console.error('Error searching standard diagnoses:', error);
+    logger.error('Error searching standard diagnoses:', error);
     throw error;
   }
 }
@@ -383,7 +384,7 @@ async function getVeterinarianDiagnoses(veterinarianId) {
     );
     return result.rows;
   } catch (error) {
-    console.error('Error getting veterinarian diagnoses:', error);
+    logger.error('Error getting veterinarian diagnoses:', error);
     throw error;
   }
 }

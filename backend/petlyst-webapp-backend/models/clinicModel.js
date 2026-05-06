@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 class Clinic {
     // Create a new clinic
@@ -51,7 +52,7 @@ class Clinic {
             return result.rows[0];
             
         } catch (error) {
-            console.error('Error in createClinic:', error);
+            logger.error('Error in createClinic:', error);
             throw error;
         }
     }
@@ -61,7 +62,7 @@ class Clinic {
         try {
             // Validate and convert clinicId to a number if it's not already
             if (clinicId === undefined || clinicId === null) {
-                console.error("getClinicById called with undefined or null clinicId");
+                logger.error("getClinicById called with undefined or null clinicId");
                 return null;
             }
             
@@ -70,7 +71,7 @@ class Clinic {
             
             // Check if valid number after conversion
             if (isNaN(numericClinicId)) {
-                console.error(`getClinicById received invalid clinicId: ${clinicId}`);
+                logger.error(`getClinicById received invalid clinicId: ${clinicId}`);
                 return null;
             }
             
@@ -110,7 +111,7 @@ class Clinic {
                     clinic.available_days = JSON.parse(clinic.available_days);
                     }
                 } catch (parseError) {
-                    console.error('Error parsing available_days:', parseError);
+                    logger.error('Error parsing available_days:', parseError);
                     clinic.available_days = [false, false, false, false, false, false, false]; // Default to all false if parsing fails
                 }
             }
@@ -139,7 +140,7 @@ class Clinic {
                     clinic.emergency_available_days = JSON.parse(clinic.emergency_available_days);
                     }
                 } catch (parseError) {
-                    console.error('Error parsing emergency_available_days:', parseError);
+                    logger.error('Error parsing emergency_available_days:', parseError);
                     clinic.emergency_available_days = [false, false, false, false, false, false, false]; // Default to all false if parsing fails
                 }
             }
@@ -172,7 +173,7 @@ class Clinic {
             
             return clinic;
         } catch (error) {
-            console.error('Error in getClinicById:', error);
+            logger.error('Error in getClinicById:', error);
             throw error;
         }
     }
@@ -213,7 +214,7 @@ class Clinic {
                         clinic.available_days = JSON.parse(clinic.available_days);
                         }
                     } catch (parseError) {
-                        console.error('Error parsing available_days:', parseError);
+                        logger.error('Error parsing available_days:', parseError);
                         clinic.available_days = [false, false, false, false, false, false, false]; // Default to all false if parsing fails
                     }
                 }
@@ -242,7 +243,7 @@ class Clinic {
                         clinic.emergency_available_days = JSON.parse(clinic.emergency_available_days);
                         }
                     } catch (parseError) {
-                        console.error('Error parsing emergency_available_days:', parseError);
+                        logger.error('Error parsing emergency_available_days:', parseError);
                         clinic.emergency_available_days = [false, false, false, false, false, false, false]; // Default to all false if parsing fails
                     }
                 }
@@ -280,7 +281,7 @@ class Clinic {
             
             return clinics;
         } catch (error) {
-            console.error('Error in getClinicsByOperatorId:', error);
+            logger.error('Error in getClinicsByOperatorId:', error);
             throw error;
         }
     }
@@ -305,7 +306,7 @@ class Clinic {
                     try {
                         clinic.available_days = JSON.parse(clinic.available_days);
                     } catch (parseError) {
-                        console.error('Error parsing available_days:', parseError);
+                        logger.error('Error parsing available_days:', parseError);
                         clinic.available_days = []; // Default to empty array if parsing fails
                     }
                 }
@@ -314,7 +315,7 @@ class Clinic {
                     try {
                         clinic.emergency_available_days = JSON.parse(clinic.emergency_available_days);
                     } catch (parseError) {
-                        console.error('Error parsing emergency_available_days:', parseError);
+                        logger.error('Error parsing emergency_available_days:', parseError);
                         clinic.emergency_available_days = []; // Default to empty array if parsing fails
                     }
                 }
@@ -324,7 +325,7 @@ class Clinic {
             
             return clinics;
         } catch (error) {
-            console.error('Error getting pending clinics:', error);
+            logger.error('Error getting pending clinics:', error);
             throw error;
         }
     }
@@ -399,7 +400,7 @@ class Clinic {
             return result.rows[0];
             
         } catch (error) {
-            console.error('Error in updateClinic:', error);
+            logger.error('Error in updateClinic:', error);
             throw error;
         }
     }
@@ -431,7 +432,7 @@ class Clinic {
             
             return result.rows[0];
         } catch (error) {
-            console.error('Error in updateVerificationStatus:', error);
+            logger.error('Error in updateVerificationStatus:', error);
             throw error;
         }
     }
@@ -557,7 +558,7 @@ class Clinic {
             return { id: result.rows[0].clinic_id };
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Error in deleteClinic:', error);
+            logger.error('Error in deleteClinic:', error);
             throw error;
         } finally {
             client.release();

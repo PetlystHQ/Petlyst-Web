@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../config/logger');
 
 class ClinicVeterinarian {
   // Veterinerin kliniğe katılma isteği göndermesi
@@ -130,7 +131,7 @@ class ClinicVeterinarian {
       try {
         await this.ensureVeterinarianRecord(veterinarianId);
       } catch (vetError) {
-        console.error(`Error ensuring veterinarian record: ${vetError.message}`);
+        logger.error(`Error ensuring veterinarian record: ${vetError.message}`);
         // Continue anyway and try to create the relation
       }
       
@@ -150,9 +151,9 @@ class ClinicVeterinarian {
             WHERE user_id = $1 AND user_type = 'veterinarian'
           `;
           await client.query(insertVetQuery, [veterinarianId]);
-          console.log(`Created veterinarian record for user ${veterinarianId}`);
+          logger.info(`Created veterinarian record for user ${veterinarianId}`);
         } catch (vetInsertError) {
-          console.error(`Failed to create veterinarian record: ${vetInsertError.message}`);
+          logger.error(`Failed to create veterinarian record: ${vetInsertError.message}`);
           // We'll continue and attempt to create the clinic-veterinarian relation anyway
         }
       }
@@ -190,7 +191,7 @@ class ClinicVeterinarian {
       return result.rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error(`Error in addClinicCreator: ${error.message}`);
+      logger.error(`Error in addClinicCreator: ${error.message}`);
       throw error;
     } finally {
       client.release();
@@ -324,7 +325,7 @@ class ClinicVeterinarian {
           `;
           
           await client.query(insertQuery, [clinic.clinic_id, clinic.clinic_operator_id]);
-          console.log(`Added clinic creator for clinic ${clinic.clinic_id}`);
+          logger.info(`Added clinic creator for clinic ${clinic.clinic_id}`);
         }
       }
       

@@ -12,9 +12,10 @@
 
 const pool = require('../config/db');
 const ClinicVeterinarian = require('../models/clinicVeterinarianModel');
+const logger = require('../config/logger');
 
 async function fixClinicVeterinarians() {
-  console.log('Starting migration to fix clinic-veterinarian associations...');
+  logger.info('Starting migration to fix clinic-veterinarian associations...');
   const client = await pool.connect();
   
   try {
@@ -25,9 +26,9 @@ async function fixClinicVeterinarians() {
       JOIN users u ON c.clinic_operator_id = u.user_id
     `;
     
-    console.log('Fetching all clinics...');
+    logger.info('Fetching all clinics...');
     const clinicsResult = await client.query(getClinicsQuery);
-    console.log(`Found ${clinicsResult.rows.length} clinics total.`);
+    logger.info(`Found ${clinicsResult.rows.length} clinics total.`);
     
     // For each clinic, check if there's a clinic_veterinarians relation with is_clinic_creator = true
     let fixedCount = 0;
@@ -35,10 +36,10 @@ async function fixClinicVeterinarians() {
     
     for (const clinic of clinicsResult.rows) {
       try {
-        console.log(`Processing clinic: ${clinic.clinic_id} - ${clinic.clinic_name}`);
+        logger.info(`Processing clinic: ${clinic.clinic_id} - ${clinic.clinic_name}`);
         
         if (clinic.user_type !== 'veterinarian') {
-          console.warn(`  WARNING: Clinic operator (${clinic.clinic_operator_id}: ${clinic.user_name} ${clinic.user_surname}) is not a veterinarian (type: ${clinic.user_type}). Skipping.`);
+          logger.warn(`  WARNING: Clinic operator (${clinic.clinic_operator_id}: ${clinic.user_name} ${clinic.user_surname}) is not a veterinarian (type: ${clinic.user_type}). Skipping.`);
           continue;
         }
         
@@ -54,39 +55,39 @@ async function fixClinicVeterinarians() {
         ]);
         
         if (relationResult.rows.length > 0) {
-          console.log(`  Clinic already has a creator relation: ${JSON.stringify(relationResult.rows[0])}`);
+          logger.info(`  Clinic already has a creator relation: ${JSON.stringify(relationResult.rows[0])}`);
           continue;
         }
         
         // Check if the operator is properly registered as a veterinarian
         try {
-          console.log(`  Ensuring veterinarian record for operator ${clinic.clinic_operator_id}...`);
+          logger.info(`  Ensuring veterinarian record for operator ${clinic.clinic_operator_id}...`);
           await ClinicVeterinarian.ensureVeterinarianRecord(clinic.clinic_operator_id);
         } catch (vetError) {
-          console.error(`  Error ensuring veterinarian record: ${vetError.message}`);
+          logger.error(`  Error ensuring veterinarian record: ${vetError.message}`);
           errorCount++;
           continue;
         }
         
         // Create the clinic-veterinarian relation
-        console.log(`  Creating clinic creator relation for clinic ${clinic.clinic_id} and veterinarian ${clinic.clinic_operator_id}...`);
+        logger.info(`  Creating clinic creator relation for clinic ${clinic.clinic_id} and veterinarian ${clinic.clinic_operator_id}...`);
         const result = await ClinicVeterinarian.addClinicCreator(clinic.clinic_operator_id, clinic.clinic_id);
-        console.log(`  Successfully created clinic creator relation: ${JSON.stringify(result)}`);
+        logger.info(`  Successfully created clinic creator relation: ${JSON.stringify(result)}`);
         fixedCount++;
       } catch (error) {
-        console.error(`Error processing clinic ${clinic.clinic_id}: ${error.message}`);
+        logger.error(`Error processing clinic ${clinic.clinic_id}: ${error.message}`);
         errorCount++;
       }
     }
     
-    console.log('\nMigration summary:');
-    console.log(`  Total clinics: ${clinicsResult.rows.length}`);
-    console.log(`  Fixed clinics: ${fixedCount}`);
-    console.log(`  Errors: ${errorCount}`);
-    console.log('Migration completed.');
+    logger.info('\nMigration summary:');
+    logger.info(`  Total clinics: ${clinicsResult.rows.length}`);
+    logger.info(`  Fixed clinics: ${fixedCount}`);
+    logger.info(`  Errors: ${errorCount}`);
+    logger.info('Migration completed.');
     
   } catch (error) {
-    console.error('Migration error:', error);
+    logger.error('Migration error:', error);
   } finally {
     client.release();
   }
@@ -97,7 +98,7 @@ if (require.main === module) {
   fixClinicVeterinarians()
     .then(() => process.exit(0))
     .catch(err => {
-      console.error('Fatal error:', err);
+      logger.error('Fatal error:', err);
       process.exit(1);
     });
 }

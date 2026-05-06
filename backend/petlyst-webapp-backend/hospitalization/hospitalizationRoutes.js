@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('../config/logger');
 const router = express.Router();
 const hospitalizationModel = require('./hospitalizationModel');
 const authenticateToken = require('../middleware/authenticateToken');
@@ -15,7 +16,7 @@ async function isClinicVeterinarian(veterinarianId, clinicId) {
     const result = await pool.query(query, [parseInt(veterinarianId), parseInt(clinicId)]);
     return result.rows.length > 0;
   } catch (error) {
-    console.error('Error checking clinic access:', error);
+    logger.error('Error checking clinic access:', error);
     return false;
   }
 }
@@ -31,7 +32,7 @@ async function isPetOwner(userId, petId) {
     const result = await pool.query(query, [petId, parseInt(userId)]);
     return result.rows.length > 0;
   } catch (error) {
-    console.error('Error checking pet ownership:', error);
+    logger.error('Error checking pet ownership:', error);
     return false;
   }
 }
@@ -66,7 +67,7 @@ router.get('/clinics/:clinicId/hospitalization/rooms', authenticateToken, async 
             rooms
         });
     } catch (error) {
-        console.error('Error fetching rooms:', error);
+        logger.error('Error fetching rooms:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch rooms',
@@ -107,7 +108,7 @@ router.get('/hospitalization/rooms/:roomId', authenticateToken, async (req, res)
             room
         });
     } catch (error) {
-        console.error('Error fetching room:', error);
+        logger.error('Error fetching room:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch room',
@@ -152,7 +153,7 @@ router.post('/clinics/:clinicId/hospitalization/rooms', authenticateToken, async
             message: 'Room created successfully'
         });
     } catch (error) {
-        console.error('Error creating room:', error);
+        logger.error('Error creating room:', error);
         
         // Handle duplicate room name error
         if (error.code === '23505') { // PostgreSQL unique violation code
@@ -215,7 +216,7 @@ router.put('/hospitalization/rooms/:roomId', authenticateToken, async (req, res)
             message: 'Room updated successfully'
         });
     } catch (error) {
-        console.error('Error updating room:', error);
+        logger.error('Error updating room:', error);
         
         // Handle duplicate room name error
         if (error.code === '23505') { // PostgreSQL unique violation code
@@ -292,7 +293,7 @@ router.put('/hospitalization/rooms/:roomId/status', authenticateToken, async (re
             message: 'Room status updated successfully'
         });
     } catch (error) {
-        console.error('Error updating room status:', error);
+        logger.error('Error updating room status:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update room status',
@@ -328,7 +329,7 @@ router.delete('/hospitalization/rooms/:roomId', authenticateToken, async (req, r
             message: 'Room deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting room:', error);
+        logger.error('Error deleting room:', error);
         
         // If error is about active hospitalizations
         if (error.message === 'Cannot delete room with active hospitalizations') {
@@ -394,7 +395,7 @@ router.post('/hospitalization/admit', authenticateToken, async (req, res) => {
             message: 'Pet admitted successfully'
         });
     } catch (error) {
-        console.error('Error admitting pet:', error);
+        logger.error('Error admitting pet:', error);
         
         // Handle specific errors
         if (error.message === 'Room not found' || error.message === 'Room is not available for admission') {
@@ -456,7 +457,7 @@ router.put('/hospitalization/:hospitalizationId/discharge', authenticateToken, a
             message: 'Pet discharged successfully'
         });
     } catch (error) {
-        console.error('Error discharging pet:', error);
+        logger.error('Error discharging pet:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to discharge pet',
@@ -499,7 +500,7 @@ router.get('/pets/:petId/hospitalization/current', authenticateToken, async (req
             hospitalization
         });
     } catch (error) {
-        console.error('Error fetching current hospitalization:', error);
+        logger.error('Error fetching current hospitalization:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch current hospitalization',
@@ -528,7 +529,7 @@ router.get('/pets/:petId/hospitalization/history', authenticateToken, async (req
             hospitalizationHistory
         });
     } catch (error) {
-        console.error('Error fetching hospitalization history:', error);
+        logger.error('Error fetching hospitalization history:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch hospitalization history',
@@ -555,7 +556,7 @@ router.get('/clinics/:clinicId/hospitalization/current', authenticateToken, asyn
             hospitalizations
         });
     } catch (error) {
-        console.error('Error fetching current hospitalizations:', error);
+        logger.error('Error fetching current hospitalizations:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch current hospitalizations',
@@ -597,7 +598,7 @@ router.get('/hospitalization/:hospitalizationId', authenticateToken, async (req,
             hospitalization
         });
     } catch (error) {
-        console.error('Error fetching hospitalization details:', error);
+        logger.error('Error fetching hospitalization details:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch hospitalization details',
@@ -650,7 +651,7 @@ router.put('/hospitalization/:hospitalizationId/discharge-date', authenticateTok
             message: 'Expected discharge date updated successfully'
         });
     } catch (error) {
-        console.error('Error updating expected discharge date:', error);
+        logger.error('Error updating expected discharge date:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update expected discharge date',
@@ -711,7 +712,7 @@ router.post('/pets/:petId/auto-discharge', authenticateToken, async (req, res) =
             results
         });
     } catch (error) {
-        console.error('Error auto-discharging pet:', error);
+        logger.error('Error auto-discharging pet:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to auto-discharge pet',
