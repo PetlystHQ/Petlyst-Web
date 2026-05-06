@@ -340,6 +340,9 @@ const SingleClinicPage: React.FC = () => {
     if (clinic) {
       fetchReviews();
     }
+    // fetchReviews is in-component and closes over `sortOption` /
+    // `ratingFilter`; the dedicated effect below at L378 handles those.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinic]);
   
   // Update fetchReviews function to include filter parameters
@@ -378,6 +381,8 @@ const SingleClinicPage: React.FC = () => {
     if (clinic) {
       fetchReviews(1); // Reset to first page when filters change
     }
+    // fetchReviews is in-component and reads the current filters via closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ratingFilter, sortOption, clinic]);
   
   // Add these handler functions
@@ -596,6 +601,10 @@ const SingleClinicPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // nextPhoto and prevPhoto are in-component callbacks captured by
+    // handleKeyDown via closure; re-attaching the listener on every render
+    // would be unnecessary churn for an arrow-key-driven gallery.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPhotoModal]);
   
   // Handle booking appointment

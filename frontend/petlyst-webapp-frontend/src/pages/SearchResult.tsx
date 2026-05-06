@@ -274,9 +274,13 @@ const SearchResult: React.FC = () => {
         setVeterinarians([]);
       }
     }
+    // The narrowed-scope helpers (isDefaultSearch, isVeterinarianSearch,
+    // showAllResults, updateFilters) are in-component closures — including
+    // them in the deps would re-run search on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    query, province, district, animalType, medicalService, 
-    additionalService, clinicType, page, limit, 
+    query, province, district, animalType, medicalService,
+    additionalService, clinicType, page, limit,
     veterinarian, expertise, veterinarianName, searchParams
   ]);
 

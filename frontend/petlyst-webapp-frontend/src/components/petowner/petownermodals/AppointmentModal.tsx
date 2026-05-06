@@ -80,13 +80,18 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       fetchPets();
       generateDateRange();
     }
+    // generateDateRange / fetchPets are in-component closures over
+    // `availableDays` and `token`; adding them would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, token, clinicId, availableDays]);
-  
+
   // Fetch available time slots or generate them when date is selected
   useEffect(() => {
     if (selectedDate) {
       generateTimeSlots();
     }
+    // generateTimeSlots is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
   
   // Reset form on close

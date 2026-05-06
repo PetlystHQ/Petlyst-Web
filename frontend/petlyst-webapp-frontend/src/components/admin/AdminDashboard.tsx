@@ -65,6 +65,10 @@ const AdminDashboard: React.FC = () => {
         fetchPendingRequests();
         fetchPendingClinics();
         fetchPendingReviews();
+        // The three fetch* functions and `adminUser` are re-created each
+        // render. Adding them to deps would loop. Effect runs once on mount
+        // and re-runs when `adminToken` changes (e.g. across login).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [adminToken]);
 
     const fetchPendingRequests = async () => {

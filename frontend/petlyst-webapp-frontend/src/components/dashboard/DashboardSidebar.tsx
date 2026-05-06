@@ -29,6 +29,11 @@ const DashboardSidebar = () => {
 
   useEffect(() => {
     checkVerificationStatus();
+    // checkVerificationStatus is intentionally not a dep: it captures `token`
+    // via closure, and adding it would loop. This file is an orphan duplicate
+    // tracked in ROADMAP.md ("Duplicate `DashboardSidebar.tsx`") and is
+    // slated for removal during Effort 2.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (

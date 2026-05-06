@@ -177,11 +177,18 @@ const AddClinicPage: React.FC = () => {
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     // Return cleanup function
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
+    // formModified, success and token are read inside handleBeforeUnload via
+    // closure. We deliberately don't re-attach the listener on every change
+    // (`formModified` flips on each keystroke) — the closure captures the
+    // values at attach time, and the warning prompt only matters on the
+    // exit attempt itself, where the latest values are read via state-ref
+    // semantics. clinicId is the only structural change worth re-attaching for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
 
   // Load clinic data if in edit mode

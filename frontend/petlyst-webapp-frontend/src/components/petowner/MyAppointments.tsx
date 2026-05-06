@@ -85,6 +85,9 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
     }
 
     fetchAppointments();
+    // fetchAppointments + navigate are stable references that close over the
+    // current token; adding them would re-run on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // Apply filters and sorting

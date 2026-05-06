@@ -907,6 +907,8 @@ const ManagementDashboard: React.FC = () => {
     if (activeTab === 'staff' && clinicId && token) {
       fetchClinicVeterinarians();
     }
+    // fetchClinicVeterinarians is in-component; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, clinicId, token]);
 
   // Redirect to home if unauthorized

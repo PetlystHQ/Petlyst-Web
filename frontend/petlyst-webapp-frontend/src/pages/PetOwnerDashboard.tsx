@@ -155,8 +155,11 @@ const PetOwnerDashboard: React.FC = () => {
       navigate("/login");
       return;
     }
-    
+
     fetchData();
+    // fetchData + navigate are in-component closures over `token`/`activeTab`;
+    // adding them would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, activeTab]);
   
   // Fetch relevant data based on active tab

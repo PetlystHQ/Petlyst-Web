@@ -327,6 +327,8 @@ const EditPetModal: React.FC<EditPetModalProps> = ({
     if (pet && isOpen) {
       fetchChipNumber();
     }
+    // fetchChipNumber closes over `pet`; adding it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pet, isOpen]);
   
   // Fetch chip number from API

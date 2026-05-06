@@ -100,6 +100,9 @@ export const Clinics: React.FC<ClinicsProps> = ({
     if (token) {
       fetchClinics();
     }
+    // fetchClinics is in-component; adding it to deps loops. Effect re-runs
+    // on token change and when the parent bumps refreshKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, refreshKey]);
 
   const getStatusBadge = (status: string) => {
