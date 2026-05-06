@@ -159,11 +159,6 @@ const EditHours: React.FC<EditHoursProps> = ({
     const durationValue = parseInt(duration, 10);
     
     // Konsola tam olarak hangi değerin gönderildiğini yazdır
-    console.log('Randevu süresi güncelleniyor:', {
-      rawDuration: duration,
-      parsedDuration: durationValue,
-      type: typeof durationValue
-    });
     
     // Ensure it's a number when passing it back
     updateField('slot_duration', durationValue);

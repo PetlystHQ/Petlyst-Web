@@ -181,14 +181,10 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
       
       // Try to fetch booked slots from API
       try {
-        console.log(`Fetching booked slots for clinic ${clinicId} on date ${selectedDate}`);
         const response = await axiosInstance.get(`/appointments/booked-slots/${clinicId}/${selectedDate}`);
         
         if (response.data && response.data.success && response.data.bookedSlots) {
-          console.log("Received booked slots:", response.data.bookedSlots);
           bookedSlots = response.data.bookedSlots;
-        } else {
-          console.log("No booked slots found or empty response");
         }
       } catch (err) {
         console.warn("Could not fetch booked slots, will show all available slots", err);
@@ -339,14 +335,12 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({
         notes: reason || null
       };
       
-      console.log("Submitting appointment data:", appointmentData);
       
       try {
         // Make the API call to create appointment
         const response = await axiosInstance.post('/appointments', appointmentData);
         
         if (response.data) {
-          console.log("Appointment created successfully:", response.data);
           setSuccess(true);
           // Call the callback if provided
           if (onAppointmentCreated) {

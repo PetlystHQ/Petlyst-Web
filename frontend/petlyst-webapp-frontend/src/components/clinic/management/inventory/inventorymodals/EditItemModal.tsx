@@ -104,7 +104,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
       // Format the date properly if it exists
       let formattedDate = '';
       if (currentItem.expiry_date) {
-        console.log('Original expiry_date from DB:', currentItem.expiry_date);
         
         // Handle possible date formats
         try {
@@ -112,13 +111,11 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
           if (typeof currentItem.expiry_date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(currentItem.expiry_date)) {
             // Just take the first 10 characters in case there's a time component
             formattedDate = currentItem.expiry_date.substring(0, 10);
-            console.log('Using direct date string:', formattedDate);
           } else {
             // Try to parse as date and format
             const date = new Date(currentItem.expiry_date);
             if (!isNaN(date.getTime())) {
               formattedDate = date.toISOString().split('T')[0];
-              console.log('Parsed date to:', formattedDate);
             }
           }
         } catch (err) {
@@ -126,11 +123,9 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
         }
       }
 
-      console.log('Setting expiryDate state to:', formattedDate);
       setExpiryDate(formattedDate);
       
       // Debug current quantity
-      console.log('Current quantity from DB:', currentItem.current_quantity, typeof currentItem.current_quantity);
       
       // Set up form data
       setFormData({
@@ -159,7 +154,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
       setPreviousUnitType(currentItem.unit_type);
       
       // Debug after setting the value
-      console.log('Set localQuantity to:', currentQty);
     }
   }, [currentItem]);
   
@@ -222,7 +216,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
   const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    console.log('Date input changed to:', value);
     
     // Update local state first
     setExpiryDate(value);
@@ -246,13 +239,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
 
     try {
       // Log the current form state for debugging
-      console.log('Current form data before submission:', formData);
-      console.log('Current local values:', {
-        localQuantity,
-        localMinQuantity, 
-        localPurchasePrice,
-        localSalePrice
-      });
       
       // Create a copy of formData with proper handling for numeric values and dates
       const dataToSubmit = {
@@ -267,12 +253,10 @@ const EditItemModal: React.FC<EditItemModalProps> = ({
         expiry_date: formData.expiry_date || null
       };
 
-      console.log('Submitting edited data:', dataToSubmit);
 
       const response = await axiosInstance.put(`/clinics/${clinicId}/inventory/items/${currentItem.id}`, dataToSubmit);
 
       if (response.data.success) {
-        console.log('Item updated successfully:', response.data.item);
         // Refresh inventory list
         onItemUpdated();
         // Close modal

@@ -50,7 +50,6 @@ const PastAppointments: React.FC = () => {
         
         if (response.data.success) {
           const fetchedAppointments = response.data.appointments || [];
-          console.log('Fetched completed appointments:', fetchedAppointments);
           setAppointments(fetchedAppointments);
         } else {
           setError('Failed to fetch appointments');

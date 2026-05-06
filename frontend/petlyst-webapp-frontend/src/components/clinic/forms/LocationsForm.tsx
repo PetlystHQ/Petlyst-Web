@@ -33,7 +33,6 @@ export const LocationsForm: React.FC<LocationsFormProps> = ({
 
   // This function wraps updateCoordinates to add debugging
   const handleCoordinatesUpdate = (coordinates: LocationCoordinates) => {
-    console.log("LocationsForm: Updating coordinates:", coordinates);
     updateCoordinates(coordinates);
   };
 

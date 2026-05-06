@@ -106,13 +106,10 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
       setError(null);
       
       try {
-        console.log(`Fetching reviews for clinic ID: ${clinicId}`);
 
         // Fetch review statistics
-        console.log("Fetching clinic stats from:", `/api/reviews/clinics/${clinicId}/stats`);
         const statsResponse = await axiosInstance.get(`/reviews/clinics/${clinicId}/stats`);
         
-        console.log("Stats response:", statsResponse.data);
         
         if (statsResponse.data) {
           // Map backend field names to our interface
@@ -127,7 +124,6 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
           setStats(statsData);
           setAverageRating(statsData.overall_rating);
           
-          console.log("Setting average rating to:", statsData.overall_rating);
         } else {
           console.warn("No stats data received from the server");
         }
@@ -149,8 +145,6 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
         }
         
         // Fetch reviews - should match what the backend expects
-        console.log("Fetching reviews from:", `/api/reviews/clinic/${clinicId}`);
-        console.log("With params:", { page, limit: 10, sort: sortParam, rating: filterRating });
         
         const reviewsResponse = await axiosInstance.get(`/reviews/clinic/${clinicId}`, { params: {
             page,
@@ -159,7 +153,6 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
             rating: filterRating
           } });
         
-        console.log("Reviews response:", reviewsResponse.data);
         
         let reviewsData: Review[] = [];
         let totalPagesCount = 0;
@@ -181,7 +174,6 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
             setStats(sampleStats);
             setAverageRating(sampleStats.overall_rating);
           }
-          console.log("Using sample data for demonstration");
         }
         
         setReviews(reviewsData);
@@ -197,8 +189,6 @@ const ClinicReviews: React.FC<ClinicReviewsProps> = ({ clinicId }) => {
         });
         setRatingCounts(counts);
         
-        console.log("Successfully set reviews:", reviewsData.length);
-        console.log("Rating counts:", counts);
         
       } catch (err) {
         console.error('Error fetching reviews:', err);

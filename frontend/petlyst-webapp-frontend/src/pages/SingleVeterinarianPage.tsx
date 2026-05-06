@@ -99,7 +99,6 @@ const SingleVeterinarianPage: React.FC = () => {
           // Backend'in gönderdiği is_owner bilgisini öncelikle kullan
           if (Object.prototype.hasOwnProperty.call(response.data, 'is_owner')) {
             setIsProfileOwner(response.data.is_owner);
-            console.log("Using backend is_owner info:", response.data.is_owner);
           } 
           // Eğer backend is_owner bilgisi yoksa, client tarafında hesapla
           else if (user && response.data.profile) {
@@ -112,11 +111,6 @@ const SingleVeterinarianPage: React.FC = () => {
             const isOwner = userId && profileUserId && 
                            String(userId) === String(profileUserId);
                            
-            console.log("Calculated is_owner client-side:", {
-              userId,
-              profileUserId,
-              isOwner
-            });
             
             setIsProfileOwner(isOwner);
           }

@@ -103,7 +103,6 @@ const ManagementDashboard: React.FC = () => {
   useEffect(() => {
     if (urlClinicId) {
       localStorage.setItem('selectedClinicId', urlClinicId);
-      console.log('Updated selectedClinicId in localStorage:', urlClinicId);
       
       // Redirect to /management-dashboard without clinic ID in URL
       navigate('/management-dashboard', { replace: true });
@@ -170,7 +169,6 @@ const ManagementDashboard: React.FC = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
       
-      console.log('Tab parameter in URL:', tabParam);
       
       // List of valid tabs
       const validTabs = [
@@ -181,17 +179,7 @@ const ManagementDashboard: React.FC = () => {
       
       // If tab parameter exists and it's a valid tab, set it as active
       if (tabParam && validTabs.includes(tabParam)) {
-        console.log('Setting active tab to:', tabParam);
         setActiveTab(tabParam);
-        
-        // If the tab is examinations, ensure any data from localStorage is processed
-        if (tabParam === 'examinations') {
-          console.log('Tab is examinations, checking localStorage for pet ID');
-          const petId = localStorage.getItem('startExamForPet');
-          if (petId) {
-            console.log('Found pet ID in localStorage for examination:', petId);
-          }
-        }
         
         // Clean URL by removing the tab parameter without refreshing the page
         // Use setTimeout to ensure the state is updated before changing the URL
@@ -221,16 +209,13 @@ const ManagementDashboard: React.FC = () => {
       const petId = customEvent.detail?.petId;
       
       if (petId) {
-        console.log('ManagementDashboard: Received startExamination event with pet ID:', petId);
         
         // Store petId securely in localStorage first
         localStorage.removeItem('startExamForPet');
         localStorage.setItem('startExamForPet', petId);
-        console.log('ManagementDashboard: Stored petId in localStorage:', petId);
         
         // Set active tab with a small delay to ensure state update is processed
         setTimeout(() => {
-          console.log('ManagementDashboard: Setting active tab to examinations');
           setActiveTab('examinations');
         }, 50);
       }
@@ -242,7 +227,6 @@ const ManagementDashboard: React.FC = () => {
       const { clinicId: eventClinicId, petId } = customEvent.detail;
       
       if (petId) {
-        console.log('ManagementDashboard: Received switchToExaminationsTab event with pet ID:', petId);
         
         // Verify the clinic ID from the event if provided
         if (eventClinicId && eventClinicId !== clinicId) {
@@ -253,11 +237,9 @@ const ManagementDashboard: React.FC = () => {
         // Store petId securely in localStorage first
         localStorage.removeItem('startExamForPet');
         localStorage.setItem('startExamForPet', petId);
-        console.log('ManagementDashboard: Stored petId in localStorage from switchTab event:', petId);
         
         // Set active tab with a small delay to ensure state update is processed
         setTimeout(() => {
-          console.log('ManagementDashboard: Setting active tab to examinations from switchTab event');
           setActiveTab('examinations');
         }, 50);
       }
@@ -269,16 +251,13 @@ const ManagementDashboard: React.FC = () => {
       const petId = customEvent.detail?.petId;
       
       if (petId) {
-        console.log('ManagementDashboard: Received startDiagnosis event with pet ID:', petId);
         
         // Store petId securely in localStorage
         localStorage.removeItem('currentPetId');
         localStorage.setItem('currentPetId', petId.toString());
-        console.log('ManagementDashboard: Stored petId in localStorage for diagnosis:', petId);
         
         // Set active tab with a small delay to ensure state update is processed
         setTimeout(() => {
-          console.log('ManagementDashboard: Setting active tab to diagnoses');
           setActiveTab('diagnoses');
           
           // Dispatch custom event to open the diagnosis form
@@ -295,13 +274,11 @@ const ManagementDashboard: React.FC = () => {
     window.addEventListener('switchToExaminationsTab', handleSwitchTab);
     window.addEventListener('startDiagnosis', handleStartDiagnosis);
     
-    console.log('ManagementDashboard: Added event listeners for examination and diagnosis events');
     
     return () => {
       window.removeEventListener('startExamination', handleStartExamination);
       window.removeEventListener('switchToExaminationsTab', handleSwitchTab);
       window.removeEventListener('startDiagnosis', handleStartDiagnosis);
-      console.log('ManagementDashboard: Removed event listeners for examination and diagnosis events');
     };
   }, [clinicId]);
 
@@ -481,7 +458,6 @@ const ManagementDashboard: React.FC = () => {
       // Fetch all veterinarians (both approved and pending)
       const response = await axiosInstance.get(`/clinics/${clinicId}/veterinarians`);
 
-      console.log('Fetched veterinarians:', response.data);
 
       if (response.data.success && response.data.veterinarians) {
         // Separate pending requests from approved staff members
@@ -489,7 +465,6 @@ const ManagementDashboard: React.FC = () => {
         const approved = allVets.filter((vet: VeterinarianData) => vet.status === 'approved');
         const pending = allVets.filter((vet: VeterinarianData) => vet.status === 'pending');
         
-        console.log('Pending requests count:', pending.length);
         setStaffMembers(approved);
         setPendingRequests(pending);
       } else {
@@ -512,7 +487,6 @@ const ManagementDashboard: React.FC = () => {
     try {
       const response = await axiosInstance.put(`/clinics/${clinicId}/veterinarian/${requestId}/status`, { status });
 
-      console.log(`Request ${status} response:`, response.data);
 
       if (response.data.success) {
         // Close the modal if open
@@ -552,7 +526,6 @@ const ManagementDashboard: React.FC = () => {
     try {
       const response = await axiosInstance.delete(`/clinics/${clinicId}/veterinarian/${vetId}`);
 
-      console.log('Remove veterinarian response:', response.data);
 
       if (response.data.success) {
         // Refresh the list
@@ -821,31 +794,22 @@ const ManagementDashboard: React.FC = () => {
 
       try {
         setLoading(true);
-        console.log('Fetching clinic data for clinic ID:', clinicId);
-        console.log('Current user ID:', userId);
         
         const response = await axiosInstance.get(`/clinics/${clinicId}`);
 
         const clinicData = response.data.clinic;
-        console.log('Clinic data received:', clinicData);
         
         // The owner of the clinic is stored in clinic_operator_id field, not owner_id
         // Convert IDs to strings for comparison to ensure proper type matching
         const clinicOwnerId = String(clinicData.clinic_operator_id);
         const currentUserId = String(userId);
         
-        console.log('Comparing clinic operator ID vs current user ID:', { 
-          clinicOwnerId, 
-          currentUserId,
-          isMatch: clinicOwnerId === currentUserId 
-        });
         
         // Check if the current user is the operator/owner of the clinic
         if (clinicOwnerId !== currentUserId) {
           console.error('User is not the operator of this clinic');
           setUnauthorized(true);
         } else {
-          console.log('User is the clinic operator - authorization successful');
           setClinic(clinicData);
         }
       } catch (err) {
@@ -935,7 +899,6 @@ const ManagementDashboard: React.FC = () => {
     try {
       const response = await axiosInstance.put(`/clinics/${action}/${clinicId}`, {});
       
-      console.log(`Clinic ${action} response:`, response.data);
       
       if (response.data.success) {
         // Update local clinic data

@@ -103,8 +103,6 @@ const SingleClinicPage: React.FC = () => {
   const isUsingId = !!params.clinicId;
   const paramValue = isUsingId ? params.clinicId : params.slug;
   
-  console.log("Route params:", params);
-  console.log("Using ID?", isUsingId, "Param value:", paramValue);
   
   // States
   const [clinic, setClinic] = useState<Clinic | null>(null);
@@ -156,9 +154,7 @@ const SingleClinicPage: React.FC = () => {
         let clinicData: Clinic;
         
         // Always fetch by slug, regardless of the path format
-        console.log("Fetching clinic by slug:", paramValue);
         const response = await axiosInstance.get(`/clinics/public/by-slug/${paramValue}`);
-        console.log("Clinic response:", response.data);
         
         if (response.data.success) {
           clinicData = response.data.clinic;
@@ -166,7 +162,6 @@ const SingleClinicPage: React.FC = () => {
           // Fetch additional data
           try {
             if (clinicData.clinic_id) {
-              console.log("Fetching additional data for clinic ID:", clinicData.clinic_id);
               
               // Fetch clinic photos
               try {
@@ -180,9 +175,7 @@ const SingleClinicPage: React.FC = () => {
                         'Authorization': `Bearer ${token}`
                       }
                     });
-                    console.log("Photos response from private endpoint:", photosResponse.data);
                   } catch {
-                    console.log("Private endpoint failed, trying public endpoint");
                     // Private endpoint başarısız olursa public endpoint'i dene
                     photosResponse = null;
                   }
@@ -191,7 +184,6 @@ const SingleClinicPage: React.FC = () => {
                 // Token yoksa veya private endpoint başarısız olduysa public endpoint'i kullan
                 if (!photosResponse) {
                   photosResponse = await axiosInstance.get(`/clinics/public/${clinicData.clinic_id}/photos`);
-                  console.log("Photos response from public endpoint:", photosResponse.data);
                 }
                 
                 // Fotoğrafları set et
@@ -206,7 +198,6 @@ const SingleClinicPage: React.FC = () => {
               // Fetch veterinarians
               try {
                 const vetsResponse = await axiosInstance.get(`/pet-owners/clinics/${clinicData.clinic_id}/public-veterinarians`);
-                console.log("Veterinarians response:", vetsResponse.data);
                 if (vetsResponse.data.success) {
                   setVeterinarians(vetsResponse.data.veterinarians || []);
                 }
@@ -272,9 +263,6 @@ const SingleClinicPage: React.FC = () => {
       const checkFavoriteStatus = async () => {
         try {
           // Add debug logs
-          console.log("Making favorite check request for clinic ID:", clinic.clinic_id);
-          console.log("Using token:", token);
-          console.log("Clinic details:", clinic);
           
           // IMPORTANT: Use axiosInstance instead of direct axios calls
           const favoriteCheckResponse = await axiosInstance.get(`/pet-owners/saved-clinics/${clinic.clinic_id}/check`, {
@@ -311,7 +299,6 @@ const SingleClinicPage: React.FC = () => {
       const checkPendingAppointment = async () => {
         try {
           setCheckingAppointment(true);
-          console.log("Checking pending appointments for clinic ID:", clinic.clinic_id);
           
           const response = await axiosInstance.get(`/pet-owners/has-pending-appointment/${clinic.clinic_id}`, {
             headers: {
@@ -321,7 +308,6 @@ const SingleClinicPage: React.FC = () => {
           
           if (response.data.success) {
             setHasPendingAppointment(response.data.hasPendingAppointment);
-            console.log("Pending appointment status:", response.data.hasPendingAppointment);
           }
         } catch (error) {
           console.warn("Could not check pending appointment status:", error);
@@ -649,9 +635,6 @@ const SingleClinicPage: React.FC = () => {
     }
 
     // Add debug logs
-    console.log("Attempting to save/unsave clinic with ID:", clinic.clinic_id);
-    console.log("Current saved status:", isSaved);
-    console.log("Using token:", token);
     
     setFavoriteLoading(true);
 
@@ -667,7 +650,6 @@ const SingleClinicPage: React.FC = () => {
           }
         );
         
-        console.log("Delete favorite response:", response.data);
         
         if (response.data.success) {
           setIsSaved(false);
@@ -687,7 +669,6 @@ const SingleClinicPage: React.FC = () => {
           }
         );
         
-        console.log("Add favorite response:", response.data);
         
         if (response.data.success) {
           setIsSaved(true);

@@ -40,12 +40,10 @@ export const Overview: React.FC<OverviewProps> = ({
 
   // Safety timeout to prevent infinite loading
   useEffect(() => {
-    console.log('Overview loading state:', isLoading);
     
     // If loading takes too long, force content to display after 5 seconds
     const timer = setTimeout(() => {
       if (isLoading) {
-        console.log('Loading timeout reached, forcing content to display');
         setForceLoaded(true);
       }
     }, 5000);
@@ -86,7 +84,6 @@ export const Overview: React.FC<OverviewProps> = ({
 
   // Show the content if either loading is complete or the force timeout has occurred
   if (isLoading && !forceLoaded) {
-    console.log('Showing loading spinner in Overview');
     return (
       <div className="flex justify-center items-center h-64">
         <div className="w-12 h-12 relative">
@@ -97,7 +94,6 @@ export const Overview: React.FC<OverviewProps> = ({
     );
   }
 
-  console.log('Rendering Overview content, verification status:', verificationStatus);
   return (
     <div className="space-y-6">
       {/* Verification Status Messages - conditionally rendered */}

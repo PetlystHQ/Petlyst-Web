@@ -456,12 +456,6 @@ const AddClinicPage: React.FC = () => {
       return;
     }
 
-    console.log('Starting photo upload process for clinic:', {
-      clinicId,
-      clinicName,
-      photoCount: selectedPhotos.length,
-      photoSizes: selectedPhotos.map(p => p.size)
-    });
 
     const uploadPromises = selectedPhotos.map(async (photo, index) => {
       setCurrentPhotoIndex(index);
@@ -476,45 +470,26 @@ const AddClinicPage: React.FC = () => {
       formData.append('clinicName', sanitizedClinicName);
       
       // FormData içeriğini kontrol et
-      console.log(`Photo ${index + 1} FormData:`, {
-        photo: photo.name,
-        photoSize: photo.size,
-        photoType: photo.type,
-        clinicId: clinicId.toString(),
-        clinicName: sanitizedClinicName
-      });
       
-      // Clinic adını temizle ve formata uygun hale getir
-      const expectedPathName = sanitizedClinicName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-      
-      console.log(`Expected S3 path: clinic-photos/${clinicId.toString()}-${expectedPathName}/`);
-
       try {
-        const response = await axiosInstance.post(`/clinics/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress: (progressEvent) => {
-              if (progressEvent.total) {
-                const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                setUploadProgress(progress);
-                console.log(`Upload progress for photo ${index + 1}: ${progress}%`);
-              }
-            } });
-        console.log(`Photo ${index + 1} upload response:`, response.data);
-        
+        const response = await axiosInstance.post(`/clinics/upload-photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(progress);
+            }
+          },
+        });
+
         // Yanıtı kontrol et
         if (response.data.success) {
           if (!response.data.photo || !response.data.photo.url) {
             console.error(`Photo ${index + 1} upload succeeded but no URL returned`, response.data);
           } else {
-            console.log(`Photo ${index + 1} successfully uploaded. URL:`, response.data.photo.url);
-            console.log(`Photo ${index + 1} key:`, response.data.photo.key);
-            
             // URL'ye fetch atarak erişilebilirliği test et
             try {
-              const testFetch = await fetch(response.data.photo.url, { method: 'HEAD' });
-              console.log(`Photo ${index + 1} accessibility test:`, testFetch.ok ? 'Accessible' : 'Not accessible');
+              await fetch(response.data.photo.url, { method: 'HEAD' });
             } catch (fetchErr) {
               console.warn(`Could not verify photo ${index + 1} accessibility:`, fetchErr);
             }
@@ -533,7 +508,6 @@ const AddClinicPage: React.FC = () => {
 
     try {
       await Promise.all(uploadPromises);
-      console.log('All photos uploaded successfully');
     } catch (err) {
       console.error('Error uploading photos:', err);
       setError(`Upload failed: ${getApiErrorMessage(err)}`);
@@ -936,7 +910,6 @@ const AddClinicPage: React.FC = () => {
 
     try {
       // Add debug logging for slot_duration
-      console.log('Submitting clinic with slot_duration:', formData.slot_duration, typeof formData.slot_duration);
       
       // Create a copy of the form data for submission
       const submissionData = { ...formData };
@@ -1026,22 +999,15 @@ const AddClinicPage: React.FC = () => {
       );
 
       if (response.status === 201) {
-        console.log('Clinic added successfully:', response.data);
         
         // Fotoğrafları yükle
         try {
-          console.log('Now uploading photos for new clinic:', {
-            clinicId: response.data.clinic.clinic_id,
-            clinicName: response.data.clinic.clinic_name,
-            photoCount: selectedPhotos.length
-          });
           
           await uploadPhotos(
             response.data.clinic.clinic_id,
             response.data.clinic.clinic_name
           );
           
-          console.log('All photos uploaded successfully for clinic ID:', response.data.clinic.clinic_id);
         } catch (photoError) {
           console.error('Failed to upload photos:', photoError);
           // Fotoğraf yükleme hatası olsa bile klinik kaydedildi, kullanıcıya bildir

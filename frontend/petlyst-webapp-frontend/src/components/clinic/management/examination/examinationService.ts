@@ -52,10 +52,12 @@ export interface UpdateExaminationData {
   appointment_id?: number;
 }
 
-// Helper for logging API calls with context
-const logApiCall = (method: string, endpoint: string, data?: unknown) => {
-  console.log(`API ${method} - ${endpoint}`, data ? { data } : '');
-};
+// Helper for logging API calls with context.
+// Currently a no-op since the development-time console.log was removed
+// during the Effort 4 logging sweep. Re-add a real logger here when the
+// pino backend integration lands.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const logApiCall = (_method: string, _endpoint: string, _data?: unknown) => {};
 
 // Helper for handling API errors
 const handleApiCallError = (error: unknown, context: string) => {

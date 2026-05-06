@@ -391,10 +391,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                 {selectedAppointment.video_meeting && (
                   <button
                     onClick={() => {
-                      console.log('Join Meeting clicked:', {
-                        url: selectedAppointment.meeting_url,
-                        videoMeeting: selectedAppointment.video_meeting
-                      });
                       if (selectedAppointment.meeting_url) {
                         const meetingUrl = selectedAppointment.meeting_url.startsWith('http') 
                           ? selectedAppointment.meeting_url 
@@ -582,10 +578,6 @@ const ClinicAppointments: React.FC<ClinicAppointmentsProps> = ({ clinicId }) => 
                           {appointment && appointment.video_meeting && (
                             <button
                               onClick={() => {
-                                console.log('Join Meeting clicked:', {
-                                  url: appointment.meeting_url,
-                                  videoMeeting: appointment.video_meeting
-                                });
                                 if (appointment.meeting_url) {
                                   const meetingUrl = appointment.meeting_url.startsWith('http') 
                                     ? appointment.meeting_url 

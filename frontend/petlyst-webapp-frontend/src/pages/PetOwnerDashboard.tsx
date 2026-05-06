@@ -219,14 +219,9 @@ const PetOwnerDashboard: React.FC = () => {
   // Fetch appointments
   const fetchAppointments = async () => {
     try {
-      console.log("PetOwnerDashboard: Fetching appointments from API");
       const response = await axiosInstance.get("/appointments/pet-owner");
       
       if (response.data && response.data.success) {
-        console.log(
-          "PetOwnerDashboard: Successfully fetched appointments:",
-          response.data.appointments.length,
-        );
         setAppointments(response.data.appointments || []);
       }
     } catch (err) {
@@ -268,7 +263,6 @@ const PetOwnerDashboard: React.FC = () => {
   // Fetch pet health
   const fetchPetHealth = async () => {
     // PetHealth bileşeni kendi içinde veri çektiği için burada bir şey yapmaya gerek yok
-    console.log('PetOwnerDashboard: Pet Health sekmesi açıldı');
   };
   
   // Handle removing a saved clinic
@@ -907,12 +901,11 @@ const PetOwnerDashboard: React.FC = () => {
   
   // Add a function to calculate the time remaining until the next appointment
   const calculateTimeRemaining = (
-    appointmentDate: string,
+    _appointmentDate: string,
     appointmentTime: string,
   ): CountdownTime | null => {
     try {
       // For debugging
-      console.log("Raw inputs:", { appointmentDate, appointmentTime });
       
       const now = new Date();
       
@@ -920,7 +913,6 @@ const PetOwnerDashboard: React.FC = () => {
       // This handles the UTC to local conversion automatically
       const appointmentDateTime = new Date(appointmentTime);
       
-      console.log("Appointment datetime:", appointmentDateTime);
       
       // Check if valid
       if (isNaN(appointmentDateTime.getTime())) {
@@ -930,13 +922,11 @@ const PetOwnerDashboard: React.FC = () => {
       
       // If in past, return zeros
       if (appointmentDateTime <= now) {
-        console.log("Appointment is in the past");
         return { days: 0, hours: 0, minutes: 0 };
       }
       
       // Calculate difference
       const diffMs = appointmentDateTime.getTime() - now.getTime();
-      console.log("Time difference in ms:", diffMs);
       
       // Convert to days, hours, minutes
       const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -945,7 +935,6 @@ const PetOwnerDashboard: React.FC = () => {
       );
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
       
-      console.log("Calculated time remaining:", { days, hours, minutes });
       return { days, hours, minutes };
     } catch (error) {
       console.error("Error in countdown calculation:", error);
@@ -977,18 +966,12 @@ const PetOwnerDashboard: React.FC = () => {
       
       if (nextAppointment) {
         // Log appointment data for debugging
-        console.log("Next appointment data:", {
-          date: nextAppointment.appointment_date,
-          startHour: nextAppointment.appointment_start_hour,
-          fullData: nextAppointment,
-        });
         
         // Initial calculation
         const initialCountdown = calculateTimeRemaining(
           nextAppointment.appointment_date, 
           nextAppointment.appointment_start_hour,
         );
-        console.log("Initial countdown:", initialCountdown);
         setTimeUntilAppointment(initialCountdown);
         
         // Set up interval for updates

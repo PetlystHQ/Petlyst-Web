@@ -116,7 +116,6 @@ const PetOwnerHomePage: React.FC = () => {
   // Fetch popular animal types and services
   const fetchPopularSearches = async () => {
     try {
-      console.log("Using relative URLs with Vite proxy");
       
       const [animalTypesRes, servicesRes] = await Promise.all([
         axiosInstance.get(`/pet-owners/popular-animal-types`),
@@ -152,13 +151,10 @@ const PetOwnerHomePage: React.FC = () => {
       }
 
       try {
-        console.log("Using relative URL with Vite proxy");
-        console.log("Searching for:", searchQuery);
         
         // Get API suggestions
         const response = await axiosInstance.get(`/pet-owners/search-suggestions`, { params: { query: searchQuery } });
 
-        console.log("Suggestion response:", response.data);
 
         let allSuggestions: SearchSuggestion[] = [];
         

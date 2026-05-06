@@ -53,8 +53,6 @@ const authSlice = createSlice({
       localStorage.setItem('user', JSON.stringify(action.payload.user));
       
       // Debug log
-      console.log('setCredentials - Token:', action.payload.token);
-      console.log('setCredentials - User:', action.payload.user);
     },
     logout: (state) => {
       state.user = null;
@@ -66,7 +64,6 @@ const authSlice = createSlice({
       localStorage.removeItem('user');
       
       // Debug log
-      console.log('logout - Clearing credentials');
     },
     setProfileVisibility: (state, action: PayloadAction<boolean>) => {
       state.profileVisibility = action.payload;
@@ -82,7 +79,6 @@ const authSlice = createSlice({
         // Update localStorage
         localStorage.setItem('user', JSON.stringify(state.user));
         
-        console.log('updateProfile - Updated user data:', state.user);
       }
     },
   },

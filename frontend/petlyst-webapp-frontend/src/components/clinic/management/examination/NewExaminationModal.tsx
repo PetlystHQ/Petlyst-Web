@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '../../../../hooks/useAppDispatch';
 import { useAppSelector } from '../../../../hooks/useAppSelector';
 import { createExamination, updateExamination } from './examinationSlice';
@@ -45,8 +45,7 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
 }) => {
   // Determine if we're in edit mode
   const isEditMode = !!examination;
-  const isFirstRender = useRef(true);
-  
+
   const dispatch = useAppDispatch();
   const { loading, success, error } = useAppSelector(state => state.examinations);
   
@@ -59,20 +58,6 @@ const NewExaminationModal: React.FC<NewExaminationModalProps> = ({
       setCurrentClinicId(parseInt(clinicId, 10));
     }
   }, []);
-  
-  // Only log on first render
-  useEffect(() => {
-    if (isFirstRender.current) {
-      if (isEditMode) {
-        console.log('Edit mode - Examination ID:', examination.examination_id);
-      } else if (petId) {
-        console.log('Create mode - Pet ID:', petId);
-      } else {
-        console.log('Create mode - No Pet ID');
-      }
-      isFirstRender.current = false;
-    }
-  }, [isEditMode, examination, petId]);
   
   const [formData, setFormData] = useState<CreateExaminationData & UpdateExaminationData>({
     pet_id: isEditMode ? examination.pet_id : (petId || 0),

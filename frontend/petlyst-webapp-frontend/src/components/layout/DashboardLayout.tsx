@@ -19,19 +19,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   // Enhanced toggle function with strict state management
   const toggleMobileMenu = () => {
-    console.log('DashboardLayout toggle called, current state:', isMobileMenuOpen);
     
     // Force a state update with the functional form
     setIsMobileMenuOpen((prevState) => {
       const newState = !prevState;
-      console.log('New mobile menu state in DashboardLayout:', newState);
       return newState;
     });
   };
 
   // Debug effect to monitor state changes
   useEffect(() => {
-    console.log('Mobile menu state changed in DashboardLayout:', isMobileMenuOpen);
     
     // If sidebar is open, add a class to prevent body scrolling
     if (isMobileMenuOpen) {

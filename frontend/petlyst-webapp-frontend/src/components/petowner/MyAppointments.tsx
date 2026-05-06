@@ -65,18 +65,12 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
   // Update internal state when external appointments change
   useEffect(() => {
     if (externalAppointments) {
-      console.log(
-        "Received external appointments:",
-        externalAppointments.length,
-      );
       setAppointments(externalAppointments);
     }
   }, [externalAppointments]);
 
   // Fetch appointments
   useEffect(() => {
-    console.log("MyAppointments component mounted");
-    console.log("Current token:", token);
 
     if (!token) {
       console.warn("No token found, redirecting to login");
@@ -92,16 +86,11 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
 
   // Apply filters and sorting
   useEffect(() => {
-    console.log(
-      "Applying filters and sorting to appointments:",
-      appointments.length,
-    );
 
     let filtered = [...appointments];
 
     // Apply status filter
     if (statusFilter !== "all") {
-      console.log("Filtering by status:", statusFilter);
       filtered = filtered.filter(
         (appointment) => appointment.appointment_status === statusFilter,
       );
@@ -136,7 +125,6 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         : stringB.localeCompare(stringA);
     });
 
-    console.log("Filtered appointments count:", filtered.length);
     setFilteredAppointments(filtered);
   }, [appointments, statusFilter, sortOrder]);
 
@@ -144,12 +132,10 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
   const fetchAppointments = async () => {
     // If appointments are provided externally, don't fetch
     if (externalAppointments && externalAppointments.length > 0) {
-      console.log("Using externally provided appointments, skipping fetch");
       return;
     }
 
     if (externalLoading !== undefined) {
-      console.log("External loading is defined, skipping fetch");
       return;
     }
 
@@ -157,24 +143,11 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
     setError(null);
 
     try {
-      console.log(
-        "Fetching appointments from /appointments/pet-owner endpoint",
-      );
       const response = await axiosInstance.get("/appointments/pet-owner");
-      console.log("Raw response:", response);
-      console.log("Response status:", response.status);
-      console.log("Response from appointments API:", response.data);
 
       // Check if response contains data and is successful
       if (response.data && response.data.success) {
         const appointmentsData = response.data.appointments || [];
-        console.log("Number of appointments found:", appointmentsData.length);
-
-        // Log the first appointment for debugging if available
-        if (appointmentsData.length > 0) {
-          console.log("First appointment data:", appointmentsData[0]);
-        }
-
         setAppointments(appointmentsData);
       } else {
         console.warn(
@@ -259,8 +232,6 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         setFilteredAppointments(updatedFilteredAppointments);
 
         // Debug log
-        console.log("Appointment canceled:", appointmentId);
-        console.log("Updated appointments count:", updatedAppointments.length);
 
         // Notify parent component if needed
         if (onAppointmentCanceled) {
@@ -291,7 +262,6 @@ const MyAppointments: React.FC<MyAppointmentsProps> = ({
         ? appointment.meeting_url 
         : `https://${appointment.meeting_url}`;
       
-      console.log('Opening meeting URL:', meetingUrl);
       window.open(meetingUrl, "_blank");
     } else {
       alert("No meeting URL available. Please contact the clinic.");

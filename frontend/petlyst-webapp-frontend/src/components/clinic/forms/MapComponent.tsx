@@ -98,7 +98,6 @@ const MapContainer = ({
     return new Promise((resolve, reject) => {
       // Google Maps zaten yüklendi mi kontrol et
       if (window.google?.maps?.Map) {
-        console.log('[DEBUG] Google Maps already loaded');
         resolve();
         return;
       }
@@ -106,19 +105,16 @@ const MapContainer = ({
       // Check if script is already being loaded
       const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api"]');
       if (existingScript) {
-        console.log('[DEBUG] Google Maps script is already loading, waiting...');
         // Wait for existing script to load
         const checkInterval = setInterval(() => {
           if (window.google?.maps?.Map) {
             clearInterval(checkInterval);
-            console.log('[DEBUG] Google Maps loaded via interval check');
             resolve();
           }
         }, 100);
         
         setTimeout(() => {
           clearInterval(checkInterval);
-          console.log('[DEBUG] Google Maps script load timeout');
           reject(new Error('Google Maps script load timeout'));
         }, 10000);
         
@@ -128,24 +124,15 @@ const MapContainer = ({
       // Create a new script element
       const script = document.createElement('script');
       
-      // Format API key for debugging
-      const displayKey = GOOGLE_MAPS_API_KEY ? 
-        GOOGLE_MAPS_API_KEY.substring(0, 5) + '...' + GOOGLE_MAPS_API_KEY.substring(GOOGLE_MAPS_API_KEY.length - 5) : 
-        'MISSING';
-      
-      console.log(`[DEBUG] Loading Google Maps with API key: ${displayKey}`);
-      
       // Callback function adını global pencerede tanımla
       const callbackName = 'googleMapsInitCallback' + Date.now();
       (window as unknown as Record<string, unknown>)[callbackName] = () => {
-        console.log('[DEBUG] Google Maps script loaded via callback');
         delete (window as unknown as Record<string, unknown>)[callbackName];
         resolve();
       };
       
       // Create the full script URL - asynchronous loading without loading=async
       const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=places,marker&v=beta&callback=${callbackName}`;
-      console.log(`[DEBUG] Full script URL being used: ${scriptUrl.replace(GOOGLE_MAPS_API_KEY, '[API-KEY-HIDDEN]')}`);
       
       script.src = scriptUrl;
       script.async = true;
@@ -159,7 +146,6 @@ const MapContainer = ({
       
       // Add to document
       document.head.appendChild(script);
-      console.log('[DEBUG] Google Maps script added to document.head');
       
       // Set timeout for script loading
       setTimeout(() => {
@@ -174,14 +160,12 @@ const MapContainer = ({
   // Function to perform reverse geocoding
   const performReverseGeocoding = async (lat: number, lng: number) => {
     if (!geocoder.current) {
-      console.log('[DEBUG] Geocoder not available for reverse geocoding');
       return;
     }
     
     setIsAddressLoading(true);
 
     try {
-      console.log('[DEBUG] Starting reverse geocoding for:', lat, lng);
       const results = await new Promise<GeocodingResult[]>((resolve, reject) => {
         if (!geocoder.current) {
           reject(new Error('Geocoder not initialized'));
@@ -202,7 +186,6 @@ const MapContainer = ({
         );
       });
 
-      console.log('[DEBUG] Geocoding results received:', results);
       const result = results[0];
       const addressComponents = result.address_components;
       const formattedAddress = result.formatted_address;
@@ -220,7 +203,6 @@ const MapContainer = ({
           }
         }
 
-        console.log('[DEBUG] Extracted address data:', { province, district, formattedAddress });
 
         // Always update all fields at once for consistency
         if (province) {
@@ -251,16 +233,10 @@ const MapContainer = ({
       return;
     }
     
-    console.log('[DEBUG] Starting map initialization');
-    console.log('[DEBUG] API Key:', GOOGLE_MAPS_API_KEY ? 
-      (GOOGLE_MAPS_API_KEY.substring(0, 5) + '...' + GOOGLE_MAPS_API_KEY.substring(GOOGLE_MAPS_API_KEY.length - 5)) : 
-      'MISSING');
     
     try {
       // Wait for Google Maps script to load
-      console.log('[DEBUG] Loading Google Maps script...');
       await loadGoogleMapsScript();
-      console.log('[DEBUG] Google Maps script loaded successfully');
       
       if (!mapContainerRef.current) {
         console.error('[DEBUG] Map container ref is null after script load');
@@ -268,8 +244,6 @@ const MapContainer = ({
         return;
       }
       
-      console.log('[DEBUG] Map container ref:', mapContainerRef.current);
-      console.log('[DEBUG] Creating map instance...');
       
       // Create map instance
       const center = formData.coordinates || defaultCenter;
@@ -284,12 +258,10 @@ const MapContainer = ({
         fullscreenControl: true,
       });
       
-      console.log('[DEBUG] Map instance created successfully');
       
       // Create geocoder
       geocoder.current = new google.maps.Geocoder();
       
-      console.log('[DEBUG] Creating marker...');
       // Try to use the standard Marker first (more reliable)
       try {
         marker.current = new google.maps.Marker({
@@ -299,7 +271,6 @@ const MapContainer = ({
           title: "Clinic Location"
         });
         
-        console.log('[DEBUG] Standard marker created successfully');
         
         // Add marker drag end event
         marker.current.addListener("dragend", () => {
@@ -307,7 +278,6 @@ const MapContainer = ({
           const newLat = position.lat();
           const newLng = position.lng();
           
-          console.log('[DEBUG] Marker dragend - updating coordinates to:', { lat: newLat, lng: newLng });
           
           updateField("coordinates", { lat: newLat, lng: newLng });
           performReverseGeocoding(newLat, newLng);
@@ -323,7 +293,6 @@ const MapContainer = ({
             title: "Clinic Location"
           });
           
-          console.log('[DEBUG] Advanced marker created successfully');
           
           // Add marker drag end event
           marker.current.addListener("dragend", () => {
@@ -331,7 +300,6 @@ const MapContainer = ({
             const newLat = position.lat;
             const newLng = position.lng;
             
-            console.log('[DEBUG] Marker dragend - updating coordinates to:', { lat: newLat, lng: newLng });
             
             updateField("coordinates", { lat: newLat, lng: newLng });
             performReverseGeocoding(newLat, newLng);
@@ -344,7 +312,6 @@ const MapContainer = ({
       
       // Add map click event
       if (!hasExistingClinic) {
-        console.log('[DEBUG] Adding map click event listener');
         google.maps.event.addListener(mapInstance.current, 'click', async (event: google.maps.MapMouseEvent) => {
           const latLng = event.latLng;
           if (!latLng) return;
@@ -368,7 +335,6 @@ const MapContainer = ({
                 const pos = marker.current.getPosition();
                 if (pos) {
                   // Log coordinates for debugging
-                  console.log('[DEBUG] Coordinates from marker dragend:', { lat: pos.lat(), lng: pos.lng() });
                   
                   // Update the form coordinates with explicit lat/lng values
                   updateField("coordinates", { 
@@ -384,7 +350,6 @@ const MapContainer = ({
           }
           
           // Log coordinates for debugging
-          console.log('[DEBUG] Coordinates from map click:', { lat, lng });
           
           // Update the form coordinates with explicit lat/lng values
           updateField("coordinates", { lat, lng });
@@ -395,7 +360,6 @@ const MapContainer = ({
       }
       
       // İlklendirme tamamlandı
-      console.log('[DEBUG] Map initialization completed successfully');
       mapReadyRef.current = true;
       setMapReady(true);
     } catch (err) {
@@ -417,7 +381,6 @@ const MapContainer = ({
     // DOM oluşumunun tamamlanması için bir anlık bekle
     const timer = setTimeout(() => {
       if (mapContainerRef.current && !mapReadyRef.current) {
-        console.log('[DEBUG] Map container ref is ready, initializing map');
         initializeMap();
       }
     }, 500);
@@ -502,7 +465,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   
   // FormData'daki coordinates nesnesini güvenli bir şekilde alalım
   const safeCoordinates = useMemo(() => {
-    console.log('[DEBUG] Computing safe coordinates from:', formData.coordinates);
     const coords = formData.coordinates;
     if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
       return coords as LatLng;
@@ -510,33 +472,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     return null;
   }, [formData.coordinates]);
   
-  // updateField fonksiyonunu konsola log ile saran bir fonksiyon oluştur
+  // updateField wrapper retained for parity with the rest of the form;
+  // it used to log every coordinate update for debugging, removed during
+  // the Effort 4 console.log sweep.
   const wrappedUpdateField = (name: string, value: unknown) => {
-    console.log(`MapComponent.wrappedUpdateField called: ${name}`, value);
-    
-    // Özellikle coordinates değerini güncellerken detaylı log tut
-    if (name === 'coordinates' && value && typeof value === 'object') {
-      const coords = value as { lat?: number; lng?: number };
-      console.log('Updating coordinates with values:', {
-        lat: coords.lat,
-        lng: coords.lng
-      });
-    }
-    
-    // Orjinal updateField fonksiyonunu çağır
     updateField(name, value);
-    
-    // Koordinat güncellemesi sonrası formData içinde kontrol et
-    setTimeout(() => {
-      if (name === 'coordinates') {
-        console.log('Current formData after coordinates update:', formData);
-      }
-    }, 100);
   };
 
   // Effect to simulate loading and show the map after a delay
   useEffect(() => {
-    console.log('[DEBUG] Starting loading simulation');
     
     // API key available check
     if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '') {
@@ -554,7 +498,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     
     // Yükleme süresini azaltalım - hemen gösterelim
     loadingTimerRef.current = window.setTimeout(() => {
-      console.log('[DEBUG] Loading timer completed, showing map');
       setIsLoading(false);
     }, 1000);
     

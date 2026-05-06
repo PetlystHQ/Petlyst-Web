@@ -44,7 +44,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
       
       if (response.data.success) {
         const userData = response.data.user;
-        console.log('Refreshed profile data after update:', userData);
         setProfileData({
           phone: userData.phone || '',
           address: userData.address || '',
@@ -163,7 +162,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
       
       if (user?.profile_photo && user.profile_photo.includes('amazonaws.com/')) {
         photoKey = user.profile_photo.split('amazonaws.com/')[1];
-        console.log('Extracted S3 key for deletion:', photoKey);
       }
       
       const formData = new FormData();
@@ -181,8 +179,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
       // Also send the user ID to help locate the folder in S3
       formData.append('user_id', user?.id?.toString() || '');
       
-      console.log('Submitting profile photo removal with key:', photoKey);
-      console.log('Full photo URL:', fullPhotoUrl);
       
       const response = await axiosInstance.put('/pet-owners/profile', formData, {
         headers: { 
@@ -190,7 +186,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
         }
       });
       
-      console.log('Server response for photo removal:', response.data);
       
       if (response.data.success) {
         setUpdateSuccess(true);
@@ -239,32 +234,16 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
       formData.append('user_address', profileData.address || '');
       
       // Debug için konsola çıktı
-      console.log('Submitting profile update with data:', {
-        phone: profileData.phone || '',
-        address: profileData.address || '',
-        hasPhotoFile: !!photoFile,
-        hasExistingPhoto: !!profileData.profilePhoto,
-        originalPhoto: user?.profile_photo
-      });
       
       // Handle photo uploading logic
       if (photoFile) {
         // Yeni fotoğraf yükle
-        console.log('Adding photo file to form:', photoFile.name, photoFile.type, photoFile.size);
         formData.append('profile_photo', photoFile);
       } else if (!profileData.profilePhoto && user?.profile_photo) {
         // Profil fotoğrafı önceden vardı ama şimdi temizlendi - kaldırma isteği
-        console.log('Requesting photo removal - clear flag is set');
         formData.append('remove_photo', 'true');
       } else if (profileData.profilePhoto) {
-        console.log('Using existing photo URL');
         formData.append('user_profile_photo', profileData.profilePhoto);
-      }
-      
-      // Form verilerini kontrol et
-      console.log('Form data entries:');
-      for (const pair of formData.entries()) {
-        console.log(pair[0], pair[1]);
       }
       
       const response = await axiosInstance.put('/pet-owners/profile', formData, {
@@ -273,7 +252,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
         }
       });
 
-      console.log('Server response:', response.data);
 
       if (response.data.success) {
         setUpdateSuccess(true);
@@ -285,7 +263,6 @@ const MyProfile: React.FC<MyProfileProps> = ({ loading: externalLoading = false,
           profile_photo: response.data.profile_photo || profileData.profilePhoto
         };
         
-        console.log('Updating Redux state with:', updatedProfile);
         
         dispatch(updateProfile({
           phone: updatedProfile.phone,

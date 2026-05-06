@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axiosInstance from '../utils/axiosConfig';
 import { RootState } from '../store';
-import { API_URL } from '../config/api';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { MapComponent } from '../components/clinic/forms/MapComponent';
 import { ClinicFormData, PhoneNumberEntry, PhoneTypeEnum } from '../types/clinic';
@@ -94,22 +93,11 @@ const ClinicPreviewPage: React.FC = () => {
         return;
       }
       
-      console.log('===== FETCHING CLINIC DETAILS =====');
-      console.log('User from Redux:', user);
-      console.log('Clinic ID from params:', clinicId);
       
       setLoading(true);
       try {
-        console.log('Making API request to:', `${API_URL}/api/clinics/${clinicId}`);
         const response = await axiosInstance.get(`/clinics/${clinicId}`);
         
-        console.log('===== API RESPONSE =====');
-        console.log('Full API response:', response);
-        console.log('Clinic data:', response.data?.clinic);
-        console.log('Additional data:', {
-          clinic_locations: response.data?.clinic_locations || 'Not provided',
-          hasLocations: Boolean(response.data?.clinic_locations)
-        });
         
         if (!response.data.clinic) {
           console.error('No clinic data in API response');
@@ -121,64 +109,31 @@ const ClinicPreviewPage: React.FC = () => {
         const clinicData = { ...response.data.clinic };
         
         // Debug working hours data
-        console.log('===== WORKING HOURS DATA DEBUG =====');
-        console.log('Opening Time:', clinicData.opening_time || 'Not Found');
-        console.log('Closing Time:', clinicData.closing_time || 'Not Found');
-        console.log('Is Open 24/7:', clinicData.is_open_24_7 || 'Not Found');
-        console.log('Slot Duration:', clinicData.slot_duration || 'Not Found');
-        console.log('Available Days:', clinicData.available_days || 'Not Found');
         
         // Debug services data
-        console.log('===== SERVICES DATA DEBUGGING =====');
-        console.log('Animal types directly from API:', clinicData.animal_types);
-        console.log('Medical services directly from API:', clinicData.medical_services);
-        console.log('Additional services directly from API:', clinicData.additional_services);
         
         // Ensure service arrays are initialized
         if (!clinicData.animal_types || !Array.isArray(clinicData.animal_types)) {
-          console.log('Initializing empty animal_types array');
           clinicData.animal_types = [];
         }
         
         if (!clinicData.medical_services || !Array.isArray(clinicData.medical_services)) {
-          console.log('Initializing empty medical_services array');
           clinicData.medical_services = [];
         }
         
         if (!clinicData.additional_services || !Array.isArray(clinicData.additional_services)) {
-          console.log('Initializing empty additional_services array');
           clinicData.additional_services = [];
         }
         
-        // Check for location data with more explicit logging
-        console.log('===== LOCATION DATA IN MAIN CLINIC OBJECT =====');
-        console.log('Address:', clinicData.clinic_address || 'Not found');
-        console.log('Province:', clinicData.province || 'Not found');
-        console.log('District:', clinicData.district || 'Not found');
-        console.log('Latitude:', clinicData.latitude || 'Not found');
-        console.log('Longitude:', clinicData.longitude || 'Not found');
-        
-        // Add a temporary flag to check if we have essential location data
-        let hasLocationData = Boolean(
-          clinicData.clinic_address && 
-          clinicData.province && 
-          clinicData.district
-        );
-        
-        console.log('Has basic location data:', hasLocationData);
 
         // Check if clinic_locations might be in a nested object
         if (response.data.clinic_locations) {
-          console.log('===== FOUND CLINIC_LOCATIONS OBJECT =====');
-          console.log('clinic_locations data:', response.data.clinic_locations);
           
           // If location data is in a separate object, merge it with clinic data
           if (response.data.clinic_locations.length > 0) {
-            console.log('Found location data items:', response.data.clinic_locations.length);
             const locationData = response.data.clinic_locations[0];
             
             // Log the location data
-            console.log('First location item:', locationData);
             
             // Update clinic data with location data, preserving existing values if they exist
             if (locationData.clinic_address) clinicData.clinic_address = locationData.clinic_address;
@@ -200,29 +155,12 @@ const ClinicPreviewPage: React.FC = () => {
                 : locationData.longitude;
             }
             
-            console.log('===== MERGED LOCATION DATA =====');
-            console.log('Updated clinic_address:', clinicData.clinic_address || 'Still missing');
-            console.log('Updated province:', clinicData.province || 'Still missing');
-            console.log('Updated district:', clinicData.district || 'Still missing');
-            console.log('Updated latitude:', clinicData.latitude || 'Still missing');
-            console.log('Updated longitude:', clinicData.longitude || 'Still missing');
-            
-            // Update location data flag
-            hasLocationData = Boolean(
-              clinicData.clinic_address && 
-              clinicData.province && 
-              clinicData.district
-            );
-            
-            console.log('Has location data after merge:', hasLocationData);
           }
         }
         
-        console.log('Trimmed status:', clinicData.clinic_verification_status ? clinicData.clinic_verification_status.trim() : '');
         
         // Check if user is admin (from localStorage or from Redux)
         const isAdmin = user.user_type === 'admin' || localStorage.getItem('adminToken');
-        console.log('User type check - Is admin:', isAdmin);
         
         if (!isAdmin) {
           // For non-admin users, enforce status restrictions
@@ -236,7 +174,6 @@ const ClinicPreviewPage: React.FC = () => {
           // For non-admin users, check if they are the clinic operator
           const clinicOperatorId = String(clinicData.clinic_operator_id).trim();
           const userId = String(user.id).trim();
-          console.log('Comparing IDs - Clinic operator:', clinicOperatorId, 'Current user:', userId);
           
           if (clinicOperatorId !== userId) {
             console.error('Unauthorized: User is not the clinic operator');
@@ -244,19 +181,14 @@ const ClinicPreviewPage: React.FC = () => {
             setLoading(false);
             return;
           }
-        } else {
-          console.log('Admin user detected - granting access to clinic details');
         }
 
-        console.log('Authorization checks passed, setting clinic data');
         setClinic(clinicData);
         
         // Klinik fotoğraflarını al
         try {
-          console.log('Fetching clinic photos from clinicalbum');
           const photosResponse = await axiosInstance.get(`/clinics/${clinicId}/photos`);
           
-          console.log('Photos API response:', photosResponse.data);
           
           if (photosResponse.data.success && photosResponse.data.photos && photosResponse.data.photos.length > 0) {
             // clinicalbum tablosundan gelen fotoğrafları URL'ye dönüştür
@@ -264,7 +196,6 @@ const ClinicPreviewPage: React.FC = () => {
               url: photo.clinic_album_photo_url
             }));
 
-            console.log('Processed photos:', photos);
             setClinicPhotos(photos);
 
             // Yükleme durumlarını ayarla
@@ -502,8 +433,8 @@ const ClinicPreviewPage: React.FC = () => {
   }
 
   // Add a dummy updateField function to pass to MapComponent
-  const dummyUpdateField = (name: string, value: unknown) => {
-    console.log(`Preview page would update ${name} to:`, value);
+  // (preview mode is read-only; no parent state to update).
+  const dummyUpdateField = (_name: string, _value: unknown) => {
     // No actual update in preview mode
   };
 

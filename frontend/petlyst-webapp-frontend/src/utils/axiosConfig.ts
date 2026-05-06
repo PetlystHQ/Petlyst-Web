@@ -17,8 +17,6 @@ axiosInstance.interceptors.request.use(
         }
         
         // Debug log for token
-        console.log('Request interceptor - Token:', token);
-        console.log('Request interceptor - Headers:', config.headers);
         
         return config;
     },

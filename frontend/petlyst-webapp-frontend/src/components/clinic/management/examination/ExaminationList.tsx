@@ -100,12 +100,10 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     if (!startExamChecked.current) {
       startExamChecked.current = true;
       const startExamForPet = localStorage.getItem('startExamForPet');
-      console.log('Checking localStorage for startExamForPet:', startExamForPet);
       
       if (startExamForPet) {
         try {
           const petIdValue = parseInt(startExamForPet, 10);
-          console.log('Found pet ID in localStorage, setting selected pet ID:', petIdValue);
           
           // Store pet ID in state
           setSelectedPetId(petIdValue);
@@ -118,7 +116,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
           
           // Set a small timeout to ensure state updates properly before opening modal
           setTimeout(() => {
-            console.log('Opening examination modal for pet:', petIdValue);
             setNewExamModalOpen(true);
             setModalJustOpened(true);
             
@@ -129,7 +126,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
             
             // Only remove from localStorage after we're sure the modal is open
             setTimeout(() => {
-              console.log('Removing startExamForPet from localStorage');
               localStorage.removeItem('startExamForPet');
               localStorage.removeItem('appointmentIdForExam');
             }, 100);
@@ -145,19 +141,16 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   useEffect(() => {
     const handleStartExamination = (event: CustomEvent) => {
       const petId = event.detail?.petId;
-      console.log('Received startExamination event with pet ID:', petId);
       
       if (petId) {
         try {
           const petIdValue = parseInt(petId, 10);
-          console.log('Setting selected pet ID from event:', petIdValue);
           
           // First set the pet ID
           setSelectedPetId(petIdValue);
           
           // Then use a small timeout to ensure state updates before opening modal
           setTimeout(() => {
-            console.log('Opening examination modal from event handler');
             setNewExamModalOpen(true);
             setModalJustOpened(true);
             
@@ -201,7 +194,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   const fetchExaminations = useCallback(() => {
     // Prevent multiple simultaneous API calls
     if (loadingLockRef.current) {
-      console.log('Loading already in progress, skipping duplicate API call');
       return;
     }
     
@@ -221,7 +213,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
       return;
     }
     
-    console.log('Fetching examinations with params:', requestParams);
     
     // Set a timeout to handle API calls that never return
     loadingTimeoutRef.current = setTimeout(() => {
@@ -248,8 +239,7 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     
     dispatch(listExaminations(requestParams))
       .unwrap()
-      .then((response) => {
-        console.log('Successfully fetched examinations:', response);
+      .then(() => {
         setIsDataLoaded(true);
         setLoadingAttempts(0); // Reset attempts on success
         loadingLockRef.current = false;
@@ -279,7 +269,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   // Load examinations when component mounts or filters/pagination change
   useEffect(() => {
     if (!isDataLoaded) {
-      console.log('Initial data load or reload triggered');
       fetchExaminations();
     }
     
@@ -298,7 +287,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
     // If there's an error, set up an interval to retry automatically every 30 seconds
     if (localError || error) {
       refreshInterval = setInterval(() => {
-        console.log('Auto-retry interval triggered');
         handleRetry();
       }, 30000); // Auto-retry every 30 seconds
     }
@@ -392,7 +380,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Handle opening the new examination modal
   const handleOpenNewExamModal = () => {
-    console.log('Manual modal open requested');
     // First clear any pet selection if this is a manual open
     setSelectedPetId(undefined);
     
@@ -408,11 +395,9 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Handle closing the new examination modal
   const handleCloseNewExamModal = () => {
-    console.log('Modal close requested');
     
     // Eğer modal henüz yeni açıldıysa, kapatılmasını engelle
     if (modalJustOpened) {
-      console.log('Preventing modal close - modal just opened');
       return;
     }
     
@@ -450,7 +435,6 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Retry loading if there was an error
   const handleRetry = () => {
-    console.log('Manual retry triggered');
     setLocalError(null);
     setIsDataLoaded(false);
     setLoadingAttempts(0); // Reset attempts counter
@@ -484,15 +468,10 @@ const ExaminationList: React.FC<ExaminationListProps> = ({
   
   // Add a guard effect to log modal state changes
   useEffect(() => {
-    console.log('Modal state changed:', { 
-      isOpen: newExamModalOpen, 
-      selectedPetId: selectedPetId 
-    });
   }, [newExamModalOpen, selectedPetId]);
   
   // Start diagnosis for an examination
   const handleStartDiagnosis = (examination: Examination) => {
-    console.log('Starting diagnosis for examination:', examination.examination_id);
     
     // Store examination ID and pet ID in localStorage
     localStorage.setItem('currentPetId', examination.pet_id.toString());

@@ -118,7 +118,6 @@ const InventoryTransactions: React.FC = () => {
       const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/transactions`);
 
       if (response.data.success && response.data.transactions) {
-        console.log('Raw transactions from API:', response.data.transactions);
         
         // Process the transactions to ensure numeric values are properly parsed
         const processedTransactions = response.data.transactions.map((transaction: {
@@ -138,7 +137,6 @@ const InventoryTransactions: React.FC = () => {
             : null
         }));
         
-        console.log('Processed transactions:', processedTransactions);
         setTransactions(processedTransactions);
       } else {
         setError('Failed to load transactions');
@@ -181,12 +179,11 @@ const InventoryTransactions: React.FC = () => {
 
     // Auto-calculate total price when unit price or quantity changes
     if (name === 'quantity' || name === 'unit_price') {
-      const quantity = name === 'quantity' ? (value === '' ? 0 : parseInt(value, 10)) : formData.quantity;
-      const unitPrice = name === 'unit_price' ? (value === '' ? 0 : parseInt(value, 10)) : formData.unit_price;
-      
-      // This is just for visual feedback in the form - the backend will calculate the actual total
-      const totalPrice = quantity * unitPrice;
-      console.log('Calculated total price:', totalPrice);
+      // The backend computes the actual total; this branch previously
+      // logged a client-side preview of (quantity × unitPrice) but no UI
+      // surface ever consumed the result.
+      void name;
+      void value;
     }
   };
 
@@ -230,7 +227,6 @@ const InventoryTransactions: React.FC = () => {
 
     try {
       // Log raw data for debugging
-      console.log('Form data before processing:', formData);
       
       // Process the data to ensure numeric values are integers
       const processedData = {
@@ -246,7 +242,6 @@ const InventoryTransactions: React.FC = () => {
         performed_by_user_id: userId
       };
 
-      console.log('Submitting transaction with integer values:', processedData);
 
       const response = await axiosInstance.post(`/clinics/${clinicId}/inventory/transactions`, processedData);
 

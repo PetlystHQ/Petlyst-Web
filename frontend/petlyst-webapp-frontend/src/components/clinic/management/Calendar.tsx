@@ -154,38 +154,18 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
       const appointmentsByDate: Record<string, CalendarAppointment[]> = {};
       let sampleAppointment: CalendarAppointment | null = null;
       
-      console.log('Fetching appointments for clinic:', clinicId);
       
       // Get pending appointments
       const pendingResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/pending`);
-      console.log('Pending appointments received:', pendingResponse.data.appointments?.length || 0);
       
       // Get confirmed appointments
       const confirmedResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/confirmed`);
-      console.log('Confirmed appointments received:', confirmedResponse.data.appointments?.length || 0);
-      
-      // Debug online meetings
-      if (confirmedResponse.data.appointments?.length > 0) {
-        const onlineMeetings = confirmedResponse.data.appointments.filter((a: CalendarAppointment) => a.video_meeting === true);
-        if (onlineMeetings.length > 0) {
-          console.log('Online meetings found:', onlineMeetings.length);
-          console.log('First online meeting sample:', {
-            id: onlineMeetings[0].appointment_id,
-            isVideoMeeting: onlineMeetings[0].video_meeting,
-            meetingUrl: onlineMeetings[0].meeting_url
-          });
-        } else {
-          console.log('No online meetings found among confirmed appointments');
-        }
-      }
       
       // Get completed appointments
       const completedResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/completed`);
-      console.log('Completed appointments received:', completedResponse.data.appointments?.length || 0);
       
       // Get canceled appointments
       const canceledResponse = await axiosInstance.get(`/appointments/clinic/${clinicId}/canceled`);
-      console.log('Canceled appointments received:', canceledResponse.data.appointments?.length || 0);
       
       // Check that all responses are successful
       if (pendingResponse.data.success && 
@@ -202,14 +182,12 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
         const startDate = firstDay.toISOString().split('T')[0];
         const endDate = lastDay.toISOString().split('T')[0];
         
-        console.log('Filtering appointments for date range:', startDate, 'to', endDate);
         
         // Our additional client-side filter to handle potential issues with deleted pets
         // In case backend filters aren't working as expected
         const filterAppointment = (appointment: CalendarAppointment): boolean => {
           // Skip appointments without pet data
           if (!appointment.pet_id || !appointment.pet_name) {
-            console.log('Skipping appointment missing pet data:', appointment.appointment_id);
             return false;
           }
           
@@ -217,7 +195,6 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
           if (appointment.pet_name.includes("[DELETED]") || 
               appointment.pet_name.includes("(DELETED)") ||
               appointment.pet_name.toLowerCase().includes("deleted")) {
-            console.log('Skipping appointment for deleted pet:', appointment.pet_id, appointment.pet_name);
             return false;
           }
           
@@ -225,7 +202,6 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
           if (!appointment.pet_owner_id || 
               !appointment.pet_owner_name ||
               !appointment.pet_owner_surname) {
-            console.log('Skipping appointment with missing owner data:', appointment.appointment_id);
             return false;
           }
           
@@ -239,15 +215,10 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
             return;
           }
           
-          console.log(`Processing ${appointments.length} ${status} appointments`);
           
           // Apply our client-side filter
           const validAppointments = appointments.filter(filterAppointment);
-          
-          if (validAppointments.length !== appointments.length) {
-            console.log(`Filtered out ${appointments.length - validAppointments.length} invalid appointments for ${status}`);
-          }
-          
+
           validAppointments.forEach(appointment => {
             // Save sample appointment for debugging
             if (!sampleAppointment && appointment) {
@@ -286,13 +257,6 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
             return new Date(a.appointment_start_hour).getTime() - new Date(b.appointment_start_hour).getTime();
           });
         });
-        
-        // Count total appointments for logging
-        let totalAppointments = 0;
-        Object.keys(appointmentsByDate).forEach(date => {
-          totalAppointments += appointmentsByDate[date].length;
-        });
-        console.log(`Total appointments for calendar: ${totalAppointments}`);
         
         setAppointments(appointmentsByDate);
       } else {
@@ -657,13 +621,6 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
     const endTime = formatTime(appointment.appointment_end_hour);
 
     // Debug appointment data
-    console.log('Appointment modal data:', {
-      id: appointment.appointment_id,
-      status: appointmentStatus,
-      isVideoMeeting: appointment.video_meeting,
-      meetingUrl: appointment.meeting_url,
-      date: appointmentDate
-    });
 
     // Check if appointment end time has passed
     const now = new Date();
@@ -781,10 +738,6 @@ const Calendar: React.FC<CalendarProps> = ({ clinicId, token }) => {
                       type="button"
                       className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
                       onClick={() => {
-                        console.log('Join Meeting clicked:', {
-                          url: appointment.meeting_url,
-                          videoMeeting: appointment.video_meeting
-                        });
                         if (appointment.meeting_url) {
                           // Kullanıcının istediği şekilde protokol ekleyelim
                           const meetingUrl = appointment.meeting_url.startsWith('http') 

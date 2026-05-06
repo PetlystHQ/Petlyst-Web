@@ -78,13 +78,11 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
       const response = await axiosInstance.get(`/clinics/${clinicId}/hospitalization/current`);
       
       if (response.data.success) {
-        console.log('Hospitalizations received:', response.data.hospitalizations?.length || 0);
         
         // Client-side filter to ensure deleted pets don't appear
         const filteredHospitalizations = response.data.hospitalizations.filter((hospitalization: Hospitalization) => {
           // Skip hospitalizations with missing or suspicious pet data
           if (!hospitalization.pet_id || !hospitalization.pet_name) {
-            console.log('Skipping hospitalization with missing pet data:', hospitalization.id);
             return false;
           }
           
@@ -92,17 +90,12 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
           if (hospitalization.pet_name?.includes("[DELETED]") || 
               hospitalization.pet_name?.includes("(DELETED)") ||
               hospitalization.pet_name?.toLowerCase().includes("deleted")) {
-            console.log('Skipping hospitalization for deleted pet:', hospitalization.pet_id, hospitalization.pet_name);
             return false;
           }
           
           return true;
         });
-        
-        if (filteredHospitalizations.length !== response.data.hospitalizations.length) {
-          console.log(`Filtered out ${response.data.hospitalizations.length - filteredHospitalizations.length} hospitalizations for deleted pets`);
-        }
-        
+
         setCurrentHospitalizations(filteredHospitalizations);
       } else {
         setError('Failed to fetch current hospitalizations');
@@ -169,7 +162,6 @@ const PatientHospitalization: React.FC<PatientHospitalizationProps> = ({ clinicI
           owner_id: pet.owner_id.toString(),
           owner_name: `${pet.pet_owner_name} ${pet.pet_owner_surname}`
         })));
-        console.log('Fetched patients:', response.data.pets);
       } else {
         setError('Failed to fetch clinic patients');
       }

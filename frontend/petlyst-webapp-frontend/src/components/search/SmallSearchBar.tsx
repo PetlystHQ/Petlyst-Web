@@ -131,7 +131,6 @@ const SmallSearchBar: React.FC<SmallSearchBarProps> = ({ initialQuery }) => {
       // Do NOT include query parameter for veterinarian searches
       
       // Kesinlikle veterinarian=any kullan, hiçbir koşulda boş string olmamalı
-      console.log("Searching for veterinarian:", suggestion.text);
       
       // Navigate using window.location to ensure full page reload
       window.location.href = `/search?${params.toString()}`;

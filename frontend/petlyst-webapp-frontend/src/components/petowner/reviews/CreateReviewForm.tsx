@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axiosInstance from '../../../utils/axiosConfig';
 import StarRating from './StarRating';
-import { getApiErrorMessage, getApiErrorResponse } from '../../../utils/errorMessage';
+import { getApiErrorMessage } from '../../../utils/errorMessage';
 interface Review {
   clinic_review_id: string;
   clinic_id: string;
@@ -151,10 +151,6 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
         setError(getApiErrorMessage(err, 'Failed to submit review. Please try again.'));
       }
       
-      // If this is a development environment, log additional details
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Error details:', getApiErrorResponse(err)?.data);
-      }
     } finally {
       setIsSubmitting(false);
     }

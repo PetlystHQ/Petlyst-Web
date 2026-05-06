@@ -36,10 +36,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     // Load profile visibility status
     const fetchProfileVisibility = async () => {
       try {
-        console.log('Fetching profile visibility status...');
         // Use API_ENDPOINTS instead of hardcoded URL
         const response = await axiosInstance.get(API_ENDPOINTS.PROFILE_VISIBILITY, { withCredentials: true });
-        console.log('Profile visibility status:', response.data);
         const isPublic = response.data.is_profile_public;
         setIsProfilePublic(isPublic);
         // Also update Redux store when loading initial visibility
@@ -92,20 +90,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       setIsUpdatingProfileVisibility(true);
       const newVisibility = pendingVisibilityChange;
       
-      console.log('Trying to update profile visibility to:', newVisibility);
       
       // Hardcoded URL, kesin çalışacak şekilde
       const response = await axiosInstance.put(`/veterinarian/profile-visibility`, {
         is_profile_public: newVisibility
       }, { withCredentials: true });
 
-      console.log('Profile visibility update response:', response.data);
 
       if (response.status === 200) {
         setIsProfilePublic(!!newVisibility);
         // Immediately update Redux store
         dispatch(setProfileVisibility(!!newVisibility));
-        console.log('Profile visibility updated successfully to:', newVisibility);
       }
     } catch (error) {
       console.error('Error updating profile visibility:', error);
@@ -166,10 +161,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const handleMobileToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Mobile toggle button clicked');
     if (onMobileToggle) {
       onMobileToggle();
-      console.log('Mobile menu toggle handler called, new state should be:', !isMobileOpen);
     } else {
       console.error('Mobile toggle function is not defined');
     }
@@ -258,7 +251,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <li>
               <button
                 onClick={() => {
-                  console.log('Profile button clicked, changing view to:', DASHBOARD_VIEWS.profile);
                   onViewChange(DASHBOARD_VIEWS.profile);
                   if (isMobileOpen && onMobileToggle) onMobileToggle();
                 }}

@@ -49,7 +49,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  console.log('DiagnosisForm INITIAL RENDER - Props:', { diagnosis, examinationId, petId: propPetId });
   
   const dispatch = useAppDispatch();
   const { loading, standardDiagnoses } = useAppSelector(state => state.diagnoses);
@@ -82,7 +81,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   useEffect(() => {
     // First check if we have a prop petId
     if (propPetId) {
-      console.log('DiagnosisForm - Using petId from props:', propPetId);
       setPetId(propPetId);
       return;
     }
@@ -90,11 +88,9 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     // Check for examination ID in localStorage
     const storedExamId = localStorage.getItem('examinationIdForDiagnosis');
     if (storedExamId) {
-      console.log('DiagnosisForm - Found examination ID in localStorage:', storedExamId);
       const parsedExamId = parseInt(storedExamId);
       
       if (!isNaN(parsedExamId)) {
-        console.log('DiagnosisForm - Setting examination ID from localStorage:', parsedExamId);
         setFormData(prev => ({
           ...prev,
           examination_id: parsedExamId
@@ -109,7 +105,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     
     // Then check if we have examinationId and can get petId from there
     if (examinationId && !petId) {
-      console.log('DiagnosisForm - Will try to get petId from examination:', examinationId);
       
       const fetchExaminationDetails = async () => {
         try {
@@ -117,7 +112,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           
           if (response.data.success && response.data.examination) {
             const petIdFromExam = response.data.examination.pet_id;
-            console.log('DiagnosisForm - Retrieved petId from examination:', petIdFromExam);
             setPetId(petIdFromExam);
           }
         } catch (error) {
@@ -134,11 +128,9 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     const urlPetId = urlParams.get('petId');
     
     if (urlPetId) {
-      console.log('DiagnosisForm - Found petId in URL:', urlPetId);
       const parsedPetId = parseInt(urlPetId);
       
       if (!isNaN(parsedPetId)) {
-        console.log('DiagnosisForm - Using petId from URL:', parsedPetId);
         setPetId(parsedPetId);
         return;
       }
@@ -147,11 +139,9 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     // Finally try localStorage
     const storedPetId = localStorage.getItem('currentPetId');
     if (storedPetId) {
-      console.log('DiagnosisForm - Found petId in localStorage:', storedPetId);
       const parsedPetId = parseInt(storedPetId);
       
       if (!isNaN(parsedPetId)) {
-        console.log('DiagnosisForm - Using petId from localStorage:', parsedPetId);
         setPetId(parsedPetId);
         return;
       }
@@ -164,7 +154,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   useEffect(() => {
     const storedClinicId = localStorage.getItem('selectedClinicId');
     if (storedClinicId) {
-      console.log('DiagnosisForm - Found clinicId in localStorage:', storedClinicId);
       setClinicId(parseInt(storedClinicId));
     }
   }, []);
@@ -178,14 +167,11 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   
   // Fetch examinations for the pet when petId is available
   useEffect(() => {
-    console.log('DiagnosisForm - petId or isEdit changed:', { petId, isEdit, examinationId, hasExaminations });
     
     if (!isEdit) {
       if (petId) {
-        console.log('DiagnosisForm - Triggering fetchExaminationsForPet for petId:', petId);
         fetchExaminationsForPet(petId);
       } else if (clinicId) {
-        console.log('DiagnosisForm - Triggering fetchClinicExaminations for clinicId:', clinicId);
         fetchClinicExaminations(clinicId);
       }
     }
@@ -198,18 +184,13 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   // Fetch all clinic examinations
   const fetchClinicExaminations = async (clinicId: number) => {
     if (!clinicId) {
-      console.log('DiagnosisForm - fetchClinicExaminations called with invalid clinicId');
       return;
     }
     
-    console.log('DiagnosisForm - fetchClinicExaminations STARTED with clinicId:', clinicId);
     setLoadingExaminations(true);
     setErrors(prev => ({ ...prev, examinations: '' }));
-    
+
     try {
-      const token = localStorage.getItem('token');
-      console.log('DiagnosisForm - Token found?', !!token);
-      
       // Get all veterinarians in this clinic
       const vetResponse = await axiosInstance.get(`/clinics/${clinicId}/veterinarians`);
       
@@ -222,10 +203,8 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         .filter((vet) => vet.status === 'approved')
         .map((vet) => vet.veterinarian_id);
       
-      console.log('DiagnosisForm - Approved vets in clinic:', approvedVets);
       
       if (approvedVets.length === 0) {
-        console.log('DiagnosisForm - No approved vets found in clinic');
         setExaminations([]);
         setHasExaminations(false);
         setLoadingExaminations(false);
@@ -260,7 +239,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         });
       }
       
-      console.log(`DiagnosisForm - Found ${allExaminations.length} total examinations from clinic vets`);
       
       // Sort by date, newest first
       allExaminations.sort((a, b) => 
@@ -277,7 +255,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           : allExaminations[0];
           
         if (matchingExam) {
-          console.log('DiagnosisForm - Auto-selecting examination:', matchingExam.examination_id);
           setFormData(prev => ({
             ...prev, 
             examination_id: matchingExam.examination_id
@@ -296,7 +273,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       setExaminations([]);
       setHasExaminations(false);
     } finally {
-      console.log('DiagnosisForm - fetchClinicExaminations COMPLETED');
       setLoadingExaminations(false);
     }
   };
@@ -304,32 +280,22 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
   // Fetch examinations for the pet
   const fetchExaminationsForPet = async (petId: number) => {
     if (!petId) {
-      console.log('DiagnosisForm - fetchExaminationsForPet called with invalid petId');
       return;
     }
     
-    console.log('DiagnosisForm - fetchExaminationsForPet STARTED with petId:', petId);
     setLoadingExaminations(true);
     setErrors(prev => ({ ...prev, examinations: '' }));
     
     // Use the correct endpoint that now combines both functionalities
     const apiUrl = `/api/examinations/pet-history/${petId}?status=for_diagnosis`;
-    console.log('DiagnosisForm - Requesting API endpoint:', apiUrl);
     
     try {
-      // Log request details
-      console.log('DiagnosisForm - Making API request to:', apiUrl);
-
-      const startTime = Date.now();
       const response = await axiosInstance.get(apiUrl);
-      const endTime = Date.now();
-      
-      console.log(`DiagnosisForm - API response received in ${endTime - startTime}ms:`, response.data);
-      
+
+
       if (response.data && response.data.success && response.data.examinations && response.data.examinations.length > 0) {
         // Map the examination data from the response
         const exams = (response.data.examinations as RawExaminationFromApi[]).map((exam): ExaminationOption => {
-          console.log('Raw examination data from API:', exam);
           return {
             examination_id: exam.examination_id,
             examination_date: new Date(exam.examination_date || exam.created_at || '').toLocaleDateString(),
@@ -339,28 +305,24 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           };
         });
 
-        console.log('DiagnosisForm - Mapped examinations:', exams);
 
         // Only use examinations with status "in_progress" or "completed"
         const filteredExams = exams.filter((exam) =>
           exam.status === 'in_progress' || exam.status === 'completed'
         );
         
-        console.log('DiagnosisForm - Filtered examinations for diagnosis:', filteredExams);
         
         setExaminations(filteredExams);
         setHasExaminations(filteredExams.length > 0);
         
         // Auto-select the first examination
         if (!formData.examination_id && filteredExams.length > 0) {
-          console.log('DiagnosisForm - Auto-selecting first examination:', filteredExams[0].examination_id);
           setFormData(prev => ({
             ...prev, 
             examination_id: filteredExams[0].examination_id
           }));
         }
       } else {
-        console.log('DiagnosisForm - No examinations found for pet:', petId);
         setExaminations([]);
         setHasExaminations(false);
       }
@@ -378,12 +340,10 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
       
       // Try without the status parameter as a fallback
       try {
-        console.log('DiagnosisForm - Trying fallback without status parameter...');
         const fallbackUrl = `/examinations/pet-history/${petId}`;
 
         const fallbackResponse = await axiosInstance.get(fallbackUrl);
         
-        console.log('DiagnosisForm - Fallback response:', fallbackResponse.data);
         
         if (fallbackResponse.data && fallbackResponse.data.success && 
             fallbackResponse.data.examinations && fallbackResponse.data.examinations.length > 0) {
@@ -402,7 +362,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
           );
           
           if (filteredExams.length > 0) {
-            console.log('DiagnosisForm - Fallback successful with filtered exams:', filteredExams);
             setExaminations(filteredExams);
             setHasExaminations(true);
             
@@ -418,7 +377,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         console.error('DiagnosisForm - Fallback also failed:', fallbackError);
       }
     } finally {
-      console.log('DiagnosisForm - fetchExaminationsForPet COMPLETED');
       setLoadingExaminations(false);
     }
   };
@@ -525,14 +483,6 @@ const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
     });
     window.dispatchEvent(event);
   };
-  
-  // Add a useEffect to log examinations whenever they change
-  useEffect(() => {
-    if (examinations.length > 0) {
-      console.log('DEBUG: Current examinations array:', examinations);
-      console.log('Pet names available:', examinations.map(e => e.pet_name || 'NOT FOUND'));
-    }
-  }, [examinations]);
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">

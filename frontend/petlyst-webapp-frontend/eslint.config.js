@@ -23,6 +23,13 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      // Underscore-prefixed names are deliberately unused (e.g. signature
+      // parity with a callback, destructured values we don't need).
+      "@typescript-eslint/no-unused-vars": ["error", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
     },
   },
 );

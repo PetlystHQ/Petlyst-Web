@@ -20,7 +20,6 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
   
   // First useEffect: When redux store visibility changes, update local state
   useEffect(() => {
-    console.log("Redux profileVisibility changed:", storeProfileVisibility);
     if (storeProfileVisibility !== null) {
       setIsProfilePublic(storeProfileVisibility);
     }
@@ -42,7 +41,6 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
         // Also update the Redux store
         dispatch(setProfileVisibility(isPublic));
         
-        console.log("ViewProfileButton: Updated visibility state:", isPublic);
       } catch (error) {
         console.error("Error fetching profile visibility:", error);
         // Default to private if we can't determine
@@ -63,14 +61,8 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
     ? storeProfileVisibility 
     : isProfilePublic;
 
-  console.log("ViewProfileButton rendering with:", { 
-    storeProfileVisibility, 
-    isProfilePublic, 
-    effectiveProfileVisibility 
-  });
 
   const handleViewProfile = async () => {
-    console.log("Current user:", user);
     
     if (!user) {
       console.error("No user found");
@@ -102,7 +94,6 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
 
       // Veterinerin slug'ı halihazırda veritabanında varsa onu kullanalım
       if (response.data && response.data.slug) {
-        console.log("Using existing slug from database:", response.data.slug);
         navigate(`/veterinarians/profile/${encodeURIComponent(response.data.slug)}`);
         return;
       }
@@ -112,7 +103,6 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       const lastName = response.data?.user_surname || legacyUser.last_name || '';
       
       const slug = generateSlug(firstName, lastName);
-      console.log("Generated slug:", slug);
       
       // URL'deki özel karakterlerin doğru işlenmesi için encodeURIComponent kullanıyoruz
       navigate(`/veterinarians/profile/${encodeURIComponent(slug)}`);
@@ -124,7 +114,6 @@ const ViewProfileButton: React.FC<ViewProfileButtonProps> = ({ className = '', f
       const lastName = legacyUser.last_name || legacyUser.user_surname || '';
       
       const slug = generateSlug(firstName, lastName);
-      console.log("Fallback generated slug:", slug);
       
       navigate(`/veterinarians/profile/${encodeURIComponent(slug)}`);
     }

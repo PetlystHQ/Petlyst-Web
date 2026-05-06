@@ -117,7 +117,6 @@ const SearchResult: React.FC = () => {
       
       try {
         // Use relative URL with proxy
-        console.log("Using relative URL with Vite proxy");
 
         // Construct API parameters from URL parameters
         const params: Record<string, string | number> = {};
@@ -131,7 +130,6 @@ const SearchResult: React.FC = () => {
         params.page = page;
         params.limit = limit;
 
-        console.log("Sending request with params:", params);
         
         // Call the search API with relative URL (proxy will handle the rest)
         const response = await axiosInstance.get<SearchResponse>(
@@ -194,10 +192,6 @@ const SearchResult: React.FC = () => {
         params.page = page;
         params.limit = limit;
 
-        console.log("Searching for veterinarians with params:", params);
-        console.log("Query parameter:", query);
-        console.log("Veterinarian parameter:", veterinarian);
-        console.log("VeterinarianName parameter:", veterinarianName);
         
         // Call the veterinarian search API
         const response = await axiosInstance.get<VeterinarianSearchResponse>(
@@ -205,8 +199,6 @@ const SearchResult: React.FC = () => {
           { params }
         );
         
-        console.log("Response from API:", response.data);
-        console.log("Found veterinarians:", response.data.veterinarians?.length || 0);
         
         if (response.data.success) {
           setVeterinarians(response.data.veterinarians);
@@ -249,7 +241,6 @@ const SearchResult: React.FC = () => {
         fetchVeterinarians()
       ]).then(() => {
         // Artık otomatik geçiş yapmıyoruz, kullanıcının seçimini koruyoruz
-        console.log("Showing all results (clinics and veterinarians)");
       }).catch(err => {
         console.error("Error fetching all results:", err);
       });
@@ -262,7 +253,6 @@ const SearchResult: React.FC = () => {
         fetchVeterinarians()
       ]).then(() => {
         // Kullanıcının seçimini koruyoruz
-        console.log("Showing results for default search (both categories)");
       }).catch(err => {
         console.error("Error fetching default search results:", err);
       });

@@ -158,11 +158,7 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
     const handleOpenDiagnosisForm = (event: Event) => {
       const customEvent = event as CustomEvent;
       const eventPetId = customEvent.detail?.petId;
-      const examinationId = customEvent.detail?.examinationId;
-      
-      console.log('DiagnosisList: Received openDiagnosisForm event with pet ID:', eventPetId);
-      console.log('DiagnosisList: Received openDiagnosisForm event with examination ID:', examinationId);
-      
+
       if (eventPetId) {
         // Update the component's petId state
         setPetId(Number(eventPetId));
@@ -175,7 +171,6 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
         setIsEdit(false);
         setFormModalOpen(true);
         
-        console.log('DiagnosisList: Opened diagnosis form for pet ID:', eventPetId);
       }
     };
     
@@ -188,7 +183,6 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
       const petId = customEvent.detail?.petId;
       const examinationId = customEvent.detail?.examinationId;
       
-      console.log('DiagnosisList: Received startDiagnosis event with petId:', petId, 'and examinationId:', examinationId);
       
       if (petId) {
         // Update states
@@ -197,7 +191,6 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
         
         // IMPORTANT: If we have an examinationId, store it in localStorage for DiagnosisForm to use
         if (examinationId) {
-          console.log('Setting examination ID in localStorage:', examinationId);
           localStorage.setItem('examinationIdForDiagnosis', examinationId.toString());
         }
         
@@ -206,7 +199,6 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
         setIsEdit(false);
         setFormModalOpen(true);
         
-        console.log('DiagnosisList: Opened diagnosis form from examination with form modal state:', formModalOpen);
       }
     };
     
@@ -217,7 +209,6 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
     if (!propPetId) {
       const storedPetId = localStorage.getItem('currentPetId');
       if (storedPetId) {
-        console.log('DiagnosisList: Found petId in localStorage:', storedPetId);
         setPetId(Number(storedPetId));
       }
     }
@@ -228,7 +219,7 @@ const DiagnosisList: React.FC<DiagnosisListProps> = ({
     };
     // formModalOpen is read by the inner handlers via closure; adding it as
     // a dep would re-attach the window listeners on every modal toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [propPetId]);
   
   // Handle form modal close

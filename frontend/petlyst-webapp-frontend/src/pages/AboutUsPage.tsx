@@ -16,7 +16,6 @@ const AboutUsPage: React.FC = () => {
 
   const handleForgotPassword = () => {
     // Forgot password işlemi burada yapılacak
-    console.log('Forgot password requested');
   };
 
   return (

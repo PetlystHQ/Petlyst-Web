@@ -178,7 +178,6 @@ export const AppointmentsForm: React.FC<AppointmentsFormProps> = ({
     setSlotDuration(duration);
     // Convert string duration to number explicitly
     const durationValue = parseInt(duration, 10);
-    console.log('Setting slot duration to:', durationValue, typeof durationValue);
     // Ensure it's a number when passing it back
     handleInputChange(createSyntheticEvent('slot_duration', durationValue));
   };

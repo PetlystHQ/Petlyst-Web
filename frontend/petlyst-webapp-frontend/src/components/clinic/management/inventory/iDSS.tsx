@@ -100,7 +100,6 @@ const IDSS: React.FC = () => {
       // Save response to localStorage
       localStorage.setItem(STORAGE_KEY_RESPONSE_DATA, JSON.stringify(apiResponse));
       
-      console.log('API Response:', apiResponse);
     } catch (err) {
       console.error(`Error fetching ${type} analysis:`, err);
       setError(getApiErrorMessage(err, `Failed to get ${type} analysis. Please try again.`));

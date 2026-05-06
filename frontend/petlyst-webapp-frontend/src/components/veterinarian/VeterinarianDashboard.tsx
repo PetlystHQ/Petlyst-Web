@@ -217,10 +217,8 @@ const VeterinarianDashboard: React.FC = () => {
 
   const fetchIncompleteClinics = async () => {
     try {
-      console.log('Fetching incomplete clinics from:', API_ENDPOINTS.INCOMPLETE_CLINICS);
       const response = await axiosInstance.get(API_ENDPOINTS.INCOMPLETE_CLINICS);
       
-      console.log('Incomplete clinics response:', response.data);
       setIncompleteClinics(response.data.clinics);
     } catch (err) {
       console.error('Error fetching incomplete clinics:', err);
@@ -228,30 +226,24 @@ const VeterinarianDashboard: React.FC = () => {
   };
 
   const handleViewChange = (view: DashboardView) => {
-    console.log('View changed to:', view);
     setCurrentView(view);
   };
 
   useEffect(() => {
-    console.log('Current view is now:', currentView);
   }, [currentView]);
 
   const renderDashboardContent = () => {
     // Explicitly log the current view to debug
-    console.log('renderDashboardContent called, currentView =', currentView);
     
     if (currentView === DASHBOARD_VIEWS.clinics) {
-      console.log('Rendering clinics view');
       return <ClinicsList clinics={clinics} loading={loading} error={error} />;
     }
     
     if (currentView === DASHBOARD_VIEWS.profile) {
-      console.log('Rendering profile view');
       return <VeterinarianProfile />;
     }
     
     // Default to overview
-    console.log('Rendering overview view');
     return (
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800">Welcome to Your Dashboard</h2>

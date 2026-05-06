@@ -137,7 +137,6 @@ export const VisualsForm: React.FC<VisualsFormProps> = ({
   
   // Fotoğraf yükleme sayfasını tetikleme
   const handleAddPhotoClick = () => {
-    console.log("Add photo clicked, opening file dialog");
     // Dosya input referansı boş değilse, click() metodunu çağır
     if (fileInputRef.current) {
       fileInputRef.current.click();

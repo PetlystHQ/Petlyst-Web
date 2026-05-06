@@ -12,10 +12,7 @@ const Dashboard = () => {
     if (user?.user_type === 'veterinarian' && token) {
       const ensureSlug = async () => {
         try {
-          console.log('Ensuring veterinarian has a slug...');
-          const response = await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
-          
-          console.log('Slug ensure response:', response.data);
+          await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
         } catch (error) {
           console.error('Error ensuring slug:', error);
         }

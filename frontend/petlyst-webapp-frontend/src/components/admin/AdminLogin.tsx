@@ -33,8 +33,6 @@ const AdminLogin: React.FC = () => {
 
             // Check both possible field names for user type
             const userType = response.data.user.userType || response.data.user.user_type;
-            console.log('Login response:', response.data.user);
-            console.log('User type from response:', userType);
             
             if (userType !== 'admin') {
                 setError('Access denied. Admin privileges required.');

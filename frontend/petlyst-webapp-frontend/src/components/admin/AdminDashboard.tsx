@@ -60,14 +60,13 @@ const AdminDashboard: React.FC = () => {
     const adminName = adminUser.name || adminUser.user_name || 'Admin';
 
     useEffect(() => {
-        console.log('Admin dashboard mounted with user:', adminUser);
         fetchPendingRequests();
         fetchPendingClinics();
         fetchPendingReviews();
         // The three fetch* functions and `adminUser` are re-created each
         // render. Adding them to deps would loop. Effect runs once on mount
         // and re-runs when `adminToken` changes (e.g. across login).
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [adminToken]);
 
     const fetchPendingRequests = async () => {
@@ -210,16 +209,13 @@ const AdminDashboard: React.FC = () => {
             e.preventDefault();
             e.stopPropagation();
         }
-        console.log('Admin dashboard toggle called directly, current state:', mobileMenuOpen);
         setMobileMenuOpen(prevState => {
             const newState = !prevState;
-            console.log('New mobile menu state in admin dashboard:', newState);
             return newState;
         });
     };
 
     useEffect(() => {
-        console.log('Mobile menu state changed in admin dashboard:', mobileMenuOpen);
         
         if (mobileMenuOpen) {
             document.body.classList.add('overflow-hidden');

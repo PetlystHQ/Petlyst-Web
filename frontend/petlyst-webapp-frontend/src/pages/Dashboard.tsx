@@ -55,7 +55,6 @@ const Dashboard: React.FC = () => {
 
         // Set hasApprovedClinic to true if the API returns a clinic
         setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
-        console.log('Approved clinic check:', response.data);
       } catch (error) {
         console.error('Error checking approved clinic status:', error);
         setHasApprovedClinic(false);
@@ -112,11 +111,8 @@ const Dashboard: React.FC = () => {
     if (user?.user_type === 'veterinarian' && token) {
       const ensureSlug = async () => {
         try {
-          console.log('Ensuring veterinarian has a slug...');
           setCheckingClinics(true); // Use existing loading state to show spinner
-          const response = await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
-          
-          console.log('Slug ensure response:', response.data);
+          await axiosInstance.post(API_ENDPOINTS.ENSURE_SLUG, {});
         } catch (error) {
           console.error('Error ensuring slug:', error);
         } finally {
@@ -147,7 +143,6 @@ const Dashboard: React.FC = () => {
   // Klinik durumu değişikliğini dinle
   useEffect(() => {
     const handleClinicStatusChange = async () => {
-      console.log('Clinic status change detected');
       if (localStorage.getItem('clinic_status_changed') === 'true') {
         // API üzerinden klinik durumunu güncelle
         if (token && user && user.user_type === 'veterinarian') {
@@ -157,7 +152,6 @@ const Dashboard: React.FC = () => {
             
             // Durumu API'dan gelen yanıta göre güncelle
             setHasApprovedClinic(response.data && response.data.success && response.data.clinic !== null);
-            console.log('Approved clinic check after status change:', response.data);
           } catch (error) {
             console.error('Error checking approved clinic status after change:', error);
             setHasApprovedClinic(false);

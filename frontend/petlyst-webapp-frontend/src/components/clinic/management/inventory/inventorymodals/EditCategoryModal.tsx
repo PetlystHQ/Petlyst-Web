@@ -70,7 +70,6 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
     const newIsActive = !isActive;
     setIsActive(newIsActive);
     
-    console.log('Toggle switched:', newIsActive);
     
     // Direct modification of formData through a custom event
     // This should ensure the parent component updates its state correctly
@@ -87,7 +86,6 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
     } as unknown as React.ChangeEvent<HTMLInputElement>;
     
     // Log the event for debugging
-    console.log('Sending custom event:', customEvent);
     
     // Pass to parent component
     handleInputChange(customEvent);
@@ -98,10 +96,6 @@ const EditCategoryModal: React.FC<EditCategoryModalProps> = ({
     e.preventDefault();
     
     // Log the form data before submission
-    console.log('Form data before submission:', { 
-      ...formData,
-      is_active: isActive // Show the actual value that will be sent
-    });
     
     // Ensure the formData has the latest isActive value
     // This might not be necessary if handleToggleChange works properly,

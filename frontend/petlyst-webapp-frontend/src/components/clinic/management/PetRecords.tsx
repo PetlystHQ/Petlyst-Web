@@ -47,25 +47,20 @@ const PetRecords: React.FC = () => {
   const fetchPets = async () => {
     if (!clinicId) {
       setLoading(false);
-      console.log('[DEBUG-PETRECORDS] Klinik ID bulunamadı, veri çekilemiyor.');
       return;
     }
 
     try {
       setLoading(true);
-      console.log(`[DEBUG-PETRECORDS] Klinik hastaları için veri çekiliyor. Klinik ID: ${clinicId}`);
       
       // Using the new endpoint that uses clinic_patients table
       const response = await axiosInstance.get(`/clinics/${clinicId}/patients`);
       
       if (response.data.success) {
         const fetchedPets = response.data.pets || [];
-        console.log(`[DEBUG-PETRECORDS] Başarıyla ${fetchedPets.length} hasta kaydı çekildi.`);
-        console.log('[DEBUG-PETRECORDS] İlk 3 hasta kaydı:', fetchedPets.slice(0, 3));
         setPets(fetchedPets);
         setLastRefresh(new Date());
       } else {
-        console.log('[DEBUG-PETRECORDS] Hasta kayıtları çekilirken hata oluştu:', response.data);
         setError('Failed to fetch patient records');
         
         // For development: Create mock data if endpoint fails
@@ -88,7 +83,6 @@ const PetRecords: React.FC = () => {
   
   // Helper function to use mock data
   const applyMockData = () => {
-    console.log('Using mock data');
     const mockPets: Pet[] = [
       {
         pet_id: '1',
@@ -171,7 +165,6 @@ const PetRecords: React.FC = () => {
   // Set up automatic refresh interval (every 30 seconds)
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing pet records');
       fetchPets();
     }, 30000); // 30 seconds
 

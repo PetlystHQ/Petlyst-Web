@@ -36,14 +36,6 @@ const DefaultHeader: React.FC = () => {
     };
   }, []);
 
-  // Debug log to check user data
-  useEffect(() => {
-    if (user) {
-      console.log('Current user:', user);
-      console.log('User type:', user.user_type);
-    }
-  }, [user]);
-
   const handleLogout = () => {
     dispatch(logout());
     setIsDropdownOpen(false);

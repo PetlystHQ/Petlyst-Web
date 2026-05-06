@@ -360,7 +360,6 @@ const VeterinarianProfile: React.FC = () => {
         try {
           const photoId = photos[0].veterinarian_album_photo_id;
           await axiosInstance.delete(`${API_ENDPOINTS.VET_PHOTOS}/${photoId}`);
-          console.log('Existing photo deleted before upload');
         } catch (deleteError) {
           console.error('Error deleting existing photo:', deleteError);
           // Continue with upload even if delete fails
@@ -2005,22 +2004,17 @@ const VeterinarianProfile: React.FC = () => {
   const fetchVerificationStatus = async () => {
     try {
       setVerificationLoading(true);
-      console.log("Fetching verification status...");
       
       const response = await axiosInstance.get(API_ENDPOINTS.VERIFICATION_STATUS);
       
-      console.log("Verification API response:", response.data);
       
       if (response.data && response.data.verification_status) {
-        console.log("Setting verification status to:", response.data.verification_status);
         setVerificationStatus(response.data.verification_status);
       } else {
-        console.log("No verification_status in response, defaulting to 'unverified'");
         setVerificationStatus('unverified');
       }
     } catch (error) {
       console.error('Error fetching verification status:', error);
-      console.log("Setting verification status to 'unverified' due to error");
       setVerificationStatus('unverified');
     } finally {
       setVerificationLoading(false);

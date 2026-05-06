@@ -199,23 +199,17 @@ export const EditVisuals: React.FC<EditVisualsProps> = ({
       // Convert clinicType to database format
       const dbFormatClinicType = clinicType === 'Animal Hospital' ? 'animal_hospital' : 'veterinary_clinic';
       
-      console.log('Uploading photo with clinic type:', {
-        displayFormat: clinicType,
-        dbFormat: dbFormatClinicType,
-        folderPath: folderName
-      });
       
-      const uploadPromises = selectedNewPhotos.map(async (photo, index) => {
+      const uploadPromises = selectedNewPhotos.map(async (photo) => {
         const formData = new FormData();
         formData.append('photo', photo);
         formData.append('clinicId', clinicId.toString());
         formData.append('clinicName', folderName);
         formData.append('clinicType', dbFormatClinicType); // Use database format
-        
-        return axiosInstance.post(`/clinics/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, onUploadProgress: (progressEvent) => {
-            const progress = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            console.log(`Upload progress for photo ${index + 1}: ${progress}%`);
-          } });
+
+        return axiosInstance.post(`/clinics/upload-photo`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       });
       
       await Promise.all(uploadPromises);

@@ -96,7 +96,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
         }
 
         const data = await response.json();
-        console.log('Login response:', data); // Debug log
 
         // Ensure user_type is included in the credentials
         dispatch(setCredentials({
@@ -144,7 +143,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
         }
 
         const loginData = await loginResponse.json();
-        console.log('Auto-login response:', loginData); // Debug log
 
         // Dispatch login credentials
         dispatch(setCredentials({
@@ -400,7 +398,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onForgotPassword
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Forgot password clicked'); // Debug log
                   onForgotPassword();
                 }}
                 className="inline-block text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"

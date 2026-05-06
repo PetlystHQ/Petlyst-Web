@@ -124,7 +124,6 @@ const InventoryList: React.FC = () => {
       const response = await axiosInstance.get(`/clinics/${clinicId}/inventory/items`);
 
       if (response.data.success && response.data.items) {
-        console.log('Fetched inventory items:', response.data.items);
         
         // Process the items to ensure numeric values are properly parsed and field names are corrected
         const processedItems = response.data.items.map((item: InventoryItem & { unit?: string; quantity?: number | string }) => {
@@ -151,18 +150,6 @@ const InventoryList: React.FC = () => {
           };
           
           // Log the conversion for debugging
-          console.log('Conversion:', {
-            original: {
-              quantity: item.quantity,
-              current_quantity: item.current_quantity,
-              unit: item.unit,
-              unit_type: item.unit_type
-            },
-            converted: {
-              current_quantity: processedItem.current_quantity,
-              unit_type: processedItem.unit_type
-            }
-          });
           
           return processedItem;
         });
@@ -241,9 +228,6 @@ const InventoryList: React.FC = () => {
   };
 
   const openEditModal = (item: InventoryItem) => {
-    console.log("Opening edit modal for item:", item);
-    console.log("Item current quantity:", item.current_quantity, "type:", typeof item.current_quantity);
-    console.log("Item expiry date:", item.expiry_date, "type:", typeof item.expiry_date);
     
     // Create a deep copy to avoid reference issues
     const itemCopy = {
@@ -263,7 +247,6 @@ const InventoryList: React.FC = () => {
     if (!token || !clinicId) return;
 
     try {
-      console.log("Raw form data before submission:", formData);
       
       // Create a copy with explicit integer conversions
       const dataToSubmit = {
@@ -294,12 +277,10 @@ const InventoryList: React.FC = () => {
         batch_number: formData.batch_number || ''
       };
 
-      console.log('Submitting data with forced integers:', dataToSubmit);
 
       const response = await axiosInstance.post(`/clinics/${clinicId}/inventory/items`, dataToSubmit);
 
       if (response.data.success) {
-        console.log('Item created successfully:', response.data);
         
         // Option 1: Directly add the new item to the state (optimized approach)
         if (response.data.item) {
@@ -330,7 +311,6 @@ const InventoryList: React.FC = () => {
             formattedNewItem.category_name = categoryObj.name;
           }
           
-          console.log('Adding new item to state:', formattedNewItem);
           
           // Update the inventory items state with the new item
           setInventoryItems(prevItems => [...prevItems, formattedNewItem]);

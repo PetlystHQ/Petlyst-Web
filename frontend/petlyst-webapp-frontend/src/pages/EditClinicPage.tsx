@@ -57,8 +57,6 @@ const EditClinicPage: React.FC = () => {
           clinicName = clinicName.replace('Veterinary Clinic', '').trim();
         }
         
-        console.log('Extracted clinic name:', clinicName);
-        console.log('Clinic type:', clinicType);
         
         // ÖNEMLİ: 24/7 durumu ve çalışma günleri için iyileştirme
         // Veritabanından gelen değerleri doğrudan kullan, 24/7 değeri Yes olsa bile override etme
@@ -82,7 +80,6 @@ const EditClinicPage: React.FC = () => {
           }
         }
         
-        console.log('Database randevu süresi:', clinic.clinic_time_slots, 'İşlenmiş değer:', slotDuration);
         
         setFormData({
           name: clinicName,
@@ -221,7 +218,6 @@ const EditClinicPage: React.FC = () => {
       }
       
       // Log to check the phone numbers data structure
-      console.log('Phone numbers data:', formData.phone_numbers);
 
       // Modify clinic name to include the clinic type if it doesn't already end with it
       let clinic_name = formData.name;
@@ -238,8 +234,6 @@ const EditClinicPage: React.FC = () => {
       // Ensure correct clinic type is sent - this is the key field for updating clinic_type
       const clinic_type = formData.clinicType === 'Animal Hospital' ? 'animal_hospital' : 'veterinary_clinic';
       
-      console.log('Sending clinic_type:', clinic_type);
-      console.log('Current clinicType in formData:', formData.clinicType);
       
       // Mevcut available_days ve emergency_available_days verilerini kullan
       // is_open_24_7 Yes olsa bile bu değerleri otomatik olarak değiştirme
@@ -264,11 +258,6 @@ const EditClinicPage: React.FC = () => {
         slotDuration = 60; // Geçersiz değer durumunda varsayılan
       }
       
-      console.log('Randevu süresi gönderiliyor (düzeltilmiş):', {
-        rawValue: formData.slot_duration,
-        formattedValue: slotDuration,
-        type: typeof slotDuration
-      });
       
       // Create request data
       const requestData = {
@@ -303,15 +292,8 @@ const EditClinicPage: React.FC = () => {
       };
       
       // Log the full request data
-      console.log('Request data:', requestData);
       
       // Özel olarak slot_duration değerini konsola yazdıralım
-      console.log('Randevu süresi gönderilirken son durum:', {
-        formDataValue: formData.slot_duration,
-        processedValue: slotDuration,
-        requestDataValue: requestData.clinic_time_slots,
-        valueType: typeof requestData.clinic_time_slots
-      });
       
       // First update the main clinic data
       const response = await axiosInstance.put(`/clinics/${clinicId}`, requestData);
@@ -335,12 +317,6 @@ const EditClinicPage: React.FC = () => {
         }
         
         // Yanıtı detaylı olarak inceleyelim
-        console.log('Clinic update response:', {
-          status: response.status,
-          data: response.data,
-          updatedClinic: response.data.clinic,
-          receivedTimeSlots: response.data.clinic?.clinic_time_slots
-        });
         
         setSuccess('Clinic updated successfully');
         setFormModified(false);

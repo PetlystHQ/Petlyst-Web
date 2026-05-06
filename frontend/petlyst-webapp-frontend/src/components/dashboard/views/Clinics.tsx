@@ -33,12 +33,6 @@ export const Clinics: React.FC<ClinicsProps> = ({
       const response = await axiosInstance.get(`/clinics/my-clinics`);
 
       if (response.data && Array.isArray(response.data.clinics)) {
-        console.log('API Response:', response.data);
-        console.log('Clinics details:', response.data.clinics.map((clinic: Clinic) => ({
-          id: clinic.clinic_id,
-          name: clinic.clinic_name,
-          status: clinic.clinic_verification_status
-        })));
         setClinics(response.data.clinics);
       } else {
         console.error('Invalid API response:', response.data);

@@ -104,7 +104,6 @@ const VerificationModal: FC<VerificationModalProps> = ({ isOpen, onClose, onSubm
       if (!token) {
         // Check localStorage as fallback
         const storedToken = localStorage.getItem('token');
-        console.log('Stored token from localStorage:', storedToken);
         
         if (!storedToken) {
           setError('Authentication token not found. Please try logging in again.');

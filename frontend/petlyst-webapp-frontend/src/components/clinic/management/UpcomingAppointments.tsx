@@ -121,7 +121,6 @@ const UpcomingAppointments: React.FC = () => {
         
         if (response.data.success) {
           const fetchedAppointments = response.data.appointments || [];
-          console.log('Fetched upcoming appointments:', fetchedAppointments);
           setAppointments(fetchedAppointments);
           
           // Process appointments into time slots
@@ -156,7 +155,6 @@ const UpcomingAppointments: React.FC = () => {
     // Current date/time
     const now = new Date();
     
-    console.log('Processing appointments:', appointmentList.length, appointmentList);
     
     // Get only appointments in the next 24 hours
     const next24HoursAppointments = appointmentList.map(appointment => {
@@ -187,7 +185,6 @@ const UpcomingAppointments: React.FC = () => {
       return diffHours >= -2 && diffHours <= 24; // Include appointments from the last 2 hours for demo purposes
     });
     
-    console.log('Filtered appointments for next 24h:', next24HoursAppointments.length);
     
     // Distribute appointments to their respective time slots
     next24HoursAppointments.forEach(appointment => {
