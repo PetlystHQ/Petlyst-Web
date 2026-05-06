@@ -2,6 +2,13 @@
 
 [![CI](https://github.com/PetlystHQ/Petlyst-Web/actions/workflows/ci.yml/badge.svg)](https://github.com/PetlystHQ/Petlyst-Web/actions/workflows/ci.yml)
 
+> **Senior Project** — Developed as part of the two-semester **Senior Project** course. Ranked **3rd** in the department graduation project competition.
+
+![Award Ceremony](https://github.com/PetlystHQ/Petlyst-Web/blob/main/award-ceremony.jpeg)
+
+**Project Advisor:**  
+Prof. Dr. Oumout Chouseinoglou
+
 Web platform for Petlyst — a system connecting pet owners, veterinarians, and clinics. Includes appointment booking, clinic management, hospitalization tracking, inventory, medical examinations, and reviews.
 
 ## Tech Stack
