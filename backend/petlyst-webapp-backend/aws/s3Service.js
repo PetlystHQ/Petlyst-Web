@@ -168,7 +168,7 @@ class S3Service {
         requestId: error.requestId,
         stack: error.stack
       });
-      throw new Error(`Failed to upload clinic photo to S3: ${error.message}`);
+      throw new Error(`Failed to upload clinic photo to S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -213,7 +213,7 @@ class S3Service {
       await s3.deleteObject(params).promise();
     } catch (error) {
       console.error('Error deleting clinic photo from S3:', error);
-      throw new Error('Failed to delete clinic photo from S3');
+      throw new Error('Failed to delete clinic photo from S3', { cause: error });
     }
   }
 
@@ -266,7 +266,7 @@ class S3Service {
         region: s3Config.region,
         folderPath: params.Prefix
       });
-      throw new Error(`Failed to list clinic photos from S3: ${error.message}`);
+      throw new Error(`Failed to list clinic photos from S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -293,7 +293,7 @@ class S3Service {
       return await s3.getSignedUrlPromise('getObject', params);
     } catch (error) {
       console.error('Error generating signed URL for clinic photo:', error);
-      throw new Error('Failed to generate signed URL for clinic photo');
+      throw new Error('Failed to generate signed URL for clinic photo', { cause: error });
     }
   }
 
@@ -413,7 +413,7 @@ class S3Service {
         clinicId,
         clinicName
       });
-      throw new Error(`Failed to delete clinic folder from S3: ${error.message}`);
+      throw new Error(`Failed to delete clinic folder from S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -598,7 +598,7 @@ class S3Service {
         requestId: error.requestId,
         stack: error.stack
       });
-      throw new Error(`Failed to upload veterinarian photo to S3: ${error.message}`);
+      throw new Error(`Failed to upload veterinarian photo to S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -617,7 +617,7 @@ class S3Service {
       await s3.deleteObject(params).promise();
     } catch (error) {
       console.error('Error deleting veterinarian photo from S3:', error);
-      throw new Error('Failed to delete veterinarian photo from S3');
+      throw new Error('Failed to delete veterinarian photo from S3', { cause: error });
     }
   }
 
@@ -682,7 +682,7 @@ class S3Service {
       }
     } catch (error) {
       console.error('Error deleting veterinarian folder:', error);
-      throw new Error(`Failed to delete veterinarian folder: ${error.message}`);
+      throw new Error(`Failed to delete veterinarian folder: ${error.message}`, { cause: error });
     }
   }
 
@@ -798,7 +798,7 @@ class S3Service {
         requestId: error.requestId,
         stack: error.stack
       });
-      throw new Error(`Failed to upload pet photo to S3: ${error.message}`);
+      throw new Error(`Failed to upload pet photo to S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -819,7 +819,7 @@ class S3Service {
       return { success: true };
     } catch (error) {
       console.error('Error deleting pet photo from S3:', error);
-      throw new Error('Failed to delete pet photo from S3');
+      throw new Error('Failed to delete pet photo from S3', { cause: error });
     }
   }
 
@@ -876,7 +876,7 @@ class S3Service {
       }
     } catch (error) {
       console.error('Error deleting pet owner photos:', error);
-      throw new Error(`Failed to delete pet owner photos: ${error.message}`);
+      throw new Error(`Failed to delete pet owner photos: ${error.message}`, { cause: error });
     }
   }
 
@@ -993,7 +993,7 @@ class S3Service {
         requestId: error.requestId,
         stack: error.stack
       });
-      throw new Error(`Failed to upload pet owner profile photo to S3: ${error.message}`);
+      throw new Error(`Failed to upload pet owner profile photo to S3: ${error.message}`, { cause: error });
     }
   }
 
@@ -1014,7 +1014,7 @@ class S3Service {
       return { success: true };
     } catch (error) {
       console.error('Error deleting pet owner profile photo from S3:', error);
-      throw new Error('Failed to delete pet owner profile photo from S3');
+      throw new Error('Failed to delete pet owner profile photo from S3', { cause: error });
     }
   }
 
@@ -1077,7 +1077,7 @@ class S3Service {
       }
     } catch (error) {
       console.error('Error deleting pet owner profile folder:', error);
-      throw new Error(`Failed to delete pet owner profile folder: ${error.message}`);
+      throw new Error(`Failed to delete pet owner profile folder: ${error.message}`, { cause: error });
     }
   }
 }

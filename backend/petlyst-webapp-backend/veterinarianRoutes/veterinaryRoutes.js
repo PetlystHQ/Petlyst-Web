@@ -32,8 +32,8 @@ async function generateUniqueSlug(name, surname) {
   // Temel slug oluştur
   let baseSlug = `dr-${name.toLowerCase()}-${surname.toLowerCase()}`
     .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
     .replace(/^-+/, '')
     .replace(/-+$/, '');
   
@@ -1419,8 +1419,8 @@ router.get('/public-profile-by-slug/:slug', async (req, res) => {
     // Generate slug from the user's name (for compatibility)
     const generatedSlug = `dr-${userData.rows[0].user_name.toLowerCase()}-${userData.rows[0].user_surname.toLowerCase()}`
       .replace(/\s+/g, '-')
-      .replace(/[^\w\-]+/g, '')
-      .replace(/\-\-+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-')
       .replace(/^-+/, '')
       .replace(/-+$/, '');
     

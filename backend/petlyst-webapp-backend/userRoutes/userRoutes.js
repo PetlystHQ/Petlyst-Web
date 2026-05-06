@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
-const PetOwner = require('../models/petOwnerModel');
 const bcrypt = require('bcrypt');
 const pool = require('../config/db');
 const nodemailer = require('nodemailer');
@@ -11,8 +10,6 @@ const authenticateToken = require('../middleware/authenticateToken');
 
 // Password validation function
 const validatePassword = (password) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]?)[A-Za-z\d@$!%*?&]{8,}$/;
-    
     const errors = [];
     if (password.length < 8) {
         errors.push('Password must be at least 8 characters long');
@@ -221,7 +218,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verify transporter connection
-transporter.verify(function(error, success) {
+transporter.verify(function(error, _success) {
   if (error) {
     console.error('SMTP connection error:', error);
     console.error('SMTP settings:', {

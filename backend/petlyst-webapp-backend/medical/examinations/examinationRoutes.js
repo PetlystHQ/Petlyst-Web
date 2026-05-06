@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router();
 const examinationModel = require('./examinationModel');
 const authenticateToken = require('../../middleware/authenticateToken');
-const { checkVerificationStatus } = require('../../middleware/verificationMiddleware');
 const pool = require('../../config/db');
 
 // Middleware for checking if the user is a veterinarian
@@ -426,7 +425,7 @@ router.delete('/:id', vetAuthMiddleware, async (req, res) => {
       });
     }
     
-    const deletedExamination = await examinationModel.deleteExamination(examinationId);
+    await examinationModel.deleteExamination(examinationId);
     
     res.json({
       success: true,

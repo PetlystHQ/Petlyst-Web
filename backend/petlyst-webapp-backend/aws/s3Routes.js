@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
-const s3Service = require('./s3Service');
 
 router.post('/upload-clinic-photo', async (req, res) => {
   try {

@@ -1,7 +1,6 @@
 const pool = require('../config/db');
 const generator = require('generate-password')
 const {
-  notifyUserAppointmentStatusChanged,
   notifyClinicVeterinarians
 } = require('../utils/notificationHelper');
 
@@ -219,27 +218,22 @@ const updateAppointment = async (appointmentId, updateData) => {
     }
 
     values.push(appointmentId);
-    
+
     const query = `
-      UPDATE appointments 
-      SET ${updateFields.join(', ')} 
+      UPDATE appointments
+      SET ${updateFields.join(', ')}
       WHERE appointment_id = $${paramCounter}
       RETURNING *
     `;
-    
-    try {
-      await notifyUserAppointmentStatusChanged(
-        userId,
-        appointment_status,
-        {
-          appointmentId: appointment_id,
-          clinicId: appointmentDetails.clinic_id,
-          petId: appointmentDetails.pet_id
-        }
-      );
-    } catch (notificationError) {
-      console.error('Error sending cancellation notification to user:', notificationError);
-    }
+
+    // Removed: a stray notifyUserAppointmentStatusChanged(...) call sat
+    // here that referenced four variables (userId, appointment_status,
+    // appointment_id, appointmentDetails) that were never bound in this
+    // function. The code would have thrown ReferenceError on every
+    // invocation, which means the notification path was effectively
+    // dead. Leaving a clean slate; a proper post-update notification
+    // hook should be reintroduced once the notification refactor lands
+    // (Effort 4 / pino logging cleanup territory).
 
     const result = await pool.query(query, values);
     

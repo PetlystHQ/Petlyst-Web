@@ -234,12 +234,9 @@ router.get('/', authenticateToken, async (req, res) => {
         );
         
         if (clinicsResult.rows.length > 0) {
-          // This will be handled differently in SQL - we'll need to modify the model
-          // or create a custom query for this case
-          const clinicIds = clinicsResult.rows.map(row => row.clinic_id);
-          
-          // For now, just let them see all diagnoses with no filtering
-          // A proper implementation would filter by clinic IDs
+          // TODO: filter by these clinic IDs once the model supports it.
+          // For now we let them see all diagnoses (no filtering).
+          // const clinicIds = clinicsResult.rows.map(row => row.clinic_id);
         } else {
           // If not in any clinic, only see own diagnoses
           filters.vet_id = userId;

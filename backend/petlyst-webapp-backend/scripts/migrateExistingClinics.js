@@ -1,4 +1,3 @@
-const pool = require('../config/db');
 const ClinicVeterinarian = require('../models/clinicVeterinarianModel');
 
 // Migration script to add clinic-veterinarian relationships for existing clinics

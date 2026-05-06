@@ -8,7 +8,6 @@ const pool = require('../config/db');
 const multer = require('multer');
 // Import S3Service instance with all methods
 const s3Service = require('../aws/s3Service');
-const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 // Individual methods are already destructured from the same export
 const { deleteClinicPhoto } = s3Service;
 

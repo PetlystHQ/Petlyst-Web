@@ -321,7 +321,7 @@ router.delete('/hospitalization/rooms/:roomId', authenticateToken, async (req, r
             return res.status(403).json({ success: false, message: 'Not authorized for this clinic' });
         }
         
-        const deletedRoom = await hospitalizationModel.deleteRoom(roomId);
+        await hospitalizationModel.deleteRoom(roomId);
         
         res.json({
             success: true,

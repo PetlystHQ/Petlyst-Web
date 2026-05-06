@@ -85,8 +85,10 @@ app.use((req, res) => {
     });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
+// Error handling middleware. Express identifies error-handlers by the
+// 4-arg arity, so the unused `_next` must stay in the signature
+// (the underscore prefix satisfies the lint rule).
+app.use((err, req, res, _next) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
 });
